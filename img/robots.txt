@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /adm/
+Disallow: /bbs/logout.php
+Disallow: /plugin/
+Disallow: /data/
+
+Sitemap: http://koreaieak.com/sitemap.xml

@@ -1,0 +1,210 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+
+$kakao_login_url = G5_PLUGIN_URL.'/social/popup.php?provider=kakao&url='.urlencode('/bbs/login.php').'&redirect_to_idp=1';
+?>
+
+<div id="mb_login" class="login-page">
+    <div class="login-card">
+        <div class="login-top">
+            <a href="#login" class="login-tab is-active">로그인</a>
+            <a href="<?php echo G5_BBS_URL ?>/register.php" class="login-tab">회원가입</a>
+        </div>
+
+        <form name="flogin" action="<?php echo $login_action_url ?>" onsubmit="return flogin_submit(this);" method="post" id="flogin" class="login-form">
+            <input type="hidden" name="url" value="<?php echo $login_url ?>">
+
+            <div id="sns_login" class="login-sns sns-wrap-32 sns-wrap-over">
+                <h3>소셜계정으로 로그인</h3>
+                <div class="sns-wrap">
+                    <a href="https://logis79.mycafe24.com/plugin/social/popup.php?provider=kakao&amp;url=%2Fbbs%2Flogin.php&amp;redirect_to_idp=1"
+                       class="sns-icon social_link sns-kakao"
+                       title="카카오">
+                        <span class="ico"></span>
+                        <span class="txt">카카오<i> 로그인</i></span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="login-divider"><span>또는 이메일로 로그인</span></div>
+
+            <div class="login-field">
+                <label for="login_id">이메일 주소</label>
+                <input type="text" name="mb_id" id="login_id" required class="frm_input required" maxlength="100" placeholder="이메일 주소">
+            </div>
+
+            <div class="login-field">
+                <label for="login_pw">비밀번호</label>
+                <div class="login-password-wrap">
+                    <input type="password" name="mb_password" id="login_pw" required class="frm_input required" maxlength="20" placeholder="비밀번호">
+                    <button type="button" class="login-password-toggle" id="login_pw_toggle" aria-label="비밀번호 보기">보기</button>
+                </div>
+            </div>
+
+            <button type="submit" class="login-submit">로그인</button>
+
+            <div class="login-links">
+                <a href="<?php echo G5_BBS_URL ?>/password_lost.php">비밀번호 찾기</a>
+                <a href="<?php echo G5_BBS_URL ?>/register.php">이메일로 회원가입</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+jQuery(function($){
+    $(".sns-wrap").on("click", "a.social_link", function(e){
+        e.preventDefault();
+
+        var pop_url = $(this).attr("href");
+        var newWin = window.open(
+            pop_url,
+            "social_sing_on",
+            "location=0,status=0,scrollbars=1,width=600,height=500"
+        );
+
+        if(!newWin || newWin.closed || typeof newWin.closed == 'undefined') {
+            alert('브라우저에서 팝업창이 차단되어 있습니다. 팝업 차단을 해제한 후 다시 시도해 주세요.');
+        }
+
+        return false;
+    });
+
+    $("#login_pw_toggle").on("click", function(){
+        var $pw = $("#login_pw");
+        var isPassword = $pw.attr("type") === "password";
+
+        $pw.attr("type", isPassword ? "text" : "password");
+        $(this).text(isPassword ? "숨김" : "보기");
+        $(this).attr("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 보기");
+    });
+});
+
+function flogin_submit(f)
+{
+    if($(document.body).triggerHandler('login_sumit', [f, 'flogin']) !== false){
+        return true;
+    }
+
+    return false;
+}
+</script>
+
+<style>
+#mb_login.login-page{max-width:450px;margin:0 auto;padding:24px 16px 40px;box-sizing:border-box}
+#mb_login .login-card{background:#fff;border:1px solid #e7ebef;border-radius:24px;box-shadow:0 18px 50px rgba(16,24,40,.08);padding:24px;box-sizing:border-box}
+#mb_login .login-top{display:flex;gap:10px;margin-bottom:20px}
+#mb_login .login-tab{flex:1;text-align:center;padding:13px 10px;border-radius:999px;background:#f3f5f7;color:#667085;font-weight:700;text-decoration:none}
+#mb_login .login-tab.is-active{background:#111827;color:#fff}
+#mb_login .login-divider{position:relative;margin:18px 0;text-align:center;color:#98a2b3;font-size:14px}
+#mb_login .login-divider:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#e5e7eb}
+#mb_login .login-divider span{position:relative;background:#fff;padding:0 12px}
+#mb_login .login-field{margin-bottom:14px}
+#mb_login .login-field label{display:block;margin-bottom:8px;font-size:14px;font-weight:700;color:#344054}
+#mb_login .login-field .frm_input{width:100%;height:52px;border-radius:14px;border:1px solid #d0d5dd;padding:0 16px;font-size:16px;background:#fff;box-sizing:border-box}
+#mb_login .login-password-wrap{display:flex;gap:10px;align-items:center}
+#mb_login .login-password-wrap .frm_input{flex:1}
+#mb_login .login-password-toggle{height:52px;padding:0 14px;border:1px solid #d0d5dd;border-radius:14px;background:#fff;color:#344054;font-weight:700;box-sizing:border-box}
+#mb_login .login-submit{width:100%;height:56px;border:0;border-radius:16px;background:linear-gradient(135deg,#b8e986 0%,#7bc96f 100%);color:#fff;font-size:17px;font-weight:800;margin-top:4px;box-sizing:border-box}
+#mb_login .login-links{display:flex;justify-content:space-between;gap:12px;margin-top:18px;font-size:14px}
+#mb_login .login-links a{color:#475467;text-decoration:none}
+@media (max-width:480px){
+    #mb_login.login-page{padding:16px}
+    #mb_login .login-card{padding:20px 16px;border-radius:20px}
+    #mb_login .login-links{flex-direction:column;align-items:flex-start}
+}
+
+/* 카카오 SNS 로그인 버튼 반응형 보정 */
+#sns_login {
+    width: 100%;
+    margin: 20px 0;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+#sns_login h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+}
+
+#sns_login .sns-wrap {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#sns_login .sns-icon.sns-kakao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 18px;
+    border-radius: 12px;
+    background: #fee500;
+    color: #191919;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    box-sizing: border-box;
+    white-space: normal;
+    word-break: keep-all;
+    overflow: visible;
+}
+
+#sns_login .sns-icon.sns-kakao .ico {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    flex: 0 0 auto;
+    background:url('<?php echo G5_IMG_URL; ?>/kakao.png') no-repeat center;
+    background-size:contain;
+}
+
+#sns_login .sns-icon.sns-kakao .txt {
+    display: inline-block;
+    line-height: 1.3;
+    white-space: normal;
+    word-break: keep-all;
+}
+
+#sns_login .sns-icon.sns-kakao .txt i {
+    font-style: normal;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+    #sns_login {
+        margin: 18px 0;
+        padding: 0;
+    }
+
+    #sns_login h3 {
+        font-size: 14px;
+    }
+
+    #sns_login .sns-icon.sns-kakao {
+        min-height: 54px;
+        font-size: 15px;
+        padding: 0 14px;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    #sns_login .sns-icon.sns-kakao {
+        min-height: 56px;
+        font-size: 14px;
+        padding: 0 12px;
+    }
+
+    #sns_login .sns-icon.sns-kakao .txt {
+        max-width: 100%;
+    }
+}
+</style>

@@ -1,0 +1,168 @@
+time: 2026-06-08 20:03:53
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 20:09:27
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 20:13:30
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 20:43:32
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 21:02:41
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 21:10:19
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-08 21:24:04
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] ㄴㅇㄹ wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: ㄴㅇㄹ | tel: 01075110500
+---
+time: 2026-06-09 10:18:02
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-09 11:52:03
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] ㄴㅇㄹ wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: ㄴㅇㄹ | tel: 01075110500
+---
+time: 2026-06-09 12:04:27
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 테스트 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 테스트 | tel: 01075110500
+---
+time: 2026-06-09 13:15:06
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-09 14:00:51
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 홍길동테스트 wrote 이사견적문의. [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 홍길동테스트 | tel: 01012345678
+---
+time: 2026-06-09 14:14:32
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 류인윤 이사견적문의 [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 류인윤 | tel: 01075110500
+---
+time: 2026-06-13 10:34:00
+page: /bbs/form_insert.php
+post: yes
+to: adfull@naver.com
+from: webmaster@xn--2e0bl1svji8lhr7f.kr
+reply_to: webmaster@xn--2e0bl1svji8lhr7f.kr
+subject: [FriendLogis/이사견적문의] 홍길동 이사견적문의 [PC]
+mail() called: yes
+result: SUCCESS
+php_error: none
+device: PC | name: 홍길동 | tel: 01075110500
+---

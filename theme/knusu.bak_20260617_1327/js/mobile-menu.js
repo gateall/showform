@@ -1,0 +1,76 @@
+(function () {
+    if (window.__knuMobileMenuLoaded) return;
+    window.__knuMobileMenuLoaded = true;
+
+    function onReady(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
+    }
+
+    function setOpenState(gnb, openBtn, open) {
+        if (!gnb) return;
+
+        if (open) {
+            gnb.classList.add('is-open');
+            gnb.style.display = 'block';
+            gnb.style.visibility = 'visible';
+            gnb.style.opacity = '1';
+            gnb.setAttribute('aria-hidden', 'false');
+            if (openBtn) openBtn.setAttribute('aria-expanded', 'true');
+        } else {
+            gnb.classList.remove('is-open');
+            gnb.style.display = 'none';
+            gnb.style.visibility = '';
+            gnb.style.opacity = '';
+            gnb.setAttribute('aria-hidden', 'true');
+            if (openBtn) openBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    onReady(function () {
+        var openBtn = document.getElementById('gnb_open') || document.getElementById('btn-menu-m');
+        var closeBtn = document.getElementById('gnb_close');
+        var gnb = document.getElementById('gnb') || document.getElementById('m-lnb-wrapper');
+        var container = document.getElementById('container');
+
+        if (openBtn && gnb) {
+            setOpenState(gnb, openBtn, false);
+            openBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                setOpenState(gnb, openBtn, !(gnb.classList.contains('is-open') || gnb.classList.contains('active') || gnb.style.display === 'block'));
+            });
+        }
+
+        if (closeBtn && gnb) {
+            closeBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                setOpenState(gnb, openBtn, false);
+            });
+        }
+
+        if (container && gnb) {
+            container.addEventListener('click', function () {
+                if (gnb.classList.contains('is-open') || gnb.classList.contains('active') || gnb.style.display === 'block') {
+                    setOpenState(gnb, openBtn, false);
+                }
+            });
+        }
+
+        document.querySelectorAll('.btn_gnb_op').forEach(function (button) {
+            button.addEventListener('click', function () {
+                this.classList.toggle('btn_gnb_cl');
+                var submenu = this.nextElementSibling;
+                if (submenu && submenu.classList.contains('gnb_2dul')) {
+                    if (window.jQuery && typeof window.jQuery(submenu).slideToggle === 'function') {
+                        window.jQuery(submenu).slideToggle(300);
+                    } else {
+                        submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+                    }
+                }
+            });
+        });
+    });
+})();

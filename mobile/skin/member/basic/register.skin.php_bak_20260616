@@ -1,0 +1,124 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+?>
+
+<style>
+.register-page { max-width: 450px; margin: 0 auto; padding: 16px 16px 32px; }
+.register-card { background: #fff; border: 1px solid #e7e7e7; border-radius: 20px; box-shadow: 0 14px 34px rgba(0,0,0,.08); overflow: hidden; }
+.register-head { padding: 18px 16px 14px; background: linear-gradient(180deg, #fff 0%, #fbfbf8 100%); text-align: center; }
+.register-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.register-tab { flex: 1; border: 1px solid #dde5d9; border-radius: 999px; background: #fff; color: #6b7568; font-size: 14px; font-weight: 700; line-height: 42px; text-align: center; }
+.register-tab.is-active { background: #6bc23d; color: #fff; border-color: #6bc23d; }
+.register-social { display: block; width: 100%; margin-bottom: 12px; border-radius: 14px; background: #fee500; color: #3a1d1d; text-align: center; font-weight: 800; font-size: 15px; line-height: 52px; text-decoration: none; }
+.register-social .login-social-icon { display: inline-flex; width: 22px; height: 22px; margin-right: 8px; vertical-align: middle; align-items: center; justify-content: center; }
+.register-social .login-social-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.register-divider { position: relative; margin: 16px 0 14px; text-align: center; color: #8c958a; font-size: 12px; }
+.register-divider:before, .register-divider:after { content: ""; position: absolute; top: 50%; width: calc(50% - 84px); height: 1px; background: #e3e6df; }
+.register-divider:before { left: 0; } .register-divider:after { right: 0; }
+.register-info { margin-top: 14px; padding: 14px; border-radius: 14px; background: #f1f8ea; color: #4e6550; font-size: 13px; line-height: 1.55; text-align: left; }
+.register-body { padding: 18px 16px 22px; }
+.register-body p { margin: 0 0 14px; color: #56625a; font-size: 13px; line-height: 1.6; }
+.register-body section + section { margin-top: 16px; }
+.register-body h2 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #2d352f; }
+.register-body textarea { width: 100%; min-height: 140px; padding: 12px; border: 1px solid #dde3d8; border-radius: 12px; background: #fafcf8; color: #525a54; font-size: 13px; line-height: 1.65; box-sizing: border-box; }
+.register-body table { width: 100%; border-collapse: collapse; border: 1px solid #dfe5d8; border-radius: 12px; overflow: hidden; }
+.register-body th, .register-body td { padding: 10px 8px; border: 1px solid #e8ece3; font-size: 12px; line-height: 1.45; vertical-align: top; }
+.register-body th { background: #f4f7ef; color: #465048; }
+.fregister_agree { margin-top: 10px; }
+.fregister_agree input[type="checkbox"] { width: 18px; height: 18px; accent-color: #6bc23d; }
+.fregister_agree label { color: #4d574f; font-size: 13px; }
+.chk_all { margin: 16px 0 0; padding: 12px 14px; border-radius: 14px; background: #f7faf5; }
+.btn_confirm { display: flex; gap: 10px; margin-top: 18px; }
+.btn_close, .btn_submit { flex: 1; height: 52px; border-radius: 14px; font-size: 15px; font-weight: 800; line-height: 52px; text-align: center; text-decoration: none; border: 0; }
+.btn_close { background: #edf1ea; color: #556056; }
+.btn_submit { background: linear-gradient(180deg, #77c94a 0%, #5eb334 100%); color: #fff; }
+</style>
+
+<div class="register-page">
+    <div class="register-card">
+        <div class="register-head">
+            <div class="register-tabs">
+                <div class="register-tab is-active">로그인</div>
+                <div class="register-tab">회원가입</div>
+            </div>
+            <a class="register-social" href="<?php echo G5_PLUGIN_URL; ?>/social/popup.php?provider=kakao&amp;url=<?php echo urlencode(G5_BBS_URL.'/register.php'); ?>&amp;redirect_to_idp=1">
+                <span class="login-social-icon" aria-hidden="true"><img src="https://logis79.mycafe24.com/img/kakao.png" alt="" title=""></span>
+                카카오로 3초만에 시작하기
+            </a>
+            <div class="register-divider">또는 이메일로 가입하기</div>
+            <div class="register-info">
+                한 번의 가입으로 구매, 생산자 등록, HUB 신청까지<br>
+                팜마을의 모든 서비스를 자유롭게 이용하실 수 있습니다.
+            </div>
+        </div>
+        <div class="register-body">
+            <form name="fregister" id="fregister" action="<?php echo $register_action_url ?>" onsubmit="return fregister_submit(this);" method="POST" autocomplete="off">
+                <p><i class="fa fa-check-circle" aria-hidden="true"></i> 회원가입 약관과 개인정보 수집 및 이용내용에 동의하신 후 회원가입을 진행하실 수 있습니다.</p>
+                <?php @include_once(get_social_skin_path().'/social_register.skin.php'); ?>
+                <section id="fregister_term">
+                    <h2>회원가입약관</h2>
+                    <textarea readonly><?php echo get_text($config['cf_stipulation']) ?></textarea>
+                    <fieldset class="fregister_agree">
+                        <input type="checkbox" name="agree" value="1" id="agree11" class="selec_chk">
+                        <label for="agree11"><span></span><b class="sound_only">회원가입약관의 내용에 동의합니다.</b></label>
+                    </fieldset>
+                </section>
+                <section id="fregister_private">
+                    <h2>개인정보 수집 및 이용</h2>
+                    <div class="tbl_head01 tbl_wrap">
+                        <table>
+                            <caption>개인정보 수집 및 이용</caption>
+                            <thead>
+                            <tr><th colspan="2">목적</th></tr>
+                            <tr><th>항목</th><th>보유기간</th></tr>
+                            </thead>
+                            <tbody>
+                            <tr><td colspan="2">이용자 식별 및 본인확인</td></tr>
+                            <tr><td>아이디, 이름, 비밀번호<?php echo ($config['cf_cert_use'])? ", 생년월일, 성별(본인인증 시 선택), 암호화된 개인식별부호(CI)" : ""; ?></td><td>회원 탈퇴 시까지</td></tr>
+                            <tr><td colspan="2">고객서비스 이용에 관한 통지,<br>CS대응을 위한 이용자 식별</td></tr>
+                            <tr><td>연락처(이메일, 휴대전화번호)</td><td>회원 탈퇴 시까지</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <fieldset class="fregister_agree">
+                        <input type="checkbox" name="agree2" value="1" id="agree21" class="selec_chk">
+                        <label for="agree21"><span></span><b class="sound_only">개인정보 수집 및 이용의 내용에 동의합니다.</b></label>
+                    </fieldset>
+                </section>
+                <div id="fregister_chkall" class="chk_all fregister_agree">
+                    <input type="checkbox" name="chk_all" id="chk_all" class="selec_chk">
+                    <label for="chk_all"><span></span>회원가입약관 및 개인정보수집 및 이용에 모두 동의합니다.</label>
+                </div>
+                <div class="btn_confirm">
+                    <a href="<?php echo G5_URL ?>" class="btn_close">취소</a>
+                    <button type="submit" class="btn_submit">회원가입</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function fregister_submit(f)
+{
+    if (!f.agree.checked) {
+        alert("회원가입약관의 내용에 동의하셔야 회원가입을 하실 수 있습니다.");
+        f.agree.focus();
+        return false;
+    }
+    if (!f.agree2.checked) {
+        alert("개인정보 수집 및 이용의 내용에 동의하셔야 회원가입을 하실 수 있습니다.");
+        f.agree2.focus();
+        return false;
+    }
+    return true;
+}
+jQuery(function($){
+    $("input[name=chk_all]").click(function() {
+        if ($(this).prop('checked')) $("input[name^=agree]").prop('checked', true);
+        else $("input[name^=agree]").prop("checked", false);
+    });
+});
+</script>

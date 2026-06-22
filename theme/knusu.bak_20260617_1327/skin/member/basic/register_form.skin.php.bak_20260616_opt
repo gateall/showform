@@ -1,0 +1,182 @@
+﻿<?php
+if (!defined('_GNUBOARD_')) exit;
+
+echo "\n<!-- LOADED: theme/knusu/skin/member/basic/register_form.skin.php -->\n";
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+add_javascript('<script src="'.G5_JS_URL.'/jquery.register_form.js"></script>', 0);
+if ($config['cf_cert_use'] && ($config['cf_cert_simple'] || $config['cf_cert_ipin'] || $config['cf_cert_hp'])) {
+    add_javascript('<script src="'.G5_JS_URL.'/certify.js?v='.G5_JS_VER.'"></script>', 0);
+}
+if (!empty($config['cf_use_addr'])) {
+    echo '<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>'.PHP_EOL;
+}
+
+$member_email = isset($member['mb_email']) ? get_text($member['mb_email']) : '';
+$member_name = isset($member['mb_name']) ? get_text($member['mb_name']) : '';
+$member_hp = isset($member['mb_hp']) ? get_text($member['mb_hp']) : '';
+$member_addr1 = isset($member['mb_addr1']) ? get_text($member['mb_addr1']) : '';
+$member_addr2 = isset($member['mb_addr2']) ? get_text($member['mb_addr2']) : '';
+$member_addr3 = isset($member['mb_addr3']) ? get_text($member['mb_addr3']) : '';
+$member_zip = isset($member['mb_zip1'], $member['mb_zip2']) ? $member['mb_zip1'].$member['mb_zip2'] : '';
+?>
+
+<div class="register-form-page">
+    <div class="register-form-card">
+        <form id="fregisterform" name="fregisterform" action="<?php echo $register_action_url ?>" onsubmit="return fregisterform_submit(this);" method="post" enctype="multipart/form-data" autocomplete="off">
+            <input type="hidden" name="w" value="<?php echo $w ?>">
+            <input type="hidden" name="url" value="<?php echo $urlencode ?>">
+            <input type="hidden" name="agree" value="<?php echo isset($agree) ? $agree : 1; ?>">
+            <input type="hidden" name="agree2" value="<?php echo isset($agree2) ? $agree2 : 1; ?>">
+            <input type="hidden" name="cert_type" value="<?php echo isset($member['mb_certify']) ? $member['mb_certify'] : ''; ?>">
+            <input type="hidden" name="cert_no" value="">
+            <?php if (isset($member['mb_sex'])) { ?><input type="hidden" name="mb_sex" value="<?php echo $member['mb_sex'] ?>"><?php } ?>
+
+            <input type="hidden" name="mb_id" id="reg_mb_id" value="<?php echo $member_email ?>">
+            <input type="hidden" name="mb_nick" id="reg_mb_nick" value="<?php echo $member_name ?>">
+            <input type="hidden" name="mb_zip" id="reg_mb_zip" value="<?php echo $member_zip ?>">
+            <input type="hidden" name="mb_addr3" id="reg_mb_addr3" value="<?php echo $member_addr3 ?>">
+            <input type="hidden" name="mb_addr_jibeon" id="reg_mb_addr_jibeon" value="<?php echo isset($member['mb_addr_jibeon']) ? get_text($member['mb_addr_jibeon']) : ''; ?>">
+
+            <div class="signup-form-fields">
+                <a href="<?php echo $kakao_login_url; ?>" class="kakao-signup-btn social_link" aria-label="카카오로 간편 가입하기">
+                    <span class="kakao-icon">💬</span>
+                    <span class="kakao-text">카카오로 간편 가입하기</span>
+                </a>
+
+                <div class="signup-divider">
+                    <span>또는 이메일로 가입하기</span>
+                </div>
+
+                <div class="green-info-box blue-info-box">
+                    한 번의 가입으로 구매, 생산자 등록, HUB 신청까지 팜마을의 모든 서비스를 자유롭게 이용하실 수 있습니다.
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg_mb_name" name="mb_name" value="<?php echo $member_name ?>" required class="signup-input" placeholder="?대쫫 (?ㅻ챸)">
+                </div>
+
+                <div class="input-group">
+                    <input type="email" name="mb_email" value="<?php echo $member_email ?>" id="reg_mb_email" required class="signup-input" placeholder="?대찓??二쇱냼 (?꾩씠?붾줈 ?ъ슜)">
+                    <span class="validation-msg" id="email-validation-msg"></span>
+                </div>
+
+                <div class="register-input-wrap">
+                    <input type="password" name="mb_password" id="reg_mb_password" <?php echo $required ?> class="signup-input" placeholder="鍮꾨?踰덊샇 (?곷Ц, ?レ옄 ?ы븿 8???댁긽)">
+                    <button type="button" class="password-view-toggle eye-icon" data-target="reg_mb_password" aria-label="鍮꾨?踰덊샇 蹂닿린">?몓截?/button>
+                    <span class="validation-msg" id="password-strength-msg"></span>
+                </div>
+
+                <div class="register-input-wrap">
+                    <input type="password" name="mb_password_re" id="reg_mb_password_re" <?php echo $required ?> class="signup-input" placeholder="鍮꾨?踰덊샇 ?뺤씤">
+                    <button type="button" class="password-view-toggle eye-icon" data-target="reg_mb_password_re" aria-label="鍮꾨?踰덊샇 蹂닿린">?몓截?/button>
+                    <span class="validation-msg" id="password-match-msg"></span>
+                </div>
+
+                <div class="input-group">
+                    <label class="group-label" for="reg_mb_hp">?대???踰덊샇</label>
+                    <input type="text" name="mb_hp" value="<?php echo $member_hp ?>" id="reg_mb_hp" required class="signup-input" placeholder="?대???踰덊샇 (- ?놁씠 ?낅젰)">
+                </div>
+
+                <div class="input-group address-group">
+                    <label class="group-label">二쇱냼</label>
+                    <div class="address-zip-row">
+                        <input type="text" name="mb_addr1" value="<?php echo $member_addr1 ?>" id="reg_mb_addr1" required class="signup-input address-detail-input" placeholder="湲곕낯 二쇱냼" readonly>
+                        <button type="button" class="address-search-btn" onclick="open_postcode_search();">주소 검색</button>
+                    </div>
+                    <input type="text" name="mb_addr2" value="<?php echo $member_addr2 ?>" id="reg_mb_addr2" required class="signup-input address-detail-input" placeholder="?곸꽭 二쇱냼">
+                </div>
+            </div>
+
+            <div class="form-agree-box chk_box">
+                <input type="checkbox" id="agree_terms" required checked>
+                <label for="agree_terms"><span></span>?뚯썝媛??諛?寃ъ쟻 ?쒖텧?⑹쑝濡쒕쭔 ?ъ슜?섎뒗 寃껋뿉 ?숈쓽?⑸땲?? (?꾩닔)</label>
+            </div>
+
+            <div class="submit-btn-group">
+                <button type="submit" id="btn_submit" class="signup-submit-btn">?뚯썝媛???꾨즺</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function syncRegisterIdentity() {
+    var email = $('#reg_mb_email').val().trim();
+    var name = $('#reg_mb_name').val().trim();
+    $('#reg_mb_id').val(email);
+    if (!$('#reg_mb_nick').val().trim()) {
+        $('#reg_mb_nick').val(name || email);
+    }
+}
+
+function ensurePostcodeScript(callback)
+{
+    if (typeof daum !== 'undefined' && typeof daum.Postcode === 'function') {
+        if (callback) callback();
+        return;
+    }
+
+    var existing = document.querySelector('script[data-postcode-loader="1"]');
+    if (existing) {
+        existing.addEventListener('load', function() {
+            if (callback) callback();
+        }, { once: true });
+        return;
+    }
+
+    var script = document.createElement('script');
+    script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    script.async = false;
+    script.setAttribute('data-postcode-loader', '1');
+    script.onload = function() {
+        if (callback) callback();
+    };
+    document.head.appendChild(script);
+}
+
+function open_postcode_search()
+{
+    ensurePostcodeScript(function() {
+        if (typeof win_zip === 'function') {
+            win_zip('fregisterform', 'mb_zip', 'mb_addr1', 'mb_addr2', 'mb_addr3', 'mb_addr_jibeon');
+        }
+    });
+}
+
+function fregisterform_submit(f)
+{
+    syncRegisterIdentity();
+
+    if (!$('#agree_terms').is(':checked')) {
+        alert('?뚯썝媛??諛?寃ъ쟻 ?쒖텧?⑹쑝濡쒕쭔 ?ъ슜?⑥뿉 ?숈쓽?섏뀛???뚯썝媛???섏떎 ???덉뒿?덈떎.');
+        $('#agree_terms').focus();
+        return false;
+    }
+
+    if (!f.mb_name.value) { alert('?대쫫???낅젰??二쇱꽭??'); f.mb_name.focus(); return false; }
+    if (!f.mb_email.value) { alert('?대찓??二쇱냼瑜??낅젰??二쇱꽭??'); f.mb_email.focus(); return false; }
+    if (!f.mb_password.value) { alert('鍮꾨?踰덊샇瑜??낅젰??二쇱꽭??'); f.mb_password.focus(); return false; }
+    if (f.mb_password.value !== f.mb_password_re.value) { alert('鍮꾨?踰덊샇 ?뺤씤???쇱튂?섏? ?딆뒿?덈떎.'); f.mb_password_re.focus(); return false; }
+    if (!f.mb_hp.value) { alert('?대???踰덊샇瑜??낅젰??二쇱꽭??'); f.mb_hp.focus(); return false; }
+    if (!f.mb_addr1.value || !f.mb_addr2.value) { alert('二쇱냼瑜??낅젰??二쇱꽭??'); return false; }
+
+    return true;
+}
+
+jQuery(function($) {
+    $('.password-view-toggle').on('click', function() {
+        var $input = $('#' + $(this).data('target'));
+        var isPassword = $input.attr('type') === 'password';
+        $input.attr('type', isPassword ? 'text' : 'password');
+        $(this).text(isPassword ? '?솃' : '?몓截?);
+    });
+
+    $('#reg_mb_hp').on('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    $('#reg_mb_email, #reg_mb_name').on('input blur change', syncRegisterIdentity);
+    syncRegisterIdentity();
+});
+</script>
+

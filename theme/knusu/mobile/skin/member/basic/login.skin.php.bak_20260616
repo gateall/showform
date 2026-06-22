@@ -1,0 +1,73 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+
+$kakao_login_url = G5_PLUGIN_URL.'/social/popup.php?provider=kakao&url='.urlencode('/bbs/login.php').'&redirect_to_idp=1';
+?>
+
+<div id="mb_login" class="login-page">
+    <div class="login-card">
+        <div class="login-top">
+            <a href="#login" class="login-tab is-active">로그인</a>
+            <a href="<?php echo G5_BBS_URL ?>/register.php" class="login-tab">회원가입</a>
+        </div>
+
+        <form name="flogin" action="<?php echo $login_action_url ?>" onsubmit="return flogin_submit(this);" method="post" id="flogin" class="login-form">
+        <input type="hidden" name="url" value="<?php echo $login_url ?>">
+
+            <a class="login-social login-social-kakao" href="<?php echo $kakao_login_url; ?>">
+                <span class="login-social-icon" aria-hidden="true">
+                    <img src="<?php echo G5_IMG_URL; ?>/kakao.png" alt="">
+                </span>
+                <span>카카오로 3초만에 시작하기</span>
+            </a>
+
+            <div class="login-divider"><span>또는 이메일로 로그인</span></div>
+
+            <div class="login-field">
+                <label for="login_id">이메일 주소</label>
+                <input type="text" name="mb_id" id="login_id" required class="frm_input required" maxlength="100" placeholder="이메일 주소">
+            </div>
+
+            <div class="login-field">
+                <label for="login_pw">비밀번호</label>
+                <div class="login-password-wrap">
+                    <input type="password" name="mb_password" id="login_pw" required class="frm_input required" maxlength="20" placeholder="비밀번호">
+                    <button type="button" class="login-password-toggle" id="login_pw_toggle" aria-label="비밀번호 보기">보기</button>
+                </div>
+            </div>
+
+            <button type="submit" class="login-submit">로그인</button>
+
+            <div class="login-links">
+                <a href="<?php echo G5_BBS_URL ?>/password_lost.php">비밀번호 찾기</a>
+                <a href="<?php echo G5_BBS_URL ?>/register.php">이메일로 회원가입</a>
+            </div>
+        </form>
+
+        <?php @include_once(get_social_skin_path().'/social_login.skin.php'); ?>
+    </div>
+</div>
+
+<script>
+jQuery(function($){
+    $("#login_pw_toggle").on("click", function(){
+        var $pw = $("#login_pw");
+        var isPassword = $pw.attr("type") === "password";
+        $pw.attr("type", isPassword ? "text" : "password");
+        $(this).text(isPassword ? "숨김" : "보기");
+        $(this).attr("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 보기");
+    });
+});
+
+function flogin_submit(f)
+{
+    if( $( document.body ).triggerHandler( 'login_sumit', [f, 'flogin'] ) !== false ){
+        return true;
+    }
+    return false;
+}
+</script>
+
+

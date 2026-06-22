@@ -1,0 +1,13 @@
+
+.inquiry-view-wrap{max-width:980px;margin:0 auto;padding:20px 15px;}
+.inquiry-status-box{border:1px solid #ddd;border-radius:8px;padding:16px;background:#fff;margin-bottom:20px;}
+.inquiry-status-label{display:inline-block;background:#8cc63f;color:#111;padding:4px 8px;margin-bottom:10px;font-weight:bold;}
+.inquiry-btn-row{display:flex;gap:8px;margin-top:10px;}
+.inquiry-btn{display:inline-block;padding:10px 18px;background:#4b4d72;color:#fff;text-decoration:none;font-weight:700;border-radius:4px;}
+.inquiry-btn.gray{background:#555;}
+#bo_v_top{max-width:980px;margin:20px auto 10px;display:flex;justify-content:flex-end;}
+#bo_v_info h2, #bo_v_info .profile_info { display: none !important; }
+.estimate-view-table { width: 100%; border-collapse: collapse; margin: 0 0 25px 0; border-top: 2px solid #111; font-size: 15px; }
+.estimate-view-table th { padding: 13px 10px; background: #f7f7f7; border-bottom: 1px solid #e5e5e5; text-align: left; font-weight: 700; color: #222; }
+.estimate-view-table td { padding: 13px 10px; border-bottom: 1px solid #e5e5e5; color: #555; }
+.estimate-view-table .em { color: #dc2626; font-weight: 700; }

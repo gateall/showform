@@ -1,0 +1,314 @@
+<?php
+include_once('./_common.php');
+$g5['title'] = '실시간 견적문의';
+include_once(G5_THEME_PATH.'/head.php');
+echo G5_POSTCODE_JS;
+
+include_once(G5_PLUGIN_PATH.'/jquery-ui/datepicker.php');
+?>
+<div style="width:100%;  background-color:#f7f7f7; padding:0; overflow:hidden;">
+	<div style="width:1250px; margin:0 auto; min-height:550px; height:auto; padding:0;">
+		<div style="float:left; width:580px; min-height:550px; height:auto; text-align:center; padding-top:30px; background-color:#fff;">
+
+
+			<form name="fwrite" id="fwrite" action="/bbs/form_insert.php" onsubmit="return fwrite_submit_x(this);" method="post" enctype="multipart/form-data" autocomplete="off">
+			<input type="hidden" name="ret" value="/">
+			<input type="hidden" name="mode" value="이사견적문의">
+			<input type="hidden" name="bo_table" value="inquiry">
+
+			
+
+			<style>
+			/* 상담신청 폼 */
+			.mb_con{width:80%; margin:0 auto; padding-bottom:24px;}
+			.mb_con .ms_inquiry ul {overflow: hidden;}
+			.mb_con .ms_inquiry li {width: 100%; float:left;margin-bottom: 9px;}
+			.ms_inquiry li.mi_name {position:relative;}
+			.ms_inquiry label {line-height:27px; position:absolute; display:block; padding:0px; background:url(/img/form_bar.png)no-repeat center left; color:#000; font-size:1.02em;}
+			.ms_inquiry .two{letter-spacing:0em;}
+			.ms_inquiry .three{letter-spacing:0em;}
+			.ms_inquiry input[type="text"], .ms_inquiry input[type="tel"], .ms_inquiry textarea, .ms_inquiry .mi_personal, .ms_inquiry select {
+				padding: 4px 6px; color: #222222; font-size:1.02em !important;
+				background: transparent; background-color: #fff; border: 1px solid #333;
+				box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;}
+			.ms_inquiry input[type="text"], .ms_inquiry input[type="tel"] {width: 372px; height: 28px; margin-left:77px;}
+			.ms_inquiry select{width:183px; height: 28px; margin-left:77px;}
+			.ms_inquiry textarea {width: 372px; height: 72px; overflow-y: scroll; resize: none; margin-left:77px;}
+			.ms_inquiry .mi_agree {}
+			.ms_inquiry .mi_personal {width:97%; height: 74px; overflow-y: scroll;  line-height: 1.45em; margin:0 auto; padding:10px 12px; text-align:left;}
+			.ms_inquiry .mi_personal p{font-size: 1.0em; line-height:1.5; text-align:left; }
+			.ms_inquiry .mi_check {margin-top: 6px; font-size: 0.92em; line-height: 1.15em; text-align:center; padding:0;}
+			.ms_inquiry input[type="checkbox"] {
+				-webkit-appearance: checkbox !important;
+				-moz-appearance: checkbox !important;
+				appearance: checkbox !important;
+				width: 20px !important;
+				height: 20px !important;
+				vertical-align: middle;
+				cursor: pointer;
+				accent-color: #073567;
+				display: inline-block !important;
+				opacity: 1 !important;
+				visibility: visible !important;
+			}
+			.ms_inquiry .mi_check input[type="checkbox"] { margin-right:6px; }
+			.ms_inquiry .mi_submit {display: block; width: 100%; height: 48px; line-height: 48px; margin: 14px auto 28px; background: #073567; border: 1px solid #073567; font-size: 1.18em; color: #fff;-webkit-appearance:none}
+			.ms_inquiry input[type="image"]{display:block; margin:14px auto 26px; max-width:100%; height:auto;}
+
+			.mi_tel img{padding:0px 5px;}
+			</style>
+
+			  <div class="ms_box02 ms_box" >   
+				<h1 style="font-size:30px; line-height:40px; font-weight:900; letter-spacing:-0.05em; margin-bottom:20px;"><i class="fa fa-home"></i> 실시간 견적문의</h1>
+				<div class="mb_con">
+
+				  <div class="ms_inquiry ms_contents">
+					<ul>
+					<li class="mi_name">
+						<label class="two">이사종류</label>
+						<select name="wr_9" id="wr_9" required>
+							<option value="">선택하세요.</option>
+							<option value="포장/반포장이사">포장/반포장이사</option>
+							<option value="일반이사">일반이사</option>
+							<option value="보관이사">보관이사</option>
+							<option value="용달화물">용달화물</option>
+							<option value="해외이사">해외이사</option>
+						</select>
+						<select name="wr_10" id="wr_10" style="margin-left:3px;" required>
+							<option value="아파트/빌라/다세대">아파트/빌라/다세대</option>
+							<option value="주택">주택</option>
+							<option value="오피스텔/원투룸">오피스텔/원투룸</option>
+							<option value="사무실">사무실</option>
+							<option value="공장">공장</option>
+							<option value="기타(학교,관공서,체육관종교시설 등 )">기타(학교,관공서,체육관종교시설 등)</option>
+						</select>
+
+					  </li>
+					  <li class="mi_name">
+						<label class="two">고객명</label>
+						<input type="text" name="wr_name" placeholder="이름" required="required">
+					  </li>
+					  <li class="mi_tel">
+						<label class="three">휴대폰</label>
+						<input type="tel" name="wr_1" placeholder="휴대폰번호" required="required">
+					  </li>
+					   <li class="mi_tel">
+						<label class="three">이사날짜</label>
+						<input type="text" name="wr_2" id="wr_2" placeholder="" required="required" style="width:338px;padding-right:10px;"> &nbsp;
+					  </li>
+					   <li class="mi_tel">
+						<label class="three">출발지정보</label>
+						<input type="text" name="wr_3" placeholder="출발지주소" required="required" style="width:230px;"  onclick="openDaumPostcode();">
+						<input type="hidden" name="wr_6" ><!--시구동만분리-->
+						<input type="text" name="wr_3_2" placeholder="평수" required="required" style="width:64px; margin-left:3px;">
+						<input type="text" name="wr_3_3" placeholder="층수" required="required" style="width:64px; margin-left:3px;">
+					  </li>
+					   <li class="mi_tel">
+						<label class="three">도착지정보</label>
+						<input type="text" name="wr_4" placeholder="도착지주소" required="required" style="width:230px;" onclick="openDaumPostcode1();">
+						<input type="hidden" name="wr_7" ><!--시구동만분리-->
+						<input type="text" name="wr_4_2" placeholder="평수" required="required" style="width:64px; margin-left:3px;">
+						<input type="text" name="wr_4_3" placeholder="층수" required="required" style="width:64px; margin-left:3px;">
+					  </li>
+					  <li class="mi_tel">
+						<label class="three">포함될가구</label>
+						<div style="width:372px; height: 25px; margin-left:80px; font-size:0.9em;">
+							<label style="position:static; display:inline-block; padding:0; background:none;"><input type="checkbox" name="wr_5[]" value="에어컨"> 에어컨</label>&nbsp;&nbsp;
+							<label style="position:static; display:inline-block; padding:0; background:none;"><input type="checkbox" name="wr_5[]" value="피아노"> 피아노</label>&nbsp;&nbsp;
+							<label style="position:static; display:inline-block; padding:0; background:none;"><input type="checkbox" name="wr_5[]" value="돌침대"> 돌침대</label>&nbsp;&nbsp;
+							<label style="position:static; display:inline-block; padding:0; background:none;"><input type="checkbox" name="wr_5[]" value="벽걸이TV"> 벽걸이TV</label>&nbsp;&nbsp;
+							<label style="position:static; display:inline-block; padding:0; background:none;"><input type="checkbox" name="wr_5[]" value="조립식장롱"> 조립식장롱</label>
+
+						</div>
+						
+					  </li>
+					  <li class="mi_con" style="margin-top:10px;">
+						<label>추가사항</label>
+						<textarea type="text" name="wr_content" required="required" style="height:50px; padding:3px;"></textarea>
+					  </li>
+					</ul>
+					<div class="mi_agree notoSans">
+					  <div class="mi_personal">
+						<p>
+						  * 개인정보 수집/이용 목적 : 고객문의 상담요청에 대하여 회신을 하거나, 상담을 위한 서비스 이용기록조회<br>
+						  * 수집하는 개인정보의 항목 : 성함, 연락처<br>
+						  ※상담예약서비스 이용과정에서 아래와 같은 정보들이 생성되어 수집될 수 있습니다.<br>
+						  - 서비스이용기록, 접속로그, 쿠키, 접속IP정보<br>
+						  * 개인정보의 보유 및 이용기간<br>
+						  -보존기간은 5년이며, 정보 제공자가 삭제를 요청할 경우 즉시 파기합니다.<br>
+						  -고객님의 정보는 개인정보 보호법에 따라 보호되며 위의 사항 외에 별도로 사용하지 않을 것을 약속드립니다
+						</p>
+					  </div>
+					  <div class="mi_check">
+						<input type="checkbox" required="required">
+						개인정보처리방침 동의
+					  </div>
+					</div>
+					<br>
+					<div style="text-align:center;">
+					    <button type="submit" style="background:#073567; color:#fff; border:none; padding:12px 40px; font-size:18px; font-weight:bold; cursor:pointer; border-radius:5px;">빠른 상담하기</button>
+					</div>
+				  </div>
+				  <script>
+					function fwrite_submit_x(f){
+						if(!confirm('신청 하시겠습니까?')) return false
+					};
+				  </script>
+				</div>
+			  </div>  
+
+
+			</form>
+
+<script>
+	$(document).ready(function() {
+		$('#wr_9').change(function(){
+			
+			var s1 = ["아파트/빌라/다세대","주택","오피스텔/원투룸","사무실","공장","기타(학교,관공서,체육관종교시설 등)"];
+			var s2 = ["아파트/빌라/다세대","주택","오피스텔/원투룸","사무실","기타"];
+			var s3 = ["오피스텔","원투룸","사무실","빌라","주택","아파트"]; 
+
+			var selectItem = $("#wr_9").val();
+			 
+			var changeItem;
+			  
+			if(selectItem == "포장/반포장이사" || selectItem == "일반이사" || selectItem == "해외이사"){			
+			  changeItem = s1;			  
+			}
+			else if(selectItem == "보관이사"){
+			  changeItem = s2;
+			}
+			else if(selectItem == "용달화물"){
+			  changeItem = s3;			  
+			}
+			 
+			 
+			$('#wr_10').empty();
+
+			$.each(changeItem, function( k, v ) {
+			  if(k == 0){
+					var optiona = $("<option>"+"선택하세요"+"</option>");
+					$('#wr_10').append(optiona);
+				}
+			  
+			  var option = $("<option value='"+v+"'>"+v+"</option>");
+			  $('#wr_10').append(option);
+
+			});	
+		
+		});
+
+		 $("#wr_2").datepicker({ 
+			 changeMonth: true, changeYear: true, dateFormat: "yy-mm-dd", showButtonPanel: true, yearRange: "c-99:c+99",		
+
+			showOn: 'both',
+					buttonImage: '/theme/knusu/img/btn001.gif',
+			buttonImageOnly: true
+		});
+
+	});
+
+	function openDaumPostcode() {	    
+	    daum.postcode.load(function(){
+		   new daum.Postcode({
+			  oncomplete: function(data) {					
+				 document.fwrite.wr_3.value =data.address+" "+data.buildingName;
+				 document.fwrite.wr_3.focus();
+				 document.fwrite.wr_6.value =data.address;
+			  }
+		   }).open();
+	    });
+    }
+	function openDaumPostcode1() {	    
+	    daum.postcode.load(function(){
+		   new daum.Postcode({
+			  oncomplete: function(data) {					
+				 document.fwrite.wr_4.value =data.address+" "+data.buildingName;
+				 document.fwrite.wr_4.focus();
+				 document.fwrite.wr_7.value =data.address;
+			  }
+		   }).open();
+	    });
+    }
+</script>
+
+		</div>
+		<div style="float:right;  width:670px; min-height:550px; height:auto; text-align:center; padding-top:30px; ">
+			<div class="ms_box02 ms_box" >   
+				<h1 style="font-size:30px; line-height:40px; font-weight:900; letter-spacing:-0.05em; margin-bottom:20px;"><i class="fa fa-file-text-o"></i> 견적접수확인</h1>
+				<div class="mb_con" style="width:90%;">
+<style>
+	.bbok{width:100px; height:29px; line-height:29px; display:block; background-color:#767676; color:#fff !important; font-weight:600; border-radius:29px; text-align:center; font-size:13px;}
+</style>
+					<table style="width:100%; border:0px solid red;">
+						<?php
+							$bo_table_n = "inquiry";	
+							$table = $g5['write_prefix'] . $bo_table_n;
+							$limit =10;
+
+							 $rs = sql_query(" select * from $table  where wr_is_comment = 0 order by wr_num asc limit $limit ");
+					
+
+							for($i=0; $i<$limit; $i++){
+
+								$trow = sql_fetch_array($rs);
+
+								if($trow){
+
+									if($i == 0) $cla_ss  ="on"; else $cla_ss="";
+									$newday = 3;
+									if(time() < strtotime($trow['wr_datetime'])+(86400*$newday)){
+										$new_icon = "<span style='font-size:10px;color:#fff;background:red;padding:1px 3px;border-radius:2px;vertical-align:middle;'>N</span>";
+									}else $new_icon = "";
+
+									if($trow['wr_reply']) $replay_icon = "&nbsp;&nbsp;<span style='color:#01b6eb;'>[답변]</span>&nbsp;";
+									else $replay_icon = "";
+									$status = isset($trow['wr_8']) ? trim((string)$trow['wr_8']) : '견적접수';
+
+									$status_text = '견적접수';
+									$status_bg = '#01b6eb';
+
+									if (strpos($status, '견적확인') !== false) {
+										$status_text = '견적확인';
+										$status_bg = '#f39c12';
+									} else if (strpos($status, '견적제출') !== false) {
+										$status_text = '견적제출';
+										$status_bg = '#073567';
+									}
+
+									?>
+
+										<tr style="height:40px;">
+											<td style="width:18%; font-size:0.9em; font-weight:600;">[<?=$trow['wr_9']?>]</td>
+											<td style="width:13%; font-size:0.9em;"><?=mb_substr(strip_tags($trow['wr_name']),0,1,'UTF-8')?>O<?=mb_substr(strip_tags($trow['wr_name']),2,1,'UTF-8')?></td>
+											<td style="font-size:0.9em; text-align:left;"><?=$trow['wr_6']?> <?=$new_icon?></td>
+											<td style="width:15%; font-size:0.9em;"><?=date('Y-m-d', strtotime($trow['wr_datetime']))?></td>
+											<td style="width:15%; font-size:0.9em;">
+												<?php if($member['mb_level']==10){ ?>
+												<a href="/bbs/board.php?bo_table=<?=$bo_table_n?>&wr_id=<?=$trow['wr_id']?>">
+												<?php } else { ?>
+                                                <a href="/bbs/board.php?bo_table=inquiry&wr_id=<?php echo $row['wr_id']; ?>" style="text-decoration:none;">
+                                                <?php } ?>
+												<span class="bbok" style="background-color:<?php echo $status_bg; ?> !important; color:#fff !important;"><?=$status_text?></span>
+												</a>
+											</td>
+										</tr>
+								
+							<?php		
+								}else{
+								
+								}
+							}
+
+						?>
+						
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<br><br>
+<?php
+include_once(G5_THEME_PATH.'/tail.php');
+?>

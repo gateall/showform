@@ -1,0 +1,436 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+if (!function_exists('knu_is_admin_login_request')) {
+    function knu_is_admin_login_request()
+    {
+        $script_name = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        if (strpos($script_name, '/bbs/login.php') === false) {
+            return false;
+        }
+
+        $login_url = isset($_GET['url']) ? (string) $_GET['url'] : '';
+        if ($login_url === '' && isset($GLOBALS['url'])) {
+            $login_url = (string) $GLOBALS['url'];
+        }
+
+        return $login_url !== '' && preg_match('#(^|/)(adm|admin)(/|$)#', urldecode($login_url));
+    }
+}
+
+if (knu_is_admin_login_request()) {
+    include_once(G5_PATH.'/tail.sub.php');
+    return;
+}
+
+if (G5_COMMUNITY_USE === false) {
+    include_once(G5_THEME_SHOP_PATH.'/shop.tail.php');
+    return;
+}
+
+$mobile_quick_links = array(
+    array('label' => '견적문의', 'href' => 'tel:010-1234-0000', 'icon' => 'consult', 'target' => ''),
+    array('label' => '전화문의', 'href' => 'tel:1844-****', 'icon' => 'phone', 'target' => '')
+);
+
+if (!function_exists('korea_nusu_quick_icon_svg')) {
+    function korea_nusu_quick_icon_svg($type) {
+        switch ($type) {
+            case 'consult':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H10l-4.6 4.1c-.64.57-1.4.11-1.4-.74V15.9A2.49 2.49 0 0 1 4 15V5.5Zm4 2.25a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5H8Zm0 3.5a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5H8Z"/></svg>';
+            case 'phone':
+            default:
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24c1.12.37 2.33.57 3.57.57c.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.85 21 3 13.15 3 3c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1c0 1.24.2 2.45.57 3.57c.11.35.03.74-.25 1.02l-2.2 2.2Z"/></svg>';
+        }
+    }
+}
+
+if (!function_exists('knu_member_info_url')) {
+    function knu_member_info_url()
+    {
+        global $is_member;
+        return $is_member ? G5_BBS_URL.'/member_confirm.php?url=register_form.php' : G5_BBS_URL.'/login.php';
+    }
+}
+?>
+
+<style>
+#ft{background:#f5f6f8;border-top:1px solid #e5e7eb;padding:0 0 52px}
+#ft *{box-sizing:border-box}
+#ft .mft-wrap{max-width:1280px;margin:0 auto;padding:16px 12px 12px}
+#ft .mft-logo{margin:0 0 10px;text-align:center}
+#ft .mft-logo img{max-width:104px;height:auto}
+#ft .mft-wrap{text-align:center}
+#ft .kfooter-menu{display:block;list-style:none;padding:0;margin:0 0 10px;font-weight:700;font-size:13px;line-height:1.4;text-align:center}
+#ft .kfooter-menu span{display:inline}
+#ft .kfooter-menu span+span:before{content:' | ';color:#a8a8a8}
+#ft .mft-info{margin:0;color:#555;font-size:11px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
+#ft .mft-copy{margin:6px 0 0;color:#888;font-size:11px;line-height:1.4;text-align:left}
+@media (max-width:1280px){#ft .mft-wrap{padding:16px 12px 12px}}
+@media (max-width:991px){#ft .mft-logo img{max-width:100px}#ft .mft-info,#ft .mft-copy{font-size:11px}}
+@media (max-width:680px){#ft .mft-wrap{display:block}#ft .mft-info{white-space:normal;overflow-wrap:anywhere;word-break:keep-all;max-width:100%}#ft .mft-info .line{display:block;white-space:normal;overflow-wrap:anywhere}#ft .mft-copy{white-space:normal;overflow-wrap:anywhere}}
+@media (max-width:480px){#ft{padding-bottom:46px}#ft .mft-wrap{padding:14px 12px 10px}#ft .mft-logo{margin-bottom:8px}#ft .mft-info,#ft .mft-copy{text-align:left;white-space:normal;overflow-wrap:anywhere;word-break:keep-all}#ft .mft-info .line{display:block;white-space:normal}}
+#top_btn{position:fixed;right:14px;bottom:80px;z-index:100010;width:44px;height:44px;border:0;border-radius:50%;background:#111;color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.18);pointer-events:auto;touch-action:manipulation;cursor:pointer}
+#mobile_quick_menu{position:fixed;right:12px;bottom:120px;z-index:95;display:flex;flex-direction:column;gap:8px}
+#mobile_quick_menu .mq-item{display:flex;align-items:center;gap:8px;min-width:108px;padding:10px 12px;border-radius:999px;background:rgba(17,17,17,.92);color:#fff;text-decoration:none;box-shadow:0 10px 20px rgba(0,0,0,.18);backdrop-filter:blur(6px)}
+#mobile_quick_menu .mq-item span{font-size:12px;font-weight:700;line-height:1}
+#mobile_quick_menu .mq-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
+#mobile_quick_menu .mq-icon svg{display:block;width:18px;height:18px}
+#mobile_quick_menu .mq-item.mq-item-blog{background:rgba(2,15,34,.94);border:1px solid rgba(255,255,255,.2)}
+#mobile_consult_bar{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:rgba(17,17,17,.96);box-shadow:0 -8px 24px rgba(0,0,0,.22);max-height:54px;overflow:hidden;transition:max-height .25s ease}
+#mobile_consult_bar{display:none}
+#mobile_consult_bar.is-open{max-height:min(72vh,460px)}
+#mobile_consult_bar *{box-sizing:border-box}
+#mobile_consult_bar .mcb-header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+#mobile_consult_bar .mcb-title{color:#fff;font-size:14px;font-weight:800;letter-spacing:-.01em}
+#mobile_consult_bar .mcb-toggle{height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+#mobile_consult_bar .mcb-close{display:none;height:32px;padding:0 12px;border:1px solid rgba(0,0,0,.08);border-radius:999px;background:#fff;color:#111827;font-size:12px;font-weight:700;cursor:pointer}
+#mobile_consult_bar.is-open .mcb-close{display:inline-flex;align-items:center;justify-content:center}
+#mobile_consult_bar .mcb-panel{padding:0 10px calc(10px + env(safe-area-inset-bottom));overflow-y:auto;max-height:calc(72vh - 54px)}
+#mobile_consult_bar .mcb-call{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 6px;padding:8px 10px;border-radius:9px;background:#fff;color:#111;text-decoration:none;font-size:15px;font-weight:800;line-height:1}
+#mobile_consult_bar .mcb-call svg{display:block;width:16px;height:16px}
+#mobile_consult_bar .mcb-form{display:block}
+#mobile_consult_bar .mcb-row{display:flex;gap:6px;margin-bottom:6px}
+#mobile_consult_bar .mcb-input{width:100%;height:36px;padding:0 10px;border:0;border-radius:8px;background:#f2f2f2;color:#111;font-size:12px;outline:none}
+#mobile_consult_bar .mcb-bottom{display:block}
+#mobile_consult_bar .mcb-consent{flex:1;min-width:0}
+#mobile_consult_bar .mcb-agree{flex:1;display:flex;align-items:flex-start;gap:6px;color:#fff;font-size:11px;line-height:1.35}
+#mobile_consult_bar .mcb-agree input{margin-top:1px;width:16px;height:16px;appearance:none;-webkit-appearance:none;border:1.5px solid #111;border-radius:3px;background:#fff;position:relative;cursor:pointer;flex:0 0 auto}
+#mobile_consult_bar .mcb-agree input:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #111;border-width:0 2px 2px 0;transform:rotate(45deg)}
+#mobile_consult_bar .mcb-agree a{color:#fff;text-decoration:underline}
+#mobile_consult_bar .mcb-privacy-toggle{margin:4px 0 0;padding:0;border:0;background:transparent;color:#111;font-size:11px;text-decoration:underline;cursor:pointer}
+#mobile_consult_bar .mcb-privacy-note{display:none;margin:4px 0 0;color:#111;font-size:10px;line-height:1.4}
+#mobile_consult_bar .mcb-privacy-note.is-expanded{display:block}
+#mobile_consult_bar .mcb-privacy-note p{margin:2px 0}
+#mobile_consult_bar .mcb-privacy-note strong{color:#111}
+#mobile_consult_bar .mcb-submit{display:block;width:100%;height:38px;margin-top:6px;border:0;border-radius:8px;background:#e60012;color:#fff;font-size:13px;font-weight:800;letter-spacing:-.01em}
+@media (max-width:768px){
+body{padding-bottom:66px}
+body.mcb-open{padding-bottom:66px}
+body.mobile-menu-open,body.pbmit-menu-open{padding-bottom:0}
+body.mcb-open #mobile_quick_menu{bottom:284px}
+#top_btn{right:16px;bottom:80px;z-index:100000}
+.premium-mobile-tabbar{display:flex !important}
+.mobile-consult-panel,
+.floating-consult,
+.mobile-floating-consult,
+.quick-consult,
+.realtime-consult,
+.bottom-consult,
+#floatingConsult,
+#mobileQuickConsult,
+#realtimeConsult{display:none !important}
+#mobile_consult_bar{display:none}
+#mobile_consult_bar.is-open{display:block;position:fixed;left:0;right:0;bottom:66px;z-index:100000;background:#fff;border-radius:0;box-shadow:0 -8px 28px rgba(0,0,0,.18);overflow:hidden}
+}
+@media (max-width:680px){#mobile_quick_menu{display:none}}
+@media (min-width:681px){#mobile_quick_menu,#mobile_consult_bar{display:none}#ft{padding-bottom:0}body.has-mobile-consult{padding-bottom:0}}
+@media (max-width:420px){
+#mobile_quick_menu{right:8px;bottom:114px}
+#mobile_quick_menu .mq-item{min-width:96px;padding:8px 10px}
+#mobile_quick_menu .mq-item span{font-size:11px}
+#mobile_consult_bar .mcb-header{height:50px;padding:0 8px}
+#mobile_consult_bar{max-height:50px}
+#mobile_consult_bar .mcb-panel{padding:0 8px calc(8px + env(safe-area-inset-bottom));max-height:calc(72vh - 50px)}
+#mobile_consult_bar .mcb-input{height:34px;font-size:12px}
+#mobile_consult_bar .mcb-submit{height:36px;font-size:12px}
+body{padding-bottom:78px}
+body.mcb-open{padding-bottom:66px}
+body.mcb-open #top_btn{bottom:80px}
+.premium-mobile-tabbar{left:0;right:0;bottom:0;height:66px;border-radius:0}
+.premium-mobile-tabbar .tabbar-icon{font-size:20px}
+.premium-mobile-tabbar .tabbar-text{font-size:10px}
+}
+.premium-mobile-tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:99999;height:66px;background:#fff;border-top:1px solid #dddddd;border-radius:0;box-shadow:0 -2px 12px rgba(0,0,0,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow:hidden}
+.premium-mobile-tabbar,.premium-mobile-tabbar *{box-sizing:border-box}
+.premium-mobile-tabbar .tabbar-item{flex:1;margin:0;padding:8px 0;border:0;background:#fff;text-decoration:none;color:#333;font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.premium-mobile-tabbar .tabbar-item + .tabbar-item{border-left:1px solid #f0f0f0}
+.premium-mobile-tabbar .tabbar-icon{font-size:21px;line-height:1}
+.premium-mobile-tabbar .tabbar-text{font-size:11px;letter-spacing:-.3px}
+.premium-mobile-tabbar .tabbar-item:active{background:#f5f5f5}
+.premium-mobile-tabbar .tabbar-consult{background:#fff;color:#01b6eb}
+.premium-mobile-tabbar .tabbar-consult .tabbar-icon{font-size:22px;color:#01b6eb}
+.premium-mobile-tabbar .tabbar-consult .tabbar-text{color:#01b6eb;font-weight:700}
+@media (max-width:768px){
+    #top_btn,
+    .btn-top,
+    .go-top,
+    .top-btn,
+    #scrollTopBtn {
+        position: fixed !important;
+        right: 16px !important;
+        bottom: 82px !important;
+        z-index: 100002 !important;
+        pointer-events: auto !important;
+    }
+}
+</style>
+
+<div id="ft">
+    <div class="mft-wrap">
+        <div class="mft-logo"><img src="/img/logo.png" alt="로고 424"></div>
+        <div class="kfooter-menu">
+            <span>회사소개</span>
+            <span>개인정보</span>
+            <span>이용약관</span>
+            <span><a href="<?php echo G5_ADMIN_URL; ?>/">관리자 바로가기</a></span>
+        </div>
+        <p class="mft-info">
+            <span class="line">회사명: 424  대표자: 대표자명  사업자등록번호: 000-00-00000</span><br>
+            <span class="line">주소 : 서울시 **구 **동  대표전화 : 1844-****  견적문의 : 010-1234-0000</span><br>
+            <span class="line">이메일: abc@naver.com  통신판매신고번호: 제026-서울-0000호</span>
+        </p>
+        <p class="mft-copy">Copyright &copy; 424 All Rights Reserved.</p>
+    </div>
+
+    <button type="button" id="top_btn" aria-label="맨 위로 이동"><i class="fa fa-arrow-up" aria-hidden="true"></i><span class="sound_only">맨 위로 이동</span></button>
+
+    <?php if ($config['cf_analytics']) { echo $config['cf_analytics']; } ?>
+</div>
+
+<nav class="premium-mobile-tabbar" aria-label="모바일 하단 메뉴">
+    <a href="/" class="tabbar-item">
+        <span class="tabbar-icon">🏠</span>
+        <span class="tabbar-text">홈</span>
+    </a>
+    <a href="tel:1844-****" class="tabbar-item">
+        <span class="tabbar-icon">📞</span>
+        <span class="tabbar-text">전화</span>
+    </a>
+    <button type="button" class="tabbar-item tabbar-consult" id="mobileConsultOpen">
+        <span class="tabbar-icon">💬</span>
+        <span class="tabbar-text">상담</span>
+    </button>
+    <a href="<?php echo knu_member_info_url(); ?>" class="tabbar-item">
+        <span class="tabbar-icon">👤</span>
+        <span class="tabbar-text">내정보</span>
+    </a>
+</nav>
+
+<div id="mobile_quick_menu" aria-label="모바일 빠른 메뉴">
+    <?php foreach($mobile_quick_links as $item){ ?>
+    <a href="<?php echo $item['href']; ?>" class="mq-item<?php echo ($item['icon'] === 'blog') ? ' mq-item-blog' : ''; ?>"<?php echo $item['target'] ? ' target="'.$item['target'].'" rel="noopener"' : ''; ?>>
+        <span class="mq-icon"><?php echo korea_nusu_quick_icon_svg($item['icon']); ?></span>
+        <span><?php echo $item['label']; ?></span>
+    </a>
+    <?php } ?>
+</div>
+
+<div id="mobile_consult_bar" class="is-collapsed" aria-label="모바일 상담 바">
+    <div class="mcb-header">
+        <strong class="mcb-title">실시간 상담</strong>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" id="mcb_toggle_btn" class="mcb-toggle" aria-expanded="false">열기</button>
+            <button type="button" id="mcb_close_btn" class="mcb-close" aria-label="상담창 닫기">닫기</button>
+        </div>
+    </div>
+
+    <div class="mcb-panel">
+        <a href="tel:1844-****" class="mcb-call" aria-label="전화문의 1844-****">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24c1.12.37 2.33.57 3.57.57c.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.85 21 3 13.15 3 3c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1c0 1.24.2 2.45.57 3.57c.11.35.03.74-.25 1.02l-2.2 2.2Z"/></svg>
+            <strong>1844-****</strong>
+        </a>
+
+        <form name="fwrite2" id="fwrite2" class="mcb-form" action="/bbs/form_insert.php" method="post" onSubmit="return chk_mobile_consult();">
+            <input type="hidden" name="bo_table" value="inquiry">
+            <input type="hidden" name="w" value="">
+            <input type="hidden" name="mode" value="상담신청">
+            <input type="hidden" name="wr_subject" value="모바일 하단 상담신청">
+            <input type="hidden" name="token" value="<?php echo get_write_token('inquiry'); ?>">
+            <input type="hidden" name="wr_10" value="footer_contact">
+            <input type="hidden" name="form_ts" value="<?php echo G5_SERVER_TIME; ?>">
+            <input type="hidden" name="wr_password" value="<?php echo substr(md5(uniqid('', true)), 0, 10); ?>">
+            <input type="text" name="contact_website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;top:-9999px;height:1px;width:1px;opacity:0;">
+
+            <div class="mcb-row">
+                <input type="text" name="wr_name" id="mobile_name_src" class="mcb-input" placeholder="이름" required="required">
+                <input type="text" name="wr_1" id="mobile_phone_src" class="mcb-input" placeholder="연락처('-' 없이 입력)" required="required">
+            </div>
+            <div class="mcb-row">
+                <input type="email" name="wr_email" id="mobile_email_src" class="mcb-input" placeholder="이메일" required="required">
+            </div>
+            <div class="mcb-row">
+                <input type="text" name="wr_content" id="mobile_message_src" class="mcb-input" placeholder="문의내용(간단히 입력)" required="required">
+            </div>
+            <div class="mcb-bottom">
+                <div class="mcb-consent">
+                    <label class="mcb-agree"><input type="checkbox" id="mobile_consult_agree" name="agree" value="1" required="required"><span>[필수] 개인정보 수집 및 이용에 동의합니다 <a href="/content/privacy" target="_blank" rel="noopener">[상세보기]</a></span></label>
+                    <button type="button" id="mcb_privacy_toggle" class="mcb-privacy-toggle" aria-expanded="false">자세히 보기</button>
+                    <div id="mcb_privacy_note" class="mcb-privacy-note" aria-label="개인정보 수집 및 이용 안내">
+                        <p><strong>수집 항목:</strong> 이름, 연락처, 문의내용</p>
+                        <p><strong>이용 목적:</strong> 상담 접수 및 답변 안내</p>
+                        <p><strong>보유 기간:</strong> 상담 처리 완료 후 관련 법령 및 내부 기준에 따라 보관 후 삭제</p>
+                    </div>
+                </div>
+                <button type="submit" class="mcb-submit" id="mobile_consult_submit">문의하기</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+jQuery(function($){
+    var mobileConsultStateKey = 'knusu_mobile_consult_state';
+    var $bar = $('#mobile_consult_bar');
+    var $toggle = $('#mcb_toggle_btn');
+    var $closeBtn = $('#mcb_close_btn');
+    var $privacyToggle = $('#mcb_privacy_toggle');
+    var $privacyNote = $('#mcb_privacy_note');
+    var $mobileConsultOpen = $('#mobileConsultOpen');
+
+    function setConsultOpen(isOpen) {
+        if (isOpen) {
+            $bar.removeClass('is-collapsed').addClass('is-open');
+            document.body.classList.add('mcb-open');
+            if ($toggle.length) { $toggle.text('닫기').attr('aria-expanded', 'true'); }
+            try { window.localStorage.setItem(mobileConsultStateKey, 'open'); } catch (e) {}
+        } else {
+            $bar.removeClass('is-open').addClass('is-collapsed');
+            document.body.classList.remove('mcb-open');
+            if ($toggle.length) { $toggle.text('열기').attr('aria-expanded', 'false'); }
+            try { window.localStorage.setItem(mobileConsultStateKey, 'collapsed'); } catch (e) {}
+        }
+    }
+
+    try {
+        var savedState = window.localStorage.getItem(mobileConsultStateKey);
+        setConsultOpen(savedState === 'open');
+    } catch (e) {
+        setConsultOpen(false);
+    }
+
+    if ($toggle.length) {
+        $toggle.on('click', function(){
+            setConsultOpen(!$bar.hasClass('is-open'));
+        });
+    }
+
+    if ($closeBtn.length) {
+        $closeBtn.on('click', function(){
+            setConsultOpen(false);
+        });
+    }
+
+    if ($privacyToggle.length && $privacyNote.length) {
+        $privacyToggle.on('click', function(){
+            $privacyNote.toggleClass('is-expanded');
+            $(this).attr('aria-expanded', $privacyNote.hasClass('is-expanded') ? 'true' : 'false');
+        });
+    }
+
+    if ($mobileConsultOpen.length && $toggle.length) {
+        $mobileConsultOpen.on('click', function(){
+            setConsultOpen(true);
+        });
+    }
+
+    var topBtn = document.getElementById('top_btn');
+    if (topBtn) {
+        var goTop = function(e){
+            e.preventDefault();
+            if (document.scrollingElement) {
+                document.scrollingElement.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+        topBtn.addEventListener('click', goTop);
+        topBtn.addEventListener('touchend', goTop, { passive: false });
+    }
+
+    document.addEventListener('click', function(e){
+        var target = e.target;
+        if (target && target.closest && target.closest('#top_btn')) {
+            e.preventDefault();
+            if (document.scrollingElement) {
+                document.scrollingElement.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, true);
+
+});
+
+function chk_mobile_consult(){
+    var agree = document.getElementById('mobile_consult_agree');
+    var nameInput = document.getElementById('mobile_name_src');
+    var phoneInput = document.getElementById('mobile_phone_src');
+    var emailInput = document.getElementById('mobile_email_src');
+    var msgInput = document.getElementById('mobile_message_src');
+    var submitBtn = document.getElementById('mobile_consult_submit');
+
+    if (!agree || !agree.checked) {
+        alert('개인정보 수집 및 이용에 동의해 주세요.');
+        return false;
+    }
+
+    if (!nameInput || !nameInput.value.trim()) {
+        alert('이름을 입력해 주세요.');
+        return false;
+    }
+
+    if (!phoneInput || !phoneInput.value.trim()) {
+        alert('연락처를 입력해 주세요.');
+        return false;
+    }
+
+    if (!emailInput || !emailInput.value.trim()) {
+        alert('이메일을 입력해 주세요.');
+        return false;
+    }
+
+    if (!msgInput || !msgInput.value.trim()) {
+        alert('문의내용을 입력해 주세요.');
+        return false;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '접수중...';
+    }
+
+    return true;
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var scrollSelectors = '#top_btn, .btn-top, .go-top, .top-btn, #scrollTopBtn';
+
+    function handleScrollTop(e) {
+        var target = e.target;
+        if (target && target.closest && target.closest(scrollSelectors)) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // 부드러운 스크롤 시도
+            try {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            } catch (err) {
+                window.scrollTo(0, 0);
+            }
+
+            // 폴백: 스크롤 위치 직접 대입
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+
+            // 추가 즉시 폴백
+            setTimeout(function() {
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            }, 50);
+        }
+    }
+
+    // 캡처링 단계에서 클릭 및 터치 이벤트를 먼저 가로채어 실행하고 전파를 차단
+    document.addEventListener('click', handleScrollTop, true);
+    document.addEventListener('touchend', handleScrollTop, { passive: false, capture: true });
+});
+</script>
+
+<?php
+include_once(G5_THEME_PATH.'/tail.sub.php');

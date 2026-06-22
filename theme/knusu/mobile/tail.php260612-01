@@ -1,0 +1,421 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+@ini_set('default_charset', 'UTF-8');
+sql_query(" set names utf8 ");
+
+if (!function_exists('knu_is_admin_login_request')) {
+    function knu_is_admin_login_request()
+    {
+        $script_name = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        if (strpos($script_name, '/bbs/login.php') === false) {
+            return false;
+        }
+
+        $login_url = isset($_GET['url']) ? (string) $_GET['url'] : '';
+        if ($login_url === '' && isset($GLOBALS['url'])) {
+            $login_url = (string) $GLOBALS['url'];
+        }
+
+        return $login_url !== '' && preg_match('#(^|/)(adm|admin)(/|$)#', urldecode($login_url));
+    }
+}
+
+if (knu_is_admin_login_request()) {
+    include_once(G5_THEME_PATH . '/tail.sub.php');
+    return;
+}
+
+if (G5_COMMUNITY_USE === false) {
+    include_once(G5_THEME_SHOP_PATH . '/shop.tail.php');
+    return;
+}
+?>
+<style>
+html,
+body {
+    overflow-x: hidden !important;
+}
+
+body {
+    padding-bottom: 60px !important;
+}
+
+#ft {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    clear: both !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+#ft .kfooter {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 28px 16px 24px !important;
+    border-radius: 0 !important;
+    background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.10), transparent 34%),
+        linear-gradient(135deg, #07111f 0%, #10284d 50%, #173b6d 100%) !important;
+    color: #ffffff !important;
+    overflow: hidden !important;
+}
+
+#ft .kfooter-inner {
+    max-width: 1280px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    text-align: center !important;
+}
+
+#ft .kfooter-logo {
+    display: flex !important;
+    justify-content: center !important;
+    margin-bottom: 24px !important;
+}
+
+#ft .kfooter-logo img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 180px !important;
+    height: auto !important;
+}
+
+#ft .kfooter-menu {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    margin: 0 0 28px !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+
+#ft .kfooter-menu li {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#ft .kfooter-menu a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 48px !important;
+    padding: 0 14px !important;
+    border-radius: 24px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    color: rgba(255, 255, 255, 0.94) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+}
+
+#ft .kfooter-info {
+    display: grid !important;
+    gap: 6px !important;
+    margin: 0 !important;
+    color: rgba(255, 255, 255, 0.86) !important;
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    word-break: keep-all !important;
+}
+
+#ft .kfooter-info span,
+#ft .kfooter-info p {
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+}
+
+#ft .kfooter-info .bar,
+#ft .kfooter-bottom,
+#ft .kfooter-copy {
+    display: none !important;
+}
+
+.kfooter-mobile-bar {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9999 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    background: #073567 !important;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18) !important;
+}
+
+.kfooter-mobile-bar a,
+.kfooter-mobile-bar button {
+    height: 60px !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.kfooter-mobile-bar button {
+    cursor: pointer !important;
+}
+
+.mobile-estimate-panel {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 60px !important;
+    z-index: 9998 !important;
+    padding: 14px !important;
+    background: rgba(0, 0, 0, 0.88) !important;
+    border-radius: 20px 20px 0 0 !important;
+    transform: translateY(120%) !important;
+    transition: transform 0.3s ease !important;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18) !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+.mobile-estimate-panel.is-open {
+    transform: translateY(0) !important;
+}
+
+.mobile-estimate-head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    color: #fff !important;
+    margin-bottom: 8px !important;
+    gap: 10px !important;
+}
+
+.mobile-estimate-head strong {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+}
+
+.mobile-estimate-close {
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border-radius: 20px !important;
+    padding: 6px 14px !important;
+    background: transparent !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+.mobile-estimate-tel {
+    display: block !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    margin-bottom: 6px !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    font-weight: 800 !important;
+    text-decoration: none !important;
+}
+
+.mobile-estimate-form {
+    display: grid !important;
+    gap: 6px !important;
+}
+
+.mobile-estimate-panel input[type="text"],
+.mobile-estimate-panel textarea {
+    width: 100% !important;
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    border: 0 !important;
+    border-radius: 6px !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 14px !important;
+}
+
+.mobile-estimate-panel textarea {
+    min-height: 64px !important;
+    padding: 10px !important;
+    resize: none !important;
+}
+
+.mobile-estimate-agree {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    margin: 4px 0 2px !important;
+}
+
+.mobile-estimate-agree input {
+    margin-top: 2px !important;
+    flex: 0 0 auto !important;
+}
+
+.mobile-estimate-agree a {
+    color: #fff !important;
+    text-decoration: underline !important;
+}
+
+.mobile-estimate-submit {
+    width: 100% !important;
+    height: 42px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: #f60718 !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+}
+
+@media (min-width: 769px) {
+    .kfooter-mobile-bar,
+    .mobile-estimate-panel {
+        display: none !important;
+    }
+}
+</style>
+
+<div id="ft">
+    <div class="kfooter">
+        <div class="kfooter-inner">
+            <div class="kfooter-logo">
+                <img src="<?php echo G5_THEME_URL; ?>/img/logo.png" alt="인터넷2424 로고">
+            </div>
+            <div class="kfooter-text">
+                <ul class="kfooter-menu">
+                    <li><a href="/">HOME</a></li>
+                    <li><a href="/content/company.php">회사소개</a></li>
+                    <li><a href="<?php echo function_exists('get_pretty_url') ? get_pretty_url('content', 'privacy') : '/content/privacy'; ?>">개인정보처리방침</a></li>
+                    <li><a href="/adm/">관리자</a></li>
+                </ul>
+                <div class="kfooter-info">
+                    <span>회사명 : 인터넷2424</span>
+                    <span>대표 : 홍길동</span>
+                    <span>대표번호 : 1844-****</span>
+                    <span>견적문의 : 010-1234-0000</span>
+                    <span>이메일 : abc@naver.com</span>
+                    <span>주소 : 서울시 **구 **동</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mobile-estimate-panel" id="mobileEstimatePanel" aria-hidden="true">
+    <div class="mobile-estimate-head">
+        <strong>온라인 상담</strong>
+        <button type="button" class="mobile-estimate-close" id="mobileEstimateClose">닫기</button>
+    </div>
+    <a class="mobile-estimate-tel" href="tel:010-2169-8148">☎ 010-2169-8148</a>
+    <form class="mobile-estimate-form" action="<?php echo G5_BBS_URL; ?>/write_update.php" method="post" autocomplete="off" onsubmit="return mobileEstimateSubmit(this);">
+        <input type="hidden" name="bo_table" value="inquiry">
+        <input type="hidden" name="w" value="">
+        <input type="hidden" name="wr_id" value="">
+        <input type="hidden" name="uid" value="<?php echo get_uniqid(); ?>">
+        <input type="hidden" name="wr_subject" value="모바일 견적문의">
+        <input type="hidden" name="move_type" value="">
+        <input type="hidden" name="housing_type" value="">
+        <input type="hidden" name="addr_out" value="">
+        <input type="hidden" name="pyung_out" value="">
+        <input type="hidden" name="floor_out" value="">
+        <input type="hidden" name="ho_out" value="">
+        <input type="hidden" name="elevator_out" value="">
+        <input type="hidden" name="addr_in" value="">
+        <input type="hidden" name="pyung_in" value="">
+        <input type="hidden" name="floor_in" value="">
+        <input type="hidden" name="ho_in" value="">
+        <input type="hidden" name="elevator_in" value="">
+        <input type="hidden" name="move_date" value="">
+        <input type="text" name="wr_name" placeholder="이름" required>
+        <input type="text" name="phone" placeholder="연락처(* 없이 입력)" required>
+        <textarea name="memo" placeholder="문의내용(간단히 입력)" required></textarea>
+        <label class="mobile-estimate-agree">
+            <input type="checkbox" name="agree_chk_quick" required>
+            <span>[필수] 개인정보 수집 및 이용에 동의합니다. <a href="<?php echo function_exists('get_pretty_url') ? get_pretty_url('content', 'privacy') : '/content/privacy'; ?>" target="_blank" rel="noopener">[상세보기]</a></span>
+        </label>
+        <button type="submit" class="mobile-estimate-submit">접수하기</button>
+    </form>
+</div>
+
+<div class="kfooter-mobile-bar" aria-label="모바일 퀵메뉴">
+    <a href="tel:1844-2424" aria-label="전화문의">전화문의</a>
+    <button type="button" id="mobileEstimateOpen" aria-controls="mobileEstimatePanel" aria-expanded="false">견적문의</button>
+    <button type="button" id="mobileTopBtn" aria-label="TOP">TOP</button>
+</div>
+
+<script>
+(function () {
+    function mobileEstimateSubmit(f) {
+        if (!f.agree_chk_quick.checked) {
+            alert('개인정보 수집 및 이용에 동의해 주세요.');
+            f.agree_chk_quick.focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    function openPanel(isOpen) {
+        var panel = document.getElementById('mobileEstimatePanel');
+        var openBtn = document.getElementById('mobileEstimateOpen');
+        if (!panel || !openBtn) {
+            return;
+        }
+
+        panel.classList.toggle('is-open', isOpen);
+        panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        openBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var openBtn = document.getElementById('mobileEstimateOpen');
+        var closeBtn = document.getElementById('mobileEstimateClose');
+        var topBtn = document.getElementById('mobileTopBtn');
+
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                var panel = document.getElementById('mobileEstimatePanel');
+                openPanel(!(panel && panel.classList.contains('is-open')));
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                openPanel(false);
+            });
+        }
+
+        if (topBtn) {
+            topBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+    });
+
+    window.mobileEstimateSubmit = mobileEstimateSubmit;
+})();
+</script>
+
+<?php
+include_once(G5_THEME_PATH . '/tail.sub.php');

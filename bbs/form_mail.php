@@ -1,0 +1,48 @@
+<?php
+// 게시물 입력시 게시자, 관리자에게 드리는 메일을 수정하고 싶으시다면 이 파일을 수정하십시오.
+if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
+?>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title><?php echo $wr_subject ?> <?=$mode?></title>
+</head>
+
+<body>
+
+<div style="margin:30px auto;width:800px;border:10px solid #f7f7f7">
+    <div style="border:1px solid #dedede; padding:10px;">
+        <table style="width:100%;">
+			<caption><h3><strong><?=$mode?></strong></h3></caption>
+			<tbody>
+				<tr>
+					<th style="background-color:#f9f9f9; width:15%; height:30px; font-weight:bold; border-bottom:1px solid #ccc;">성명</th>
+					<td style="border-bottom:1px solid #ccc; text-align:left; padding-left:10px;"><?=$wr_name?></td>
+				</tr>
+				<tr>
+					<th style="background-color:#f9f9f9; width:15%; height:30px; font-weight:bold; border-bottom:1px solid #ccc;">연락처</th>
+					<td style="border-bottom:1px solid #ccc; text-align:left; padding-left:10px;"><?=$wr_1?></td>
+				</tr>
+				<?php if (isset($wr_email) && $wr_email) { ?>
+				<tr>
+					<th style="background-color:#f9f9f9; width:15%; height:30px; font-weight:bold; border-bottom:1px solid #ccc;">이메일</th>
+					<td style="border-bottom:1px solid #ccc; text-align:left; padding-left:10px;"><?=$wr_email?></td>
+				</tr>
+				<?php } ?>
+				<tr>
+					<th style="background-color:#f9f9f9; width:15%; height:30px; font-weight:bold; border-bottom:1px solid #ccc;">문의내용</th>
+					<td style="border-bottom:1px solid #ccc; text-align:left; padding-left:10px;">
+						<?=$wr_content?>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+    </div>
+</div>
+
+</body>
+</html>
+
+
+

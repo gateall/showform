@@ -1,0 +1,96 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+
+$kakao_login_url = G5_PLUGIN_URL.'/social/popup.php?provider=kakao&url='.urlencode('/bbs/login.php').'&redirect_to_idp=1';
+?>
+
+<div id="mb_login" class="login-page">
+    <div class="login-card">
+        <div class="login-top">
+            <a href="#login" class="login-tab is-active">로그인</a>
+            <a href="<?php echo G5_BBS_URL ?>/register.php" class="login-tab">회원가입</a>
+        </div>
+
+        <form name="flogin" action="<?php echo $login_action_url ?>" onsubmit="return flogin_submit(this);" method="post" id="flogin" class="login-form">
+        <input type="hidden" name="url" value="<?php echo $login_url ?>">
+
+            <a class="login-social login-social-kakao" href="<?php echo $kakao_login_url; ?>">
+                <span class="login-social-icon" aria-hidden="true">
+                    <img src="<?php echo G5_IMG_URL; ?>/kakao.png" alt="">
+                </span>
+                <span>카카오로 3초만에 시작하기</span>
+            </a>
+
+            <div class="login-divider"><span>또는 이메일로 로그인</span></div>
+
+            <div class="login-field">
+                <label for="login_id">이메일 주소</label>
+                <input type="text" name="mb_id" id="login_id" required class="frm_input required" maxlength="100" placeholder="이메일 주소">
+            </div>
+
+            <div class="login-field">
+                <label for="login_pw">비밀번호</label>
+                <div class="login-password-wrap">
+                    <input type="password" name="mb_password" id="login_pw" required class="frm_input required" maxlength="20" placeholder="비밀번호">
+                    <button type="button" class="login-password-toggle" id="login_pw_toggle" aria-label="비밀번호 보기">보기</button>
+                </div>
+            </div>
+
+            <button type="submit" class="login-submit">로그인</button>
+
+            <div class="login-links">
+                <a href="<?php echo G5_BBS_URL ?>/password_lost.php">비밀번호 찾기</a>
+                <a href="<?php echo G5_BBS_URL ?>/register.php">이메일로 회원가입</a>
+            </div>
+        </form>
+
+        <?php @include_once(get_social_skin_path().'/social_login.skin.php'); ?>
+    </div>
+</div>
+
+<script>
+jQuery(function($){
+    $("#login_pw_toggle").on("click", function(){
+        var $pw = $("#login_pw");
+        var isPassword = $pw.attr("type") === "password";
+        $pw.attr("type", isPassword ? "text" : "password");
+        $(this).text(isPassword ? "숨김" : "보기");
+        $(this).attr("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 보기");
+    });
+});
+
+function flogin_submit(f)
+{
+    if( $( document.body ).triggerHandler( 'login_sumit', [f, 'flogin'] ) !== false ){
+        return true;
+    }
+    return false;
+}
+</script>
+
+<style>
+#mb_login.login-page{max-width:450px;margin:0 auto;padding:16px}
+#mb_login .login-card{background:#fff;border:1px solid #e7ebef;border-radius:20px;box-shadow:0 12px 34px rgba(16,24,40,.08);padding:18px}
+#mb_login .login-top{display:flex;gap:8px;margin-bottom:16px}
+#mb_login .login-tab{flex:1;text-align:center;padding:12px 8px;border-radius:999px;background:#f3f5f7;color:#667085;font-weight:700;font-size:14px;text-decoration:none}
+#mb_login .login-tab.is-active{background:#111827;color:#fff}
+#mb_login .login-social{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:14px;background:#fee500;color:#3b1e1e;font-weight:800;font-size:15px;text-decoration:none}
+#mb_login .login-social-icon img{width:20px;height:20px;display:block}
+#mb_login .login-divider{position:relative;margin:16px 0;text-align:center;color:#98a2b3;font-size:13px}
+#mb_login .login-divider:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#e5e7eb}
+#mb_login .login-divider span{position:relative;background:#fff;padding:0 10px}
+#mb_login .login-field{margin-bottom:12px}
+#mb_login .login-field label{display:block;margin-bottom:7px;font-size:13px;font-weight:700;color:#344054}
+#mb_login .login-field .frm_input{width:100%;height:50px;border-radius:14px;border:1px solid #d0d5dd;padding:0 14px;font-size:15px;background:#fff}
+#mb_login .login-password-wrap{display:flex;gap:8px;align-items:center}
+#mb_login .login-password-wrap .frm_input{flex:1}
+#mb_login .login-password-toggle{flex:0 0 auto;height:50px;padding:0 12px;border:1px solid #d0d5dd;border-radius:14px;background:#fff;color:#344054;font-weight:700}
+#mb_login .login-submit{width:100%;height:54px;border:0;border-radius:16px;background:linear-gradient(135deg,#b8e986 0%,#7bc96f 100%);color:#fff;font-size:16px;font-weight:800;margin-top:2px}
+#mb_login .login-links{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-size:13px}
+#mb_login .login-links a{color:#475467;text-decoration:none}
+@media (max-width:360px){
+    #mb_login .login-links{flex-direction:column;align-items:flex-start}
+}
+</style>

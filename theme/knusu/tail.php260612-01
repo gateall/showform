@@ -1,0 +1,651 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+@ini_set('default_charset', 'UTF-8');
+sql_query(" set names utf8 ");
+
+if (!function_exists('knu_is_admin_login_request')) {
+    function knu_is_admin_login_request()
+    {
+        $script_name = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        if (strpos($script_name, '/bbs/login.php') === false) {
+            return false;
+        }
+
+        $login_url = isset($_GET['url']) ? (string) $_GET['url'] : '';
+        if ($login_url === '' && isset($GLOBALS['url'])) {
+            $login_url = (string) $GLOBALS['url'];
+        }
+
+        return $login_url !== '' && preg_match('#(^|/)(adm|admin)(/|$)#', urldecode($login_url));
+    }
+}
+
+if (knu_is_admin_login_request()) {
+    include_once(G5_PATH . '/tail.sub.php');
+    return;
+}
+
+if (G5_COMMUNITY_USE === false) {
+    include_once(G5_THEME_SHOP_PATH . '/shop.tail.php');
+    return;
+}
+?>
+<style>
+html,
+body {
+    overflow-x: hidden !important;
+}
+
+body {
+    padding-bottom: 320px !important;
+}
+
+#ft,
+.footer,
+.kfooter,
+.knu-footer {
+    position: relative !important;
+    width: 100% !important;
+    clear: both !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    z-index: 1 !important;
+}
+
+#ft {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #07111f !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+#ft .kfooter {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 40px auto 24px !important;
+    padding: 64px 32px 42px !important;
+    border-radius: 36px 36px 0 0 !important;
+    background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 34%),
+        linear-gradient(135deg, #000000 0%, #0e2355 50%, #1a2d59 100%) !important;
+    color: #ffffff !important;
+    overflow: hidden !important;
+}
+
+#ft .kfooter-inner {
+    max-width: 1440px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: 260px minmax(0, 1fr) !important;
+    gap: 36px !important;
+    align-items: start !important;
+}
+
+#ft .kfooter-logo {
+    display: flex !important;
+    align-items: flex-start !important;
+}
+
+#ft .kfooter-logo img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 190px !important;
+    height: auto !important;
+    filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.28)) !important;
+}
+
+#ft .kfooter-text {
+    min-width: 0 !important;
+}
+
+#ft .kfooter-menu {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+
+#ft .kfooter-menu li {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#ft .kfooter-menu a {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 38px !important;
+    padding: 0 15px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    transition: background .22s ease, color .22s ease, transform .22s ease !important;
+}
+
+#ft .kfooter-menu a:hover,
+#ft .kfooter-menu a:focus {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+#ft .kfooter-info {
+    margin: 0 !important;
+    color: rgba(255, 255, 255, 0.76) !important;
+    font-size: 15px !important;
+    line-height: 1.9 !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+#ft .kfooter-info span {
+    display: inline-block !important;
+}
+
+#ft .kfooter-info .bar {
+    margin: 0 9px !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.kfooter-pc-quick {
+    position: fixed !important;
+    right: 24px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    pointer-events: auto !important;
+}
+
+.kfooter-pc-quick a,
+.kfooter-pc-quick button {
+    width: 82px !important;
+    min-height: 72px !important;
+    border-radius: 18px !important;
+    background: #073567 !important;
+    color: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18) !important;
+    border: 0 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+}
+
+.kfooter-pc-quick a:hover,
+.kfooter-pc-quick button:hover {
+    background: #0b4a8b !important;
+}
+
+.kfooter-pc-quick__icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 6px !important;
+    font-size: 17px !important;
+    flex: 0 0 auto !important;
+}
+
+.kfooter-pc-quick__icon svg {
+    width: 17px !important;
+    height: 17px !important;
+    display: block !important;
+}
+
+.kfooter-pc-quick__text {
+    line-height: 1.15 !important;
+}
+
+.kfooter-mobile-fixed {
+    display: none !important;
+}
+
+@media (min-width: 1025px) {
+    .kfooter-mobile-fixed {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    #ft {
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        top: auto !important;
+    }
+
+    .kfooter-pc-quick {
+        display: none !important;
+    }
+
+    .kfooter-mobile-fixed {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 9999 !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        background: #073567 !important;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18) !important;
+    }
+
+    .kfooter-mobile-fixed a,
+    .kfooter-mobile-fixed button {
+        height: 58px !important;
+        color: #ffffff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        text-decoration: none !important;
+        border: 0 !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    body {
+        padding-bottom: 60px !important;
+    }
+
+    #ft .kfooter {
+        margin: 28px 12px 70px !important;
+        padding: 42px 18px 32px !important;
+        border-radius: 26px 26px 0 0 !important;
+        width: auto !important;
+    }
+
+    #ft .kfooter-inner {
+        grid-template-columns: 220px minmax(0, 1fr) !important;
+        gap: 28px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 60px !important;
+    }
+
+    #ft .kfooter {
+        margin: 0 !important;
+        padding: 28px 16px 24px !important;
+        border-radius: 0 !important;
+        min-height: auto !important;
+        width: auto !important;
+    }
+
+    #ft .kfooter-inner {
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+        text-align: center !important;
+    }
+
+    #ft .kfooter-logo {
+        justify-content: center !important;
+        margin-bottom: 24px !important;
+    }
+
+    #ft .kfooter-menu {
+        justify-content: center !important;
+        gap: 10px !important;
+        margin-bottom: 28px !important;
+    }
+
+    #ft .kfooter-menu a {
+        min-width: 124px !important;
+        justify-content: center !important;
+        height: 48px !important;
+        padding: 0 14px !important;
+        font-size: 16px !important;
+        border-radius: 24px !important;
+    }
+
+    #ft .kfooter-info {
+        margin-top: 0 !important;
+        gap: 6px !important;
+        font-size: 14px !important;
+        line-height: 1.55 !important;
+    }
+
+    #ft .kfooter-info span {
+        display: block !important;
+        font-size: 15px !important;
+        line-height: 1.55 !important;
+    }
+
+    #ft .kfooter-info .bar {
+        display: none !important;
+    }
+
+    #ft .kfooter-bottom,
+    #ft .kfooter-copy {
+        display: none !important;
+    }
+
+    body {
+        padding-bottom: 60px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding-bottom: 60px !important;
+    }
+
+    #ft .kfooter {
+        padding: 22px 14px 18px !important;
+    }
+
+    #ft .kfooter-logo img {
+        max-width: 150px !important;
+    }
+
+    .kfooter-mobile-fixed a,
+    .kfooter-mobile-fixed button {
+        font-size: 13px !important;
+        height: 58px !important;
+    }
+}
+
+@media (max-width:768px){
+  /* Footer 모바일 고정 제거 및 일반 흐름 배치 */
+  #ft {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .mobile-estimate-panel{
+    position:fixed !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:58px !important; /* 모바일 하단 버튼바 높이에 맞춤 */
+    z-index:9998 !important;
+    padding:20px 16px !important;
+    background:rgba(0,0,0,0.88) !important;
+    border-radius:20px 20px 0 0 !important;
+    transform:translateY(120%) !important;
+    transition:.3s ease !important;
+    box-sizing: border-box !important;
+  }
+
+  .mobile-estimate-panel.is-open{
+    transform:translateY(0) !important;
+  }
+
+  .mobile-estimate-head{
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+    color:#fff !important;
+    margin-bottom:14px !important;
+  }
+
+  .mobile-estimate-head h3 {
+    margin: 0 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+  }
+
+  .mobile-estimate-head .btn-close-estimate{
+    color:#fff !important;
+    border:1px solid #ffffff !important;
+    border-radius:20px !important;
+    padding:6px 14px !important;
+    background:transparent !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+  }
+
+  .mobile-estimate-tel{
+    display:flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height:36px !important;
+    margin-bottom:12px !important;
+    background:#ffffff !important;
+    color:#111111 !important;
+    border-radius:8px !important;
+    font-weight:800 !important;
+    font-size: 15px !important;
+  }
+
+  .mobile-estimate-panel input[type="text"]{
+    width:100% !important;
+    height:36px !important;
+    margin-bottom:8px !important;
+    padding:10px !important;
+    border:0 !important;
+    border-radius:6px !important;
+    background:#fff !important;
+    box-sizing:border-box !important;
+    font-size: 13px !important;
+  }
+
+  .mobile-estimate-agree{
+    display:flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    color:#ffffff !important;
+    font-size:11px !important;
+    margin:6px 0 12px !important;
+    gap: 4px !important;
+  }
+  
+  .mobile-estimate-agree input[type="checkbox"] {
+    margin: 0 !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+  }
+  
+  .mobile-estimate-agree label {
+    cursor: pointer !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: normal !important;
+  }
+  
+  .mobile-estimate-agree .btn-privacy-detail {
+    color: #ffffff !important;
+    text-decoration: underline !important;
+    font-size: 11px !important;
+  }
+
+  .mobile-estimate-submit{
+    width:100% !important;
+    height:42px !important;
+    border:0 !important;
+    border-radius:8px !important;
+    background:#f60718 !important;
+    color:#ffffff !important;
+    font-weight:800 !important;
+    font-size: 15px !important;
+    cursor: pointer !important;
+  }
+}
+</style>
+
+<div id="ft" class="knu-footer">
+    <div class="kfooter">
+        <div class="kfooter-inner">
+            <div class="kfooter-logo">
+                <img src="<?php echo G5_THEME_URL; ?>/img/logo.png" alt="인터넷2424 로고">
+            </div>
+            <div class="kfooter-text">
+                <ul class="kfooter-menu">
+                    <li><a href="/">HOME</a></li>
+                    <li><a href="/content/company.php">회사소개</a></li>
+                    <li><a href="<?php echo function_exists('get_pretty_url') ? get_pretty_url('content', 'privacy') : '/content/privacy'; ?>">개인정보처리방침</a></li>
+                    <li><a href="/adm/">관리자</a></li>
+                </ul>
+                <p class="kfooter-info">
+                    <span>회사명 : 인터넷2424</span><span class="bar">|</span>
+                    <span>대표 : 홍길동</span><span class="bar">|</span>
+                    <span>대표번호 : 1844-****</span><span class="bar">|</span>
+                    <span>견적문의 : 010-1234-0000</span><span class="bar">|</span>
+                    <span>이메일 : abc@naver.com</span><span class="bar">|</span>
+                    <span>주소 : 서울시 **구 **동</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="kfooter-pc-quick" aria-label="PC 퀵메뉴">
+    <a href="/estimate01.php" aria-label="견적문의">
+        <span class="kfooter-pc-quick__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4 4.75A2.75 2.75 0 0 1 6.75 2h10.5A2.75 2.75 0 0 1 20 4.75v14.5A2.75 2.75 0 0 1 17.25 22H6.75A2.75 2.75 0 0 1 4 19.25V4.75Zm2.75-1A1 1 0 0 0 5.75 4.75v14.5a1 1 0 0 0 1 1h10.5a1 1 0 0 0 1-1V4.75a1 1 0 0 0-1-1H6.75Zm1.25 3.5A.75.75 0 0 1 8.75 6.5h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 8 7.25Zm0 4A.75.75 0 0 1 8.75 10.5h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 8 11.25Zm0 4A.75.75 0 0 1 8.75 14.5h3.5a.75.75 0 0 1 0 1.5h-3.5A.75.75 0 0 1 8 15.25Z"/>
+            </svg>
+        </span>
+        <span class="kfooter-pc-quick__text">견적문의</span>
+    </a>
+    <a href="tel:1844-2424" aria-label="전화문의">
+        <span class="kfooter-pc-quick__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24c1.12.37 2.33.57 3.57.57c.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.85 21 3 13.15 3 3c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1c0 1.24.2 2.45.57 3.57c.11.35.03.74-.25 1.02l-2.2 2.2Z"/>
+            </svg>
+        </span>
+        <span class="kfooter-pc-quick__text">전화문의</span>
+    </a>
+    <a href="/" aria-label="HOME">
+        <span class="kfooter-pc-quick__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M3 11.2 12 3l9 8.2v8.05A1.75 1.75 0 0 1 19.25 21h-4.5A.75.75 0 0 1 14 20.25V15h-4v5.25a.75.75 0 0 1-.75.75h-4.5A1.75 1.75 0 0 1 3 19.25V11.2Zm1.5.66v7.39c0 .14.11.25.25.25H8.5v-5.25c0-.41.34-.75.75-.75h5.5c.41 0 .75.34.75.75v5.25h3.75c.14 0 .25-.11.25-.25v-7.39L12 5.03 4.5 11.86Z"/>
+            </svg>
+        </span>
+        <span class="kfooter-pc-quick__text">HOME</span>
+    </a>
+    <button type="button" id="kfooterTopBtn" aria-label="TOP">
+        <span class="kfooter-pc-quick__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 4.25c.22 0 .43.09.58.25l6 6a.82.82 0 0 1-1.16 1.16L12.82 7.06v12.12a.82.82 0 0 1-1.64 0V7.06l-4.6 4.6a.82.82 0 0 1-1.16-1.16l6-6c.15-.16.36-.25.58-.25Z"/>
+            </svg>
+        </span>
+        <span class="kfooter-pc-quick__text">TOP</span>
+    </button>
+</div>
+
+<div class="kfooter-mobile-fixed" aria-label="모바일 퀵메뉴">
+    <a href="tel:010-2169-8148" aria-label="전화문의">
+        <span>전화문의</span>
+    </a>
+    <button type="button" id="btn_mobile_estimate" aria-label="견적문의" onclick="openEstimatePanel();">
+        <span>견적문의</span>
+    </button>
+    <button type="button" id="kfooterTopBtnMobile" aria-label="TOP">
+        <span>TOP</span>
+    </button>
+</div>
+
+<!-- 모바일 하단 슬라이드 견적문의 패널 -->
+<div class="mobile-estimate-panel" id="mobileEstimatePanel" aria-label="모바일 하단 슬라이드 견적문의 패널">
+    <div class="mobile-estimate-head">
+        <h3>온라인 상담</h3>
+        <button type="button" class="btn-close-estimate" onclick="closeEstimatePanel();">닫기</button>
+    </div>
+    
+    <div class="mobile-estimate-tel">
+        <span>☎ 010-2169-8148</span>
+    </div>
+
+    <form name="fquick_estimate" id="fquick_estimate" action="/bbs/form_insert.php" method="post" onsubmit="return fquick_estimate_submit(this);" autocomplete="off">
+        <input type="hidden" name="ret" value="/">
+        <input type="hidden" name="mode" value="이사견적문의">
+        <input type="hidden" name="bo_table" value="inquiry">
+        <input type="hidden" name="wr_9" value="포장/반포장이사"> <!-- 기본값 -->
+        <input type="hidden" name="wr_10" value="아파트/빌라/다세대"> <!-- 기본값 -->
+        
+        <input type="text" name="wr_name" placeholder="이름" required>
+        <input type="text" name="wr_1" placeholder="연락처(* 없이 입력)" required>
+        <input type="text" name="wr_content" placeholder="문의내용(간단히 입력)" required>
+        
+        <div class="mobile-estimate-agree">
+            <input type="checkbox" id="agree_chk_quick" required>
+            <label for="agree_chk_quick">[필수] 개인정보 수집 및 이용에 동의합니다.</label>
+            <a href="javascript:void(0);" onclick="alert('개인정보 수집 및 이용 안내\n\n* 목적 : 상담 요청 회신 및 서비스 안내\n* 항목 : 이름, 연락처\n* 기간 : 5년 보관 후 파기');" class="btn-privacy-detail">[상세보기]</a>
+        </div>
+        
+        <button type="submit" class="mobile-estimate-submit">접수하기</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var topButtons = [
+        document.getElementById('kfooterTopBtn'),
+        document.getElementById('kfooterTopBtnMobile')
+    ];
+
+    topButtons.forEach(function (btn) {
+        if (!btn) {
+            return;
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+});
+
+function openEstimatePanel() {
+    var panel = document.getElementById('mobileEstimatePanel');
+    if (panel) {
+        panel.classList.add('is-open');
+    }
+}
+function closeEstimatePanel() {
+    var panel = document.getElementById('mobileEstimatePanel');
+    if (panel) {
+        panel.classList.remove('is-open');
+    }
+}
+function fquick_estimate_submit(f) {
+    if (!f.agree_chk_quick.checked) {
+        alert("개인정보 수집 및 이용에 동의하셔야 접수가 가능합니다.");
+        f.agree_chk_quick.focus();
+        return false;
+    }
+    if (!confirm("상담을 접수하시겠습니까?")) {
+        return false;
+    }
+    return true;
+}
+</script>
+
+<?php
+include_once(G5_THEME_PATH . '/tail.sub.php');
