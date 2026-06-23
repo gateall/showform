@@ -1134,3 +1134,9 @@ input[type="text"]{max-width:200px}
 /* Styles */
 input[type="text"]{max-width:200px}
 }
+
+/* ShowForm Admin Menu Icons */
+.sf-menu-landing i { color:#2563eb; }
+.sf-menu-inquiry i { color:#16a34a; }
+.sf-menu-ai i { color:#7c3aed; }
+

@@ -1,0 +1,733 @@
+<style>
+    .bo_v_nb {
+        max-width: 900px;
+        margin: 15px auto 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid #ddd;
+        box-sizing: border-box;
+    }
+
+    .bo_v_nb li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+        color: #555;
+    }
+
+    .bo_v_nb li:last-child {
+        border-bottom: 0;
+    }
+
+    .bo_v_nb .nb_tit {
+        color: #376fc7;
+        font-weight: 700;
+    }
+
+    .bo_v_nb a {
+        color: #333;
+        text-decoration: none;
+        flex: 1;
+    }
+
+    .bo_v_nb .nb_date {
+        margin-left: auto;
+        color: #999;
+        font-size: 12px;
+    }
+
+    .estimate-view-table {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto 15px;
+        border-collapse: collapse;
+        border-top: 3px solid #111;
+    }
+
+    .estimate-view-table th {
+        width: 120px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+        padding: 14px 10px;
+        text-align: left;
+        font-size: 15px;
+        font-weight: 700;
+        color: #111;
+    }
+
+    .estimate-view-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 14px 10px;
+        text-align: left;
+        font-size: 15px;
+        color: #555;
+        line-height: 1.6;
+    }
+
+    .estimate-view-table .point-red {
+        color: #f00;
+        font-weight: 700;
+    }
+
+    .estimate-status-box {
+        max-width: 900px;
+        margin: 15px auto 70px;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        text-align: left;
+        box-sizing: border-box;
+        background: #fff;
+    }
+
+    .estimate-status-btn {
+        display: inline-block;
+        margin: 3px 4px 3px 0;
+        padding: 8px 13px;
+        background: #4b4d68;
+        color: #fff !important;
+        text-decoration: none !important;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 0;
+    }
+
+    .estimate-status-btn.active {
+        background: #8cc63f;
+        color: #111 !important;
+    }
+
+    .estimate-view-btns {
+        max-width: 900px;
+        margin: 25px auto 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        box-sizing: border-box;
+    }
+
+    .estimate-action-btn {
+        display: inline-block;
+        padding: 8px 12px;
+        background: #4b4d68;
+        color: #fff !important;
+        text-decoration: none !important;
+        font-size: 13px;
+        font-weight: 700;
+        margin: 2px;
+    }
+
+    .estimate-action-btn.danger {
+        background: #d94141 !important;
+    }
+
+    @media (max-width: 768px) {
+
+        body {
+            overflow-x: hidden !important;
+        }
+
+        #bo_v,
+        .bo_v,
+        .inquiry-view,
+        .estimate-view {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 12px !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+        }
+
+        .estimate-title,
+        .inquiry-title {
+            width: auto !important;
+            max-width: calc(100% - 24px) !important;
+            margin: 20px auto 18px !important;
+            padding: 12px 18px !important;
+            font-size: 18px !important;
+            line-height: 1.3 !important;
+            border-radius: 999px !important;
+            box-sizing: border-box !important;
+            text-align: center !important;
+            word-break: keep-all !important;
+        }
+
+        .estimate-title span,
+        .inquiry-title span {
+            display: inline-block !important;
+            font-size: 12px !important;
+            margin-right: 6px !important;
+            padding: 4px 8px !important;
+            border-radius: 999px !important;
+            vertical-align: middle !important;
+        }
+
+        .estimate-table,
+        .inquiry-table,
+        #bo_v table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            border-top: 2px solid #111 !important;
+            box-sizing: border-box !important;
+        }
+
+        .estimate-table colgroup,
+        .inquiry-table colgroup,
+        #bo_v table colgroup {
+            display: none !important;
+        }
+
+        .estimate-table tr,
+        .inquiry-table tr,
+        #bo_v table tr {
+            display: block !important;
+            width: 100% !important;
+            border-bottom: 1px solid #ddd !important;
+            box-sizing: border-box !important;
+        }
+
+        .estimate-table th,
+        .estimate-table td,
+        .inquiry-table th,
+        .inquiry-table td,
+        #bo_v table th,
+        #bo_v table td {
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            text-align: left !important;
+            word-break: keep-all !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+        }
+
+        .estimate-table th,
+        .inquiry-table th,
+        #bo_v table th {
+            padding: 10px 12px 6px !important;
+            background: #f3f4f6 !important;
+            color: #111 !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            border-bottom: 0 !important;
+        }
+
+        .estimate-table td,
+        .inquiry-table td,
+        #bo_v table td {
+            padding: 8px 12px 14px !important;
+            background: #fff !important;
+            color: #555 !important;
+            font-size: 14px !important;
+            line-height: 1.6 !important;
+            border-bottom: 0 !important;
+        }
+
+        .estimate-table td strong,
+        .inquiry-table td strong,
+        #bo_v table td strong {
+            color: red !important;
+            font-weight: 800 !important;
+        }
+
+        .estimate-status-box,
+        .inquiry-status-box {
+            width: 100% !important;
+            padding: 12px !important;
+            margin: 15px 0 !important;
+            box-sizing: border-box !important;
+            border: 1px solid #ddd !important;
+            border-radius: 8px !important;
+        }
+
+        .estimate-status-box a,
+        .estimate-status-box button,
+        .inquiry-status-box a,
+        .inquiry-status-box button {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-width: 78px !important;
+            height: 38px !important;
+            margin: 3px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            box-sizing: border-box !important;
+        }
+
+        .bo_v_nb {
+            width: 100% !important;
+            margin: 24px 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        .bo_v_nb li,
+        .bo_v_nb a {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            font-size: 13px !important;
+            line-height: 1.5 !important;
+            word-break: keep-all !important;
+        }
+
+        .bo_v_btn,
+        .bo_v_top {
+            width: 100% !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            justify-content: space-between !important;
+            box-sizing: border-box !important;
+        }
+
+        .bo_v_btn a,
+        .bo_v_btn button,
+        .bo_v_top a,
+        .bo_v_top button {
+            min-width: 70px !important;
+            height: 38px !important;
+            line-height: 38px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            text-align: center !important;
+            border-radius: 6px !important;
+            box-sizing: border-box !important;
+        }
+    }
+</style>
+<!-- INQUIRY VIEW TEST: basic -->
+<?php
+
+if (!defined("_GNUBOARD_"))
+    exit; // 揶쏆뮆????륁뵠筌왖 ?臾롫젏 ?븍뜃?
+include_once(G5_LIB_PATH . '/thumbnail.lib.php');
+
+if (!function_exists('clean_est_text')) {
+    function clean_est_text($str)
+    {
+        $str = html_entity_decode((string) $str, ENT_QUOTES, 'UTF-8');
+        $str = str_replace(array('&nbsp;', "\xC2\xA0"), ' ', $str);
+        return trim($str);
+    }
+}
+
+if (!function_exists('get_pure_memo')) {
+    function get_pure_memo($content)
+    {
+        $content = str_replace(array("\r\n", "\r"), "\n", $content);
+        $patterns = array(
+            '/^Inquiry type:.*$/mi',
+            '/^Name:.*$/mi',
+            '/^Phone:.*$/mi',
+            '/^Move-out date:.*$/mi',
+            '/^Move-out address:.*$/mi',
+            '/^Move-in address:.*$/mi',
+            '/^Items:.*$/mi',
+            '/^\(contact type:.*\)$/mi'
+        );
+        $content = preg_replace($patterns, '', $content);
+        return trim($content);
+    }
+}
+
+add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">', 0);
+add_stylesheet('<link rel="stylesheet" href="' . G5_THEME_URL . '/css/inquiry-view.css?ver=20260609">', 0);
+?>
+
+<script src="<?php echo G5_JS_URL; ?>/viewimageresize.js"></script>
+
+<!-- 野껊슣?녻눧???꾨┛ ??뽰삂 { -->
+
+<article id="bo_v" style="width:<?php echo $width; ?>">
+    <header>
+        <h2 id="bo_v_title" class="estimate-view-title">
+            <span class="bo_v_tit">
+                <?php echo cut_str(get_text($view['wr_subject']), 70); ?>
+            </span>
+        </h2>
+    </header>
+
+    <?php if (false) { ?>
+        <section id="bo_v_info">
+            <h2>??륁뵠筌왖 ?類ｋ궖</h2>
+            <div class="profile_info">
+                <div class="pf_img">
+                    <?php echo get_member_profile_img($view['mb_id']) ?>
+                </div>
+                <div class="profile_info_ct">
+                    <span class="sound_only">?臾믨쉐??/span> <strong>
+                            <?php echo $view['name'] ?>
+                            <?php if ($is_ip_view) {
+                                echo "&nbsp;($ip)";
+                            } ?>
+                        </strong><br>
+                        <span class="sound_only">?蹂?</span><strong><a href="#bo_vc"> <i class="fa fa-commenting-o"
+                                    aria-hidden="true"></i>
+                                <?php echo number_format($view['wr_comment']) ?>椰?/a></strong>
+                        <span class="sound_only">鈺곌퀬??/span><strong><i class="fa fa-eye" aria-hidden="true"></i>
+                            <?php echo number_format($view['wr_hit']) ?>??/strong>
+                            <strong class="if_date"><span class="sound_only">?臾믨쉐??/span><i class="fa fa-clock-o"
+                                        aria-hidden="true"></i>
+                                    <?php echo date("y-m-d H:i", strtotime($view['wr_datetime'])) ?></strong>
+                </div>
+            </div>
+        </section>
+    <?php } ?>
+
+    <!-- 野껊슣?녻눧??怨룸뼊 甕곌쑵????뽰삂 { -->
+    <?php if ($bo_table != 'inquiry') { ?>
+        <div id="bo_v_top">
+            <ul class="btn_bo_user bo_v_com">
+                <li><a href="<?php echo $list_href ?>" class="btn_b01 btn" title="筌뤴뫖以?><i class="fa fa-list"
+                            aria-hidden="true"></i><span class="sound_only">筌뤴뫖以?/span></a></li>
+                <?php if ($copy_href || $move_href || $search_href) { ?>
+                    <li>
+                        <button type="button" class="btn_more_opt is_view_btn btn_b01 btn"><i class="fa fa-ellipsis-v"
+                                aria-hidden="true"></i><span class="sound_only">野껊슣????귐딅뮞??????/span></button>
+                        <ul class="more_opt is_view_btn">
+                            <?php if ($copy_href) { ?>
+                                <li><a href="<?php echo $copy_href ?>" onclick="board_move(this.href); return false;">癰귣벊沅?i
+                                            class="fa fa-files-o" aria-hidden="true"></i></a></li>
+                            <?php } ?>
+                            <?php if ($move_href) { ?>
+                                <li><a href="<?php echo $move_href ?>" onclick="board_move(this.href); return false;">??猷?i
+                                            class="fa fa-arrows" aria-hidden="true"></i></a></li>
+                            <?php } ?>
+                            <?php if ($search_href) { ?>
+                                <li><a href="<?php echo $search_href ?>">野꺜??i class="fa fa-search" aria-hidden="true"></i></a>
+                                </li>
+                            <?php } ?>
+                        </ul>
+                    </li>
+                <?php } ?>
+            </ul>
+            <script>
+                jQuery(function ($) {
+                    $(".btn_more_opt.is_view_btn").on("click", function (e) {
+                        e.stopPropagation();
+                        $(".more_opt.is_view_btn").toggle();
+                    });
+                    $(document).on("click", function (e) {
+                        if (!$(e.target).closest('.is_view_btn').length) {
+                            $(".more_opt.is_view_btn").hide();
+                        }
+                    });
+                });
+            </script>
+            <?php
+            $link_buttons = ob_get_contents();
+            ob_end_flush();
+            ?>
+        </div>
+    <?php } ?>
+    <!-- } 野껊슣?녻눧??怨룸뼊 甕곌쑵????->
+
+    <section id="bo_v_atc">
+        <h2 id="bo_v_atc_title">癰귣챶揆</h2>
+        <?php /* ??쎄쾿??甕곌쑵???怨몃열 ??볤탢
+   <div id="bo_v_share">
+       <?php include_once(G5_SNS_PATH . "/view.sns.skin.php"); ?>
+       <?php if ($scrap_href) { ?><a href="<?php echo $scrap_href; ?>" target="_blank" class="btn btn_b03"
+               onclick="win_scrap(this.href); return false;"><i class="fa fa-bookmark" aria-hidden="true"></i> ??쎄쾿??/a>
+       <?php } ?>
+   </div>
+   */ ?>
+
+        <?php
+        // ???뵬 ?곗뮆??
+        $v_img_count = count($view['file']);
+        if ($v_img_count) {
+            echo "<div id=\"bo_v_img\">\n";
+            foreach ($view['file'] as $view_file) {
+                echo get_file_thumbnail($view_file);
+            }
+            echo "</div>\n";
+        }
+        ?>
+
+        <!-- 癰귣챶揆 ??곸뒠 ??뽰삂 { -->
+    <?php
+    $status_text = clean_est_text($view['wr_8']);
+    if (!$status_text)
+        $status_text = '野꺫딆읅?臾믩땾';
+
+    $move_type = clean_est_text($view['wr_3']);
+    if (clean_est_text($view['wr_10'])) {
+        $move_type .= ' / ' . clean_est_text($view['wr_10']);
+    }
+    $start_info = clean_est_text($view['wr_4']);
+    $end_info = clean_est_text($view['wr_5']);
+    $cust_name = isset($view['wr_1']) && trim($view['wr_1']) !== '' ? clean_est_text($view['wr_1']) : clean_est_text($view['wr_name']);
+    $phone = clean_est_text($view['wr_2']);
+    $move_date = clean_est_text($view['wr_6']);
+    $furniture = clean_est_text($view['wr_7']);
+    $memo = clean_est_text($view['wr_9']);
+    ?>
+
+    <table class="estimate-view-table">
+        <tbody>
+            <tr>
+                <th>?⑥쥒而쇽쭗?/th>
+                <td><?php echo $cust_name; ?></td>
+                <th>?怨뺤뵭筌?/th>
+                <td class="point-red"><?php echo $phone; ?></td>
+            </tr>
+            <tr>
+                <th>??곴텢 ?ル굝履?/th>
+                <td colspan="3"><?php echo $move_type; ?></td>
+            </tr>
+            <tr>
+                <th>?곗뮆而삼쭪?</th>
+                <td colspan="3"><?php echo $start_info; ?></td>
+            </tr>
+            <tr>
+                <th>?袁⑷컩筌왖</th>
+                <td colspan="3"><?php echo $end_info; ?></td>
+            </tr>
+            <tr>
+                <th>??곴텢??/th>
+                <td colspan="3" class="point-red"><?php echo $move_date; ?></td>
+            </tr>
+            <tr>
+                <th>?醫뤾문??덀걠</th>
+                <td colspan="3"><?php echo $furniture; ?></td>
+            </tr>
+            <tr>
+                <th>疫꿸퀬? 筌롫뗀??/th>
+                <td colspan="3">
+                    <?php
+                    if ($memo) {
+                        echo nl2br($memo);
+                    } else {
+                        echo '<span style="color:#999; font-style:italic;">??낆젾??筌롫뗀?덂첎? ??곷뮸??덈뼄.</span>';
+                    }
+                    ?>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <?php if ($bo_table == 'inquiry' && $is_admin) { ?>
+        <div class="estimate-status-box">
+            <a href="<?php echo G5_BBS_URL; ?>/inquiry_status_update.php?bo_table=<?php echo $bo_table; ?>&wr_id=<?php echo $wr_id; ?>&status=<?php echo urlencode('野꺫딆읅?臾믩땾'); ?>"
+                class="estimate-status-btn <?php echo $status_text == '野꺫딆읅?臾믩땾' ? 'active' : ''; ?>">野꺫딆읅?臾믩땾</a>
+
+            <a href="<?php echo G5_BBS_URL; ?>/inquiry_status_update.php?bo_table=<?php echo $bo_table; ?>&wr_id=<?php echo $wr_id; ?>&status=<?php echo urlencode('野꺫딆읅?類ㅼ뵥'); ?>"
+                class="estimate-status-btn <?php echo $status_text == '野꺫딆읅?類ㅼ뵥' ? 'active' : ''; ?>">野꺫딆읅?類ㅼ뵥</a>
+
+            <a href="<?php echo G5_BBS_URL; ?>/inquiry_status_update.php?bo_table=<?php echo $bo_table; ?>&wr_id=<?php echo $wr_id; ?>&status=<?php echo urlencode('野꺫딆읅??뽱뀱'); ?>"
+                class="estimate-status-btn <?php echo $status_text == '野꺫딆읅??뽱뀱' ? 'active' : ''; ?>">野꺫딆읅??뽱뀱</a>
+        </div>
+    <?php } ?>
+
+    <div id="bo_v_con" style="display:none;"><?php echo get_view_thumbnail($view['content']); ?></div>
+    <!-- } 癰귣챶揆 ??곸뒠 ??-->
+
+    <?php if ($is_signature) { ?>
+        <p>
+            <?php echo $signature ?>
+        </p>
+    <?php } ?>
+
+    <!-- ?곕뗄荑???쑴?쏉㎗???뽰삂 { -->
+    <?php if ($good_href || $nogood_href) { ?>
+        <div id="bo_v_act">
+            <?php if ($good_href) { ?>
+                <span class="bo_v_act_gng">
+                    <a href="<?php echo $good_href . '&amp;' . $qstr ?>" id="good_button" class="bo_v_good"><i
+                            class="fa fa-thumbs-o-up" aria-hidden="true"></i><span class="sound_only">?곕뗄荑?/span><strong>
+                            <?php echo number_format($view['wr_good']) ?>
+                        </strong></a>
+                    <b id="bo_v_act_good"></b>
+                </span>
+            <?php } ?>
+            <?php if ($nogood_href) { ?>
+                <span class="bo_v_act_gng">
+                    <a href="<?php echo $nogood_href . '&amp;' . $qstr ?>" id="nogood_button" class="bo_v_nogood"><i
+                            class="fa fa-thumbs-o-down" aria-hidden="true"></i><span class="sound_only">??쑴?쏉㎗?/span><strong>
+                                <?php echo number_format($view['wr_nogood']) ?>
+                            </strong></a>
+                    <b id="bo_v_act_nogood"></b>
+                </span>
+            <?php } ?>
+        </div>
+    <?php } else {
+        if ($board['bo_use_good'] || $board['bo_use_nogood']) {
+            ?>
+            <div id="bo_v_act">
+                <?php if ($board['bo_use_good']) { ?><span class="bo_v_good"><i class="fa fa-thumbs-o-up"
+                            aria-hidden="true"></i><span class="sound_only">?곕뗄荑?/span><strong>
+                            <?php echo number_format($view['wr_good']) ?>
+                        </strong></span>
+                <?php } ?>
+                <?php if ($board['bo_use_nogood']) { ?><span class="bo_v_nogood"><i class="fa fa-thumbs-o-down"
+                            aria-hidden="true"></i><span class="sound_only">??쑴?쏉㎗?/span><strong>
+                                <?php echo number_format($view['wr_nogood']) ?>
+                            </strong></span>
+                    <?php } ?>
+            </div>
+            <?php
+        }
+    }
+    ?>
+    <!-- } ?곕뗄荑???쑴?쏉㎗???-->
+    </section>
+
+    <?php
+    $cnt = 0;
+    if ($view['file']['count']) {
+        for ($i = 0; $i < count($view['file']); $i++) {
+            if (isset($view['file'][$i]['source']) && $view['file'][$i]['source'] && !$view['file'][$i]['view'])
+                $cnt++;
+        }
+    }
+    ?>
+
+    <?php if ($cnt) { ?>
+        <!-- 筌ｂ뫀????뵬 ??뽰삂 { -->
+        <section id="bo_v_file">
+            <h2>筌ｂ뫀????뵬</h2>
+            <ul>
+                <?php
+                for ($i = 0; $i < count($view['file']); $i++) {
+                    if (isset($view['file'][$i]['source']) && $view['file'][$i]['source'] && !$view['file'][$i]['view']) {
+                        ?>
+                        <li>
+                            <i class="fa fa-folder-open" aria-hidden="true"></i>
+                            <a href="<?php echo $view['file'][$i]['href']; ?>" class="view_file_download">
+                                <strong>
+                                    <?php echo $view['file'][$i]['source'] ?>
+                                </strong>
+                                <?php echo $view['file'][$i]['content'] ?> (
+                                <?php echo $view['file'][$i]['size'] ?>)
+                            </a>
+                            <br>
+                            <span class="bo_v_file_cnt">
+                                <?php echo $view['file'][$i]['download'] ?>????쇱뒲嚥≪뮆諭?| DATE :
+                                <?php echo $view['file'][$i]['datetime'] ?>
+                            </span>
+                        </li>
+                        <?php
+                    }
+                }
+                ?>
+            </ul>
+        </section>
+        <!-- } 筌ｂ뫀????뵬 ??-->
+    <?php } ?>
+
+    <?php if (isset($view['link']) && array_filter($view['link'])) { ?>
+        <!-- ?온??ㅼ춦????뽰삂 { -->
+        <section id="bo_v_link">
+            <h2>?온??ㅼ춦??/h2>
+                <ul>
+                    <?php
+                    for ($i = 1; $i <= count($view['link']); $i++) {
+                        if ($view['link'][$i]) {
+                            $link = cut_str($view['link'][$i], 70);
+                            ?>
+                            <li>
+                                <i class="fa fa-link" aria-hidden="true"></i>
+                                <a href="<?php echo $view['link_href'][$i] ?>" target="_blank">
+                                    <strong>
+                                        <?php echo $link ?>
+                                    </strong>
+                                </a>
+                                <br>
+                                <span class="bo_v_link_cnt">
+                                    <?php echo $view['link_hit'][$i] ?>???怨뚭퍙
+                                </span>
+                            </li>
+                            <?php
+                        }
+                    }
+                    ?>
+                </ul>
+        </section>
+        <!-- } ?온??ㅼ춦????-->
+    <?php } ?>
+
+    <?php if ($prev_href || $next_href) { ?>
+        <ul class="bo_v_nb">
+            <?php if ($prev_href) { ?>
+                <li class="btn_prv"><span class="nb_tit"><i class="fa fa-chevron-up" aria-hidden="true"></i> ??곸읈疫꼲</span><a
+                        href="<?php echo $prev_href ?>">
+                        <?php echo $prev_wr_subject; ?>
+                    </a> <span class="nb_date">
+                        <?php echo str_replace('-', '.', substr($prev_wr_date, '2', '8')); ?>
+                    </span></li>
+            <?php } ?>
+            <?php if ($next_href) { ?>
+                <li class="btn_next"><span class="nb_tit"><i class="fa fa-chevron-down" aria-hidden="true"></i> ??쇱벉疫꼲</span><a
+                        href="<?php echo $next_href ?>">
+                        <?php echo $next_wr_subject; ?>
+                    </a> <span class="nb_date">
+                        <?php echo str_replace('-', '.', substr($next_wr_date, '2', '8')); ?>
+                    </span></li>
+            <?php } ?>
+        </ul>
+    <?php } ?>
+
+    <?php
+    // ?꾨뗀李????놃뀱??
+    include_once(G5_BBS_PATH . '/view_comment.php');
+    ?>
+
+    <div class="estimate-view-btns">
+        <div class="estimate-view-btns-left">
+            <?php if ($update_href) { ?>
+                <a href="<?php echo G5_BBS_URL; ?>/write.php?w=u&bo_table=<?php echo $bo_table; ?>&wr_id=<?php echo $wr_id; ?>"
+                    class="estimate-action-btn">??륁젟</a>
+            <?php } ?>
+
+            <?php if ($delete_href) { ?>
+                <a href="<?php echo $delete_href; ?>" onclick="del(this.href); return false;"
+                    class="estimate-action-btn danger">????/a>
+            <?php } ?>
+        </div>
+
+        <div class="estimate-view-btns-right">
+            <a href="<?php echo G5_BBS_URL; ?>/board.php?bo_table=<?php echo $bo_table; ?>"
+                class="estimate-action-btn">筌뤴뫖以?/a>
+        </div>
+    </div>
+
+</article>
+<!-- } 野껊슣?녷묾? ??꾨┛ ??-->
+
+<script>
+    <?php if ($board['bo_download_point'] < 0) { ?>
+        $(function () {
+            $("a.view_file_download").click(function () {
+                if (!g5_is_member) {
+                    alert("??쇱뒲嚥≪뮆諭?亦낅슦釉????곷뮸??덈뼄.\n???뜚??곷뻻??겹늺 嚥≪뮄???????곸뒠??雅뚯눘苑??");
+                    return false;
+                }
+
+                var msg = "?????뵬????쇱뒲嚥≪뮆諭???뤿뻻筌?????硫? 筌△몿而??몃빍??\n\n?類ｌ춾 ??쇱뒲嚥≪뮆諭???뤿뻻野껋쥙???뉙돱?";
+
+                if (confirm(msg)) {
+                    var href = $(this).attr("href") + "&js=on";
+                    $(this).attr("href", href);
+
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+        });
+    <?php } ?>
+
+    function board_move(href) {
+        window.open(href, "boardmove", "left=50, top=50, width=500, height=550, scrollbars=1");
+    }
+</script>

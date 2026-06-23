@@ -1,0 +1,31 @@
+<?php
+include_once('./_common.php');
+
+$g5['title'] = '랜딩 목록';
+
+include_once(G5_ADMIN_PATH.'/admin.head.php');
+?>
+
+<div class="local_desc01 local_desc">
+    <p>랜딩 목록 관리 화면입니다.</p>
+</div>
+
+<div class="tbl_head01 tbl_wrap">
+<table>
+<thead>
+<tr>
+<th>메뉴명</th>
+<th>상태</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>랜딩 목록</td>
+<td>정상 출력 테스트</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<?php
+include_once(G5_ADMIN_PATH.'/admin.tail.php');

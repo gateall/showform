@@ -1,0 +1,201 @@
+<?php
+$sub_menu = '900100';
+include_once('./_common.php');
+
+auth_check_menu($auth, $sub_menu, 'r');
+
+$g5['title'] = '마스터 템플릿 관리';
+
+$table = G5_TABLE_PREFIX . 'landing_page';
+$inq_table = G5_TABLE_PREFIX . 'landing_inquiry';
+
+// 테이블/컬럼 방어적 보정
+$col_is_template = sql_fetch(" show columns from {$table} like 'is_template' ");
+if (!$col_is_template) {
+    @sql_query(" ALTER TABLE {$table} ADD `is_template` CHAR(1) NOT NULL DEFAULT 'N' ", false);
+}
+$col_parent_id = sql_fetch(" show columns from {$table} like 'parent_id' ");
+if (!$col_parent_id) {
+    @sql_query(" ALTER TABLE {$table} ADD `parent_id` INT NOT NULL DEFAULT '0' ", false);
+}
+$col_thumbnail_url = sql_fetch(" show columns from {$table} like 'thumbnail_url' ");
+if (!$col_thumbnail_url) {
+    @sql_query(" ALTER TABLE {$table} ADD `thumbnail_url` VARCHAR(255) NULL ", false);
+}
+$col_is_display = sql_fetch(" show columns from {$table} like 'is_display' ");
+if (!$col_is_display) {
+    @sql_query(" ALTER TABLE {$table} ADD `is_display` CHAR(1) NOT NULL DEFAULT 'Y' ", false);
+}
+$col_industry = sql_fetch(" show columns from {$table} like 'industry' ");
+if (!$col_industry) {
+    @sql_query(" ALTER TABLE {$table} ADD `industry` VARCHAR(255) NOT NULL DEFAULT '' ", false);
+}
+$col_hero_title = sql_fetch(" show columns from {$table} like 'hero_title' ");
+if (!$col_hero_title) {
+    @sql_query(" ALTER TABLE {$table} ADD `hero_title` VARCHAR(255) NOT NULL DEFAULT '' ", false);
+}
+$col_subject = sql_fetch(" show columns from {$table} like 'subject' ");
+if (!$col_subject) {
+    @sql_query(" ALTER TABLE {$table} ADD `subject` VARCHAR(255) NOT NULL DEFAULT '' ", false);
+}
+
+// 검색 및 필터 파라미터
+$cate = isset($_GET['cate']) ? trim($_GET['cate']) : '';
+$stx = isset($_GET['stx']) ? trim($_GET['stx']) : '';
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'latest';
+
+$sql_search = " WHERE a.is_template = 'Y' ";
+if ($cate) {
+    $sql_search .= " and a.industry = '" . sql_real_escape_string($cate) . "' ";
+}
+if ($stx) {
+    $safe_stx = sql_real_escape_string($stx);
+    $sql_search .= " and (a.subject like '%{$safe_stx}%' or a.hero_title like '%{$safe_stx}%' or a.industry like '%{$safe_stx}%') ";
+}
+
+$order_by = " order by a.id desc ";
+if ($sort == 'popular') {
+    $order_by = " order by derived_cnt desc, a.id desc ";
+}
+
+// 카테고리(industry) 목록 추출
+$cates = array();
+$res_cate = @sql_query(" select distinct industry from {$table} where industry != '' and is_template = 'Y' order by industry ", false);
+if ($res_cate) {
+    while ($r = sql_fetch_array($res_cate)) {
+        $cates[] = $r['industry'];
+    }
+}
+
+// 템플릿 목록 가져오기
+$sql = " select a.*, (select count(*) from {$table} where parent_id = a.id and is_template = 'N') as derived_cnt from {$table} a {$sql_search} {$order_by} ";
+$result = @sql_query($sql, false);
+$total_count = $result ? sql_num_rows($result) : 0;
+
+include_once(G5_ADMIN_PATH . '/admin.head.php');
+?>
+
+<style>
+.template_top { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; flex-wrap:wrap; gap:15px; }
+.category_tabs { display:flex; gap:10px; flex-wrap:wrap; }
+.cate_btn { padding:8px 16px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; border-radius:20px; text-decoration:none; font-weight:bold; font-size:14px; }
+.cate_btn:hover { background:#e2e8f0; }
+.cate_btn.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+.search_area { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.search_area select, .search_area input { padding:8px; border:1px solid #cbd5e1; border-radius:4px; outline:none; }
+.btn_search { padding:8px 20px; background:#475569; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+.btn_create { padding:8px 20px; background:#10b981; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; text-decoration:none; }
+.btn_link_live { padding:8px 20px; background:#f59e0b; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; text-decoration:none; }
+.template_grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; margin-bottom:40px; }
+@media (max-width: 1200px) { .template_grid { grid-template-columns:repeat(3, 1fr); } }
+@media (max-width: 900px) { .template_grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 600px) { .template_grid { grid-template-columns:1fr; } }
+.tpl_card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.05); transition:transform 0.2s; display:flex; flex-direction:column; }
+.tpl_card:hover { transform:translateY(-5px); box-shadow:0 10px 15px rgba(0,0,0,0.1); }
+.tpl_thumb { position:relative; width:100%; padding-top:60%; background:#f1f5f9; overflow:hidden; border-bottom:1px solid #e2e8f0; }
+.tpl_thumb img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+.tpl_thumb .placeholder { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#94a3b8; font-size:40px; }
+.tpl_overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 0.2s; }
+.tpl_thumb:hover .tpl_overlay { opacity:1; }
+.tpl_overlay a { padding:10px 20px; background:#fff; color:#1e293b; border-radius:30px; text-decoration:none; font-weight:bold; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+.tpl_info { padding:15px; flex:1; }
+.tpl_cate { font-size:12px; font-weight:bold; color:#10b981; margin-bottom:5px; }
+.tpl_title { font-size:16px; font-weight:bold; color:#1e293b; margin-bottom:10px; line-height:1.4; word-break:keep-all; }
+.tpl_stats { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#64748b; padding-top:10px; border-top:1px dashed #cbd5e1; }
+.tpl_stats .badge { background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:10px; font-weight:bold; }
+.tpl_controls { padding:10px 15px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:8px; }
+.btn_generate { width:100%; padding:8px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; }
+.btn_generate:hover { background:#2563eb; }
+.action_btns { display:flex; gap:5px; width:100%; }
+.action_btns button { flex:1; padding:6px; font-size:12px; border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:4px; cursor:pointer; font-weight:bold; }
+.action_btns button:hover { background:#f1f5f9; }
+.action_btns .btn_del { color:#ef4444; border-color:#fca5a5; }
+.action_btns .btn_del:hover { background:#fef2f2; }
+</style>
+
+<div class="template_top">
+    <div class="category_tabs">
+        <a href="?cate=&sort=<?php echo $sort; ?>&stx=<?php echo urlencode($stx); ?>" class="cate_btn <?php echo !$cate ? 'active' : ''; ?>">전체</a>
+        <?php foreach ($cates as $c) { ?>
+            <a href="?cate=<?php echo urlencode($c); ?>&sort=<?php echo $sort; ?>&stx=<?php echo urlencode($stx); ?>" class="cate_btn <?php echo $cate == $c ? 'active' : ''; ?>"><?php echo get_text($c); ?></a>
+        <?php } ?>
+    </div>
+    <form name="fsearch" method="get" class="search_area">
+        <input type="hidden" name="cate" value="<?php echo get_text($cate); ?>">
+        <select name="sort" onchange="this.form.submit()">
+            <option value="latest" <?php echo $sort == 'latest' ? 'selected' : ''; ?>>최신 등록순</option>
+            <option value="popular" <?php echo $sort == 'popular' ? 'selected' : ''; ?>>인기순(파생많음)</option>
+        </select>
+        <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="템플릿명 검색">
+        <button type="submit" class="btn_search">조회</button>
+        <a href="./template_form.php" class="btn_create">+ 신규 마스터 템플릿 등록</a>
+        <a href="./landing_list.php" class="btn_link_live">라이브 페이지 목록 가기 ➔</a>
+    </form>
+</div>
+
+<div class="template_grid">
+    <?php if ($total_count == 0) { echo "<div style='grid-column:1/-1; padding:50px; text-align:center; color:#64748b; background:#f8fafc; border-radius:8px;'>등록된 마스터 템플릿이 없습니다.</div>"; } ?>
+    <?php 
+    if ($result) {
+        while ($row = sql_fetch_array($result)) { 
+            $img_url = isset($row['thumbnail_url']) ? $row['thumbnail_url'] : ''; 
+    ?>
+    <div class="tpl_card" id="card_<?php echo $row['id']; ?>">
+        <div class="tpl_thumb">
+            <?php if ($img_url) { ?><img src="<?php echo $img_url; ?>" alt="썸네일"><?php } else { ?><div class="placeholder">🖼</div><?php } ?>
+            <div class="tpl_overlay"><a href="/page/landing.php?id=<?php echo $row['id']; ?>" target="_blank">🔍 미리보기</a></div>
+        </div>
+        <div class="tpl_info">
+            <div class="tpl_cate"><?php echo get_text(isset($row['industry']) && $row['industry'] ? $row['industry'] : '미분류'); ?></div>
+            <div class="tpl_title"><?php echo get_text(isset($row['subject']) && $row['subject'] ? $row['subject'] : (isset($row['hero_title']) ? $row['hero_title'] : '')); ?></div>
+            <div class="tpl_stats"><span>파생 라이브 페이지</span><span class="badge"><?php echo number_format((int)$row['derived_cnt']); ?>개</span></div>
+        </div>
+        <div class="tpl_controls">
+            <button type="button" class="btn_generate" onclick="createLivePage(<?php echo (int)$row['id']; ?>)">🚀 이 템플릿으로 페이지 생성</button>
+            <div class="action_btns">
+                <button type="button" onclick="location.href='./template_form.php?id=<?php echo (int)$row['id']; ?>'">템플릿 수정</button>
+                <button type="button" class="btn_del" onclick="deleteTemplate(<?php echo (int)$row['id']; ?>, <?php echo (int)$row['derived_cnt']; ?>)">삭제</button>
+            </div>
+        </div>
+    </div>
+    <?php 
+        }
+    } 
+    ?>
+</div>
+
+<script>
+function createLivePage(id) {
+    if (confirm('이 마스터 템플릿의 레이아웃을 가져와서 실제 마케팅용 [라이브 페이지]를 생성하시겠습니까?')) {
+        $.post('./template_create_live.php', { id: id }, function(res) {
+            if (res.success) {
+                alert('페이지가 성공적으로 생성되었습니다. 라이브 페이지 목록으로 이동합니다.');
+                location.href = './landing_list.php';
+            } else {
+                alert('생성 실패: ' + res.error);
+            }
+        }, 'json').fail(function() {
+            alert('서버 통신 오류');
+        });
+    }
+}
+function deleteTemplate(id, derived_cnt) {
+    if (derived_cnt > 0) {
+        alert('⚠️ 삭제 불가: 해당 템플릿으로 생성되어 사용 중인 라이브 페이지가 ' + derived_cnt + '개 존재합니다. 안전을 위해 원본 템플릿을 삭제할 수 없습니다.');
+        return;
+    }
+    if (confirm('이 템플릿을 정말 삭제하시겠습니까? (복구 불가)')) {
+        $.post('./template_delete.php', { id: id }, function(res) {
+            if (res.success) {
+                $('#card_' + id).fadeOut(300, function(){ $(this).remove(); });
+            } else {
+                alert('삭제 실패: ' + res.error);
+            }
+        }, 'json').fail(function() {
+            alert('서버 통신 오류');
+        });
+    }
+}
+</script>
+
+<?php include_once(G5_ADMIN_PATH . '/admin.tail.php'); ?>

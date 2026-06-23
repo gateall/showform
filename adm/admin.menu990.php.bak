@@ -1,0 +1,10 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+$menu['menu990'] = array (
+    array('990000', '랜딩관리', G5_ADMIN_URL.'/landing/landing_list.php', 'landing'),
+    array('990100', '랜딩목록', G5_ADMIN_URL.'/landing/landing_list.php', 'landing_list'),
+    array('990200', '랜딩생성', G5_ADMIN_URL.'/landing/landing_form.php', 'landing_form'),
+    array('990300', '템플릿관리', '#', 'template_list'),
+    array('990400', '업종관리', '#', 'category_list')
+);
+?>

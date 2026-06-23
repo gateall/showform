@@ -1,0 +1,8 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+$menu['menu991'] = array (
+    array('991000', '문의관리', G5_ADMIN_URL.'/landing/inquiry_list.php', 'inquiry'),
+    array('991100', '문의목록', G5_ADMIN_URL.'/landing/inquiry_list.php', 'inquiry_list'),
+    array('991200', '통계', '#', 'inquiry_stats')
+);
+?>

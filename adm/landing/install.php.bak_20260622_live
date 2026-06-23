@@ -1,0 +1,47 @@
+﻿<?php
+$sub_menu = '990050';
+include_once('../../common.php');
+include_once(G5_ADMIN_PATH.'/admin.lib.php');
+
+if (!$is_admin) {
+    alert('관리자만 접근 가능합니다.', G5_URL);
+}
+
+$landing_category_table = G5_TABLE_PREFIX . 'landing_category';
+$landing_page_table = G5_TABLE_PREFIX . 'landing_page';
+$landing_inquiry_table = G5_TABLE_PREFIX . 'landing_inquiry';
+
+$sql = array();
+
+$sql[] = "CREATE TABLE IF NOT EXISTS `{$landing_category_table}` (\n  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,\n  `category_code` VARCHAR(50) NOT NULL,\n  `category_name` VARCHAR(50) NOT NULL,\n  `category_desc` TEXT NULL,\n  `sort_order` INT NOT NULL DEFAULT 0,\n  `is_display` CHAR(1) NOT NULL DEFAULT 'Y',\n  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uk_category_code` (`category_code`),\n  UNIQUE KEY `uk_category_name` (`category_name`),\n  KEY `idx_sort_order` (`sort_order`),\n  KEY `idx_is_display` (`is_display`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+$sql[] = "ALTER TABLE `{$landing_page_table}` ADD COLUMN `category_id` INT UNSIGNED NULL DEFAULT NULL";
+$sql[] = "ALTER TABLE `{$landing_page_table}` ADD KEY `idx_category_id` (`category_id`)";
+
+$sql[] = "CREATE TABLE IF NOT EXISTS `{$landing_inquiry_table}` (\n  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,\n  `landing_id` INT UNSIGNED NOT NULL DEFAULT 0,\n  `name` VARCHAR(100) NOT NULL,\n  `tel` VARCHAR(50) NOT NULL,\n  `email` VARCHAR(255) DEFAULT '',\n  `category` VARCHAR(100) DEFAULT '',\n  `content` TEXT NOT NULL,\n  `ip` VARCHAR(50) DEFAULT '',\n  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_landing_id` (`landing_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+foreach ($sql as $query) {
+    sql_query($query, false);
+}
+
+$defaults = array(
+    array('nusu', '누수', '누수 탐지 및 방수 관련 카테고리', 1, 'Y'),
+    array('bangsu', '방수', '방수 시공 관련 카테고리', 2, 'Y'),
+    array('interior', '인테리어', '인테리어 및 리모델링 카테고리', 3, 'Y'),
+    array('clean', '청소', '청소 서비스 카테고리', 4, 'Y'),
+    array('moving', '이사', '이사 관련 카테고리', 5, 'Y'),
+);
+foreach ($defaults as $item) {
+    list($code, $name, $desc, $sort, $disp) = $item;
+    $dup = sql_fetch(" select id from {$landing_category_table} where category_code = '" . sql_real_escape_string($code) . "' limit 1 ");
+    if (!$dup) {
+        sql_query(" insert into {$landing_category_table} set category_code = '" . sql_real_escape_string($code) . "', category_name = '" . sql_real_escape_string($name) . "', category_desc = '" . sql_real_escape_string($desc) . "', sort_order = '{$sort}', is_display = '{$disp}', created_at = '" . G5_TIME_YMDHIS . "', updated_at = '" . G5_TIME_YMDHIS . "' ");
+    }
+}
+
+$sample = sql_fetch(" select id from {$landing_page_table} where id = '1' ");
+if (!$sample) {
+    sql_query(" insert into {$landing_page_table}\n        set id = 1,\n            subject = 'AI 랜딩페이지 자동화 시스템',\n            company = 'ShowForm',\n            tel = '010-0000-0000',\n            category = '랜딩페이지 자동화',\n            area = '전국',\n            hero_text = '사진과 업체 정보만 입력하면 랜딩페이지가 자동 생성됩니다.',\n            intro_text = 'ShowForm은 소상공인과 지역업체를 위한 AI 기반 랜딩페이지 자동화 시스템입니다.',\n            adv1 = '빠른 제작',\n            adv2 = '모바일 최적화',\n            adv3 = '광고 연동 가능',\n            is_use = 1,\n            created_at = '" . G5_TIME_YMDHIS . "' ", false);
+}
+
+alert('랜딩 카테고리 및 기본 DB 설치가 완료되었습니다.', G5_ADMIN_URL . '/landing/category_list.php');

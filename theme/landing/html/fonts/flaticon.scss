@@ -1,0 +1,257 @@
+$flaticon-font: "flaticon";
+
+@font-face {
+    font-family: $flaticon-font;
+    src: url("../fonts/flaticon.woff2?553c94bd8a3f0d24e290f55fb5c99649") format("woff2"),
+url("../fonts/flaticon.woff?553c94bd8a3f0d24e290f55fb5c99649") format("woff"),
+url("../fonts/flaticon.eot?553c94bd8a3f0d24e290f55fb5c99649#iefix") format("embedded-opentype"),
+url("../fonts/flaticon.ttf?553c94bd8a3f0d24e290f55fb5c99649") format("truetype"),
+url("../fonts/flaticon.svg?553c94bd8a3f0d24e290f55fb5c99649#flaticon") format("svg");
+}
+
+i[class^="flaticon-"]:before, i[class*=" flaticon-"]:before {
+    font-family: flaticon !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+$flaticon-map: (
+    "brickwall": "\f101",
+    "pantone": "\f102",
+    "bathroom": "\f103",
+    "living-room": "\f104",
+    "blueprint": "\f105",
+    "quote-left": "\f106",
+    "cushions": "\f107",
+    "right-quotation-mark": "\f108",
+    "brickwall-1": "\f109",
+    "star": "\f10a",
+    "stairs": "\f10b",
+    "star-1": "\f10c",
+    "armchair": "\f10d",
+    "user": "\f10e",
+    "kitchen": "\f10f",
+    "bathtub": "\f110",
+    "axis": "\f111",
+    "trophy": "\f112",
+    "house": "\f113",
+    "world": "\f114",
+    "3d": "\f115",
+    "portfolio": "\f116",
+    "paint": "\f117",
+    "satisfaction": "\f118",
+    "bed": "\f119",
+    "phone": "\f11a",
+    "blueprint-1": "\f11b",
+    "telephone": "\f11c",
+    "blueprint-2": "\f11d",
+    "map": "\f11e",
+    "placeholder": "\f11f",
+    "message": "\f120",
+    "right": "\f121",
+    "left": "\f122",
+    "up-right-arrow": "\f123",
+    "check-mark": "\f124",
+    "wallet": "\f125",
+    "clock": "\f126",
+    "tick-mark": "\f127",
+    "conversation": "\f128",
+    "hard-hat": "\f129",
+    "tools": "\f12a",
+    "house-design": "\f12b",
+    "drill": "\f12c",
+    "compass": "\f12d",
+    "tape-measure": "\f12e",
+    "eco-home": "\f12f",
+    "plastering": "\f130",
+    "calendar": "\f131",
+    "people": "\f132",
+    "warranty": "\f133",
+    "premium": "\f134",
+    "offer": "\f135",
+    "engineer": "\f136",
+    "award": "\f137",
+    "magnifying-glass": "\f138",
+    "trolley": "\f139",
+    "client": "\f13a",
+);
+
+.flaticon-brickwall:before {
+    content: map-get($flaticon-map, "brickwall");
+}
+.flaticon-pantone:before {
+    content: map-get($flaticon-map, "pantone");
+}
+.flaticon-bathroom:before {
+    content: map-get($flaticon-map, "bathroom");
+}
+.flaticon-living-room:before {
+    content: map-get($flaticon-map, "living-room");
+}
+.flaticon-blueprint:before {
+    content: map-get($flaticon-map, "blueprint");
+}
+.flaticon-quote-left:before {
+    content: map-get($flaticon-map, "quote-left");
+}
+.flaticon-cushions:before {
+    content: map-get($flaticon-map, "cushions");
+}
+.flaticon-right-quotation-mark:before {
+    content: map-get($flaticon-map, "right-quotation-mark");
+}
+.flaticon-brickwall-1:before {
+    content: map-get($flaticon-map, "brickwall-1");
+}
+.flaticon-star:before {
+    content: map-get($flaticon-map, "star");
+}
+.flaticon-stairs:before {
+    content: map-get($flaticon-map, "stairs");
+}
+.flaticon-star-1:before {
+    content: map-get($flaticon-map, "star-1");
+}
+.flaticon-armchair:before {
+    content: map-get($flaticon-map, "armchair");
+}
+.flaticon-user:before {
+    content: map-get($flaticon-map, "user");
+}
+.flaticon-kitchen:before {
+    content: map-get($flaticon-map, "kitchen");
+}
+.flaticon-bathtub:before {
+    content: map-get($flaticon-map, "bathtub");
+}
+.flaticon-axis:before {
+    content: map-get($flaticon-map, "axis");
+}
+.flaticon-trophy:before {
+    content: map-get($flaticon-map, "trophy");
+}
+.flaticon-house:before {
+    content: map-get($flaticon-map, "house");
+}
+.flaticon-world:before {
+    content: map-get($flaticon-map, "world");
+}
+.flaticon-3d:before {
+    content: map-get($flaticon-map, "3d");
+}
+.flaticon-portfolio:before {
+    content: map-get($flaticon-map, "portfolio");
+}
+.flaticon-paint:before {
+    content: map-get($flaticon-map, "paint");
+}
+.flaticon-satisfaction:before {
+    content: map-get($flaticon-map, "satisfaction");
+}
+.flaticon-bed:before {
+    content: map-get($flaticon-map, "bed");
+}
+.flaticon-phone:before {
+    content: map-get($flaticon-map, "phone");
+}
+.flaticon-blueprint-1:before {
+    content: map-get($flaticon-map, "blueprint-1");
+}
+.flaticon-telephone:before {
+    content: map-get($flaticon-map, "telephone");
+}
+.flaticon-blueprint-2:before {
+    content: map-get($flaticon-map, "blueprint-2");
+}
+.flaticon-map:before {
+    content: map-get($flaticon-map, "map");
+}
+.flaticon-placeholder:before {
+    content: map-get($flaticon-map, "placeholder");
+}
+.flaticon-message:before {
+    content: map-get($flaticon-map, "message");
+}
+.flaticon-right:before {
+    content: map-get($flaticon-map, "right");
+}
+.flaticon-left:before {
+    content: map-get($flaticon-map, "left");
+}
+.flaticon-up-right-arrow:before {
+    content: map-get($flaticon-map, "up-right-arrow");
+}
+.flaticon-check-mark:before {
+    content: map-get($flaticon-map, "check-mark");
+}
+.flaticon-wallet:before {
+    content: map-get($flaticon-map, "wallet");
+}
+.flaticon-clock:before {
+    content: map-get($flaticon-map, "clock");
+}
+.flaticon-tick-mark:before {
+    content: map-get($flaticon-map, "tick-mark");
+}
+.flaticon-conversation:before {
+    content: map-get($flaticon-map, "conversation");
+}
+.flaticon-hard-hat:before {
+    content: map-get($flaticon-map, "hard-hat");
+}
+.flaticon-tools:before {
+    content: map-get($flaticon-map, "tools");
+}
+.flaticon-house-design:before {
+    content: map-get($flaticon-map, "house-design");
+}
+.flaticon-drill:before {
+    content: map-get($flaticon-map, "drill");
+}
+.flaticon-compass:before {
+    content: map-get($flaticon-map, "compass");
+}
+.flaticon-tape-measure:before {
+    content: map-get($flaticon-map, "tape-measure");
+}
+.flaticon-eco-home:before {
+    content: map-get($flaticon-map, "eco-home");
+}
+.flaticon-plastering:before {
+    content: map-get($flaticon-map, "plastering");
+}
+.flaticon-calendar:before {
+    content: map-get($flaticon-map, "calendar");
+}
+.flaticon-people:before {
+    content: map-get($flaticon-map, "people");
+}
+.flaticon-warranty:before {
+    content: map-get($flaticon-map, "warranty");
+}
+.flaticon-premium:before {
+    content: map-get($flaticon-map, "premium");
+}
+.flaticon-offer:before {
+    content: map-get($flaticon-map, "offer");
+}
+.flaticon-engineer:before {
+    content: map-get($flaticon-map, "engineer");
+}
+.flaticon-award:before {
+    content: map-get($flaticon-map, "award");
+}
+.flaticon-magnifying-glass:before {
+    content: map-get($flaticon-map, "magnifying-glass");
+}
+.flaticon-trolley:before {
+    content: map-get($flaticon-map, "trolley");
+}
+.flaticon-client:before {
+    content: map-get($flaticon-map, "client");
+}

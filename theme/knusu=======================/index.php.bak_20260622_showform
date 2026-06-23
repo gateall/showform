@@ -1,0 +1,432 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+$g5['title'] = 'ShowForm | AI 랜딩페이지 자동생성 플랫폼';
+
+include_once(G5_THEME_PATH.'/head.php');
+?>
+
+<style>
+/* 기존 이사 사이트 콘텐츠 숨김 처리 (일반 홈페이지형 메뉴 구조 제거) */
+header, .site-header, .pbmit-header-area, footer, .site-footer, .pbmit-footer-section, .footer-area { display: none !important; }
+
+/* 신규 모바일 단순 메뉴 (상단 고정) */
+.sf-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+.sf-topbar-logo {
+    font-size: 20px;
+    font-weight: 900;
+    color: #111;
+    text-decoration: none;
+}
+.sf-topbar-nav a {
+    margin-left: 15px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    text-decoration: none;
+}
+.sf-topbar-nav a:hover { color: #1d4ed8; }
+
+.sf-lp *{box-sizing:border-box}
+.sf-lp{font-family:Arial,'Noto Sans KR',sans-serif;color:#111;line-height:1.6; padding-top: 60px;}
+.sf-lp a{text-decoration:none}
+.sf-wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* 1단계: 히어로 영역 */
+.sf-hero{
+    padding: 120px 0;
+    display:flex;
+    align-items:center;
+    background:linear-gradient(135deg,#050816,#1d4ed8);
+    color:#fff;
+    text-align:center;
+}
+.sf-hero-inner {
+    width: 100%;
+}
+.sf-hero h1{
+    margin:0 auto 24px;
+    max-width:920px;
+    font-size:56px;
+    line-height:1.2;
+    letter-spacing:-2px;
+    font-weight: 900;
+}
+.sf-hero p{
+    max-width:760px;
+    margin:0 auto 40px;
+    font-size:20px;
+    color:#e5e7eb;
+}
+.sf-hero-sub {
+    font-size: 16px;
+    color: #93c5fd;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+.sf-actions{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+.sf-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:200px;
+    height:56px;
+    padding:0 30px;
+    border-radius:10px;
+    font-weight:800;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+.sf-btn-primary{background:#fff;color:#1d4ed8;}
+.sf-btn-primary:hover{background:#f8fafc;transform:translateY(-2px);}
+.sf-btn-line{border:1px solid rgba(255,255,255,.55);color:#fff}
+.sf-btn-line:hover{background:rgba(255,255,255,.1);transform:translateY(-2px);}
+
+/* 3단계: 신뢰도 배너 */
+.sf-trust-banner {
+    background: #111827;
+    padding: 30px 0;
+    color: #fff;
+    border-bottom: 1px solid #1f2937;
+}
+.sf-trust-list {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+.sf-trust-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+}
+.sf-trust-item i {
+    color: #10b981;
+}
+
+/* 4단계: 실제 샘플 카드 (3개) */
+.sf-section{padding:90px 0}
+.sf-section h2{
+    margin:0 0 18px;
+    font-size:38px;
+    line-height:1.25;
+    text-align:center;
+    letter-spacing:-1px;
+    font-weight: 900;
+}
+.sf-section .lead{
+    max-width:780px;
+    margin:0 auto 42px;
+    text-align:center;
+    font-size:19px;
+    color:#555;
+}
+.sf-gray{background:#f8fafc}
+.sf-cards{display:grid;gap:20px}
+.sf-cards-2{grid-template-columns:repeat(2,1fr)}
+.sf-cards-3{grid-template-columns:repeat(3,1fr)}
+.sf-cards-4{grid-template-columns:repeat(4,1fr)}
+.sf-cards-5{grid-template-columns:repeat(5,1fr)}
+.sf-card{
+    padding:32px 24px;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    background:#fff;
+    text-align:center;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+.sf-card:hover {
+    transform: translateY(-5px);
+}
+.sf-card strong{
+    display:block;
+    margin-bottom:10px;
+    font-size:22px;
+    color:#111;
+}
+.sf-card p{margin:0;color:#64748b;font-size:16px;}
+
+.sf-sample-card {
+    display: block;
+    padding: 40px 20px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-weight: 800;
+    font-size: 20px;
+    text-align: center;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+.sf-sample-card:hover {
+    border-color: #3b82f6;
+    color: #1d4ed8;
+    transform: translateY(-5px);
+}
+.sf-sample-icon {
+    display: block;
+    font-size: 40px;
+    margin-bottom: 15px;
+    color: #3b82f6;
+}
+
+/* 5단계: 숫자 강조 */
+.sf-number-card {
+    background: #eff6ff;
+    border: none;
+}
+.sf-number-card .num {
+    display: block;
+    font-size: 48px;
+    font-weight: 900;
+    color: #1d4ed8;
+    margin-bottom: 5px;
+    line-height: 1;
+}
+
+/* 6단계: 지원 업종 */
+.sf-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    justify-content:center;
+}
+.sf-tags span{
+    padding:12px 24px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid #cbd5e1;
+    font-weight:700;
+    color:#334155;
+    font-size: 16px;
+}
+
+/* 7단계: 관리자 기능 */
+.sf-admin-card {
+    padding: 24px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: #0f172a;
+}
+
+/* 9단계: 최종 CTA */
+.sf-bottom-cta{
+    padding:120px 0;
+    background:linear-gradient(135deg,#0f172a,#1e40af);
+    color:#fff;
+    text-align:center;
+}
+.sf-bottom-cta h2{
+    font-size:46px;
+    margin:0 0 20px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+.sf-bottom-cta p{
+    font-size:22px;
+    margin:0 0 40px;
+    color:#cbd5e1;
+}
+
+@media(max-width:900px){
+    .sf-hero{padding: 80px 0;}
+    .sf-hero h1{font-size:42px;}
+    .sf-hero p{font-size:18px;}
+    .sf-cards-2, .sf-cards-3, .sf-cards-4, .sf-cards-5{grid-template-columns:repeat(2,1fr)}
+    .sf-trust-list { gap: 15px; }
+}
+
+@media(max-width:520px){
+    .sf-hero{padding: 60px 0;}
+    .sf-hero h1{font-size:34px;}
+    .sf-section{padding:60px 0}
+    .sf-section h2{font-size:30px}
+    .sf-cards-2, .sf-cards-3, .sf-cards-4, .sf-cards-5{grid-template-columns:1fr}
+    .sf-btn{width:100%;}
+    .sf-topbar-nav a { margin-left: 10px; font-size: 14px; }
+}
+</style>
+
+<!-- 모바일 상단 고정 네비게이션 -->
+<div class="sf-topbar">
+    <a href="/" class="sf-topbar-logo">ShowForm</a>
+    <div class="sf-topbar-nav">
+        <a href="#samples">샘플보기</a>
+        <a href="/adm/landing/landing_form.php">랜딩생성</a>
+        <a href="/adm/landing/inquiry_list.php">문의하기</a>
+    </div>
+</div>
+
+<main class="sf-lp">
+
+<!-- 1단계: 히어로 영역 전면 교체 -->
+<section class="sf-hero">
+    <div class="sf-wrap sf-hero-inner">
+        <p class="sf-hero-sub">누수 · 방수 · 이사 · 청소 · 병원 · 요양원</p>
+        <h1>5분 만에 랜딩페이지 생성<br>문의 DB · AI 문구 · 상담폼까지 자동 구축</h1>
+        <p>
+            업종만 선택하면 랜딩페이지가 자동 생성됩니다.
+        </p>
+        <!-- 2단계: CTA 버튼 강화 -->
+        <div class="sf-actions">
+            <a href="/page/landing.php?id=1" class="sf-btn sf-btn-primary">무료 샘플 보기</a>
+            <a href="/adm/landing/landing_form.php" class="sf-btn sf-btn-line">지금 랜딩 만들기</a>
+        </div>
+    </div>
+</section>
+
+<!-- 3단계: 신뢰도 배너 추가 -->
+<div class="sf-trust-banner">
+    <div class="sf-wrap">
+        <div class="sf-trust-list">
+            <div class="sf-trust-item"><i class="fa-solid fa-check"></i> 랜딩 자동 생성</div>
+            <div class="sf-trust-item"><i class="fa-solid fa-check"></i> 문의 DB 저장</div>
+            <div class="sf-trust-item"><i class="fa-solid fa-check"></i> 모바일 자동 최적화</div>
+            <div class="sf-trust-item"><i class="fa-solid fa-check"></i> AI 문구 생성</div>
+            <div class="sf-trust-item"><i class="fa-solid fa-check"></i> 광고 연결 지원</div>
+        </div>
+    </div>
+</div>
+
+<!-- 4단계: 실제 샘플 카드 추가 -->
+<section id="samples" class="sf-section sf-gray">
+    <div class="sf-wrap">
+        <h2>실제 생성된 랜딩페이지</h2>
+        <p class="lead">단 몇 분만에 아래와 같은 고품질 랜딩페이지가 자동 생성됩니다.</p>
+
+        <div class="sf-cards sf-cards-3">
+            <a href="/page/landing.php?id=1" class="sf-sample-card">
+                <i class="fa-solid fa-droplet sf-sample-icon"></i>
+                누수 랜딩 보기
+            </a>
+            <a href="/page/landing.php?id=2" class="sf-sample-card">
+                <i class="fa-solid fa-umbrella sf-sample-icon"></i>
+                방수 랜딩 보기
+            </a>
+            <a href="/page/landing.php?id=3" class="sf-sample-card">
+                <i class="fa-solid fa-hospital sf-sample-icon"></i>
+                병원 랜딩 보기
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- 5단계: 숫자 강조 섹션 추가 -->
+<section class="sf-section">
+    <div class="sf-wrap">
+        <h2>랜딩 제작 시간을 획기적으로 줄입니다</h2>
+        <p class="lead">복잡한 디자인, 코딩 없이 오직 비즈니스에만 집중하세요.</p>
+
+        <div class="sf-cards sf-cards-4">
+            <div class="sf-card sf-number-card">
+                <span class="num">5분</span>
+                <strong>랜딩 생성</strong>
+            </div>
+            <div class="sf-card sf-number-card">
+                <span class="num">1회</span>
+                <strong>입력 자동 출력</strong>
+            </div>
+            <div class="sf-card sf-number-card">
+                <span class="num">24H</span>
+                <strong>문의 접수</strong>
+            </div>
+            <div class="sf-card sf-number-card">
+                <span class="num">100%</span>
+                <strong>모바일 대응</strong>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 6단계: 지원 업종 확대 -->
+<section class="sf-section sf-gray">
+    <div class="sf-wrap">
+        <h2>지원 업종</h2>
+        <p class="lead">
+            지역광고와 문의형 업종에 최적화된 랜딩 구조를 지원합니다.
+        </p>
+
+        <div class="sf-tags">
+            <span>누수</span>
+            <span>방수</span>
+            <span>설비</span>
+            <span>이사</span>
+            <span>청소</span>
+            <span>요양원</span>
+            <span>병원</span>
+            <span>인테리어</span>
+            <span>법무사</span>
+            <span>세무사</span>
+            <span>학원</span>
+            <span>부동산</span>
+            <span>자동차</span>
+            <span>쇼핑몰</span>
+            <span>식당</span>
+            <span>카페</span>
+            <span>미용실</span>
+            <span>지역서비스</span>
+        </div>
+    </div>
+</section>
+
+<!-- 7단계: 관리자 기능 강조 -->
+<section class="sf-section">
+    <div class="sf-wrap">
+        <h2>관리자에서 모든 것을 관리합니다</h2>
+        <p class="lead">원클릭으로 설정하고 생성된 DB를 간편하게 관리하세요.</p>
+
+        <div class="sf-cards sf-cards-4">
+            <div class="sf-admin-card">랜딩관리</div>
+            <div class="sf-admin-card">문의관리</div>
+            <div class="sf-admin-card">템플릿관리</div>
+            <div class="sf-admin-card">업종관리</div>
+            <div class="sf-admin-card">AI 프롬프트</div>
+            <div class="sf-admin-card">생성로그</div>
+            <div class="sf-admin-card">API설정</div>
+        </div>
+    </div>
+</section>
+
+<!-- 9단계: 최종 CTA 교체 -->
+<section class="sf-bottom-cta">
+    <div class="sf-wrap">
+        <h2>지금 바로 랜딩페이지를 생성해보세요</h2>
+        <p>
+            랜딩 제작 시간을 줄이고 문의 관리를 자동화하십시오.
+        </p>
+        <div class="sf-actions">
+            <a href="/page/landing.php?id=1" class="sf-btn sf-btn-line">무료 샘플 보기</a>
+            <a href="/adm/landing/landing_form.php" class="sf-btn sf-btn-primary">랜딩 생성 시작하기</a>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<?php
+include_once(G5_THEME_PATH.'/tail.php');
+?>

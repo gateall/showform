@@ -1,0 +1,166 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+if (G5_IS_MOBILE) {
+    include_once(G5_THEME_MOBILE_PATH.'/tail.php');
+    return;
+}
+
+if (G5_COMMUNITY_USE === false) {
+    include_once(G5_THEME_SHOP_PATH.'/shop.tail.php');
+    return;
+}
+
+$korea_nusu_quick_links = array(
+    array('label' => '블로그', 'href' => 'https://m.blog.naver.com/qkrxogus_04', 'icon' => 'blog', 'external' => true),
+    array('label' => '인스타', 'href' => 'https://www.instagram.com/korea_nusu?igsh=MW03dGlrYm42bGlnNQ%3D%3D', 'icon' => 'insta', 'external' => true),
+    array('label' => '유튜브', 'href' => 'https://www.youtube.com/channel/UCWhd1CR-VCcs8wn4sd9aJ-g', 'icon' => 'youtube', 'external' => true),
+    array('label' => '상담문의', 'href' => '/content/online.php', 'icon' => 'consult', 'external' => false),
+    array('label' => '전화문의', 'href' => 'tel:010-2169-8148', 'icon' => 'phone', 'external' => false),
+);
+
+if (!function_exists('korea_nusu_quick_icon_svg')) {
+    function korea_nusu_quick_icon_svg($type) {
+        switch ($type) {
+            case 'blog':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.75A2.75 2.75 0 0 1 9.75 2h4.5A2.75 2.75 0 0 1 17 4.75v14.5A2.75 2.75 0 0 1 14.25 22h-4.5A2.75 2.75 0 0 1 7 19.25V4.75Zm2.25.75a.75.75 0 0 0-.75.75v11.5c0 .41.34.75.75.75h5.5c.41 0 .75-.34.75-.75V6.25a.75.75 0 0 0-.75-.75h-5.5ZM10 8.25c0-.41.34-.75.75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm0 3.5c0-.41.34-.75.75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm0 3.5c0-.41.34-.75.75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Z"/></svg>';
+            case 'insta':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.75a4 4 0 0 0-4 4v8.5a4 4 0 0 0 4 4h8.5a4 4 0 0 0 4-4v-8.5a4 4 0 0 0-4-4h-8.5ZM12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Zm0 1.75A3.25 3.25 0 1 0 12 15.25A3.25 3.25 0 0 0 12 8.75Zm5.13-2.06a1.19 1.19 0 1 1 0 2.38a1.19 1.19 0 0 1 0-2.38Z"/></svg>';
+            case 'youtube':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.58 7.19a2.98 2.98 0 0 0-2.1-2.1C17.61 4.5 12 4.5 12 4.5s-5.61 0-7.48.59a2.98 2.98 0 0 0-2.1 2.1A31.7 31.7 0 0 0 1.83 12c0 1.63.2 3.25.59 4.81a2.98 2.98 0 0 0 2.1 2.1c1.87.59 7.48.59 7.48.59s5.61 0 7.48-.59a2.98 2.98 0 0 0 2.1-2.1c.39-1.56.59-3.18.59-4.81c0-1.63-.2-3.25-.59-4.81ZM10.25 15.5v-7l6 3.5l-6 3.5Z"/></svg>';
+            case 'consult':
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7A2.5 2.5 0 0 1 17.5 15H10l-4.6 4.1c-.64.57-1.4.11-1.4-.74V15.9A2.49 2.49 0 0 1 4 15V5.5Zm4 2.25a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5H8Zm0 3.5a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5H8Z"/></svg>';
+            case 'phone':
+            default:
+                return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24c1.12.37 2.33.57 3.57.57c.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.85 21 3 13.15 3 3c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1c0 1.24.2 2.45.57 3.57c.11.35.03.74-.25 1.02l-2.2 2.2Z"/></svg>';
+        }
+    }
+}
+?>
+
+    </div>
+
+<hr>
+
+<style>
+#ft{background:#f3f3f3;border-top:1px solid #e5e5e5;padding:0}
+#ft .kfooter{max-width:1280px;margin:0 auto;padding:42px 20px 34px;box-sizing:border-box}
+#ft .kfooter-inner{display:flex;align-items:center;gap:34px}
+#ft .kfooter-logo{flex:0 0 150px}
+#ft .kfooter-logo img{display:block;max-width:100%;height:auto}
+#ft .kfooter-text{flex:1;min-width:0}
+#ft .kfooter-info{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0;color:#666;font-size:15px;line-height:1.8;word-break:keep-all}
+#ft .kfooter-info .bar{color:#a8a8a8}
+#ft .kfooter-copy{margin:12px 0 0;color:#777;font-size:15px;line-height:1.7;letter-spacing:.2px}
+.kn-pc-quick{display:none}
+.kn-pc-admin{display:none}
+@media (min-width:769px){
+.kn-pc-quick{display:block;position:fixed;right:24px;bottom:96px;z-index:99999}
+.kn-pc-admin{display:block;position:fixed;left:24px;bottom:96px;z-index:99998}
+.kn-pc-admin-link{display:inline-flex;align-items:center;justify-content:center;min-width:136px;height:48px;padding:0 20px;border-radius:999px;background:#172742;color:#fff;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:-.01em;box-shadow:0 10px 24px rgba(10,22,44,.25);transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+.kn-pc-admin-link:hover{transform:translateY(-4px);background:#0f57d6;box-shadow:0 14px 30px rgba(15,87,214,.28);color:#fff}
+.kn-pc-quick-list{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.kn-pc-quick-item{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:164px;height:52px;padding:0 16px;border-radius:999px;background:rgba(24,34,51,.94);box-shadow:0 10px 24px rgba(7,18,38,.18);color:#fff;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:-.02em;transition:transform .2s ease,background .2s ease,box-shadow .2s ease;backdrop-filter:blur(8px)}
+.kn-pc-quick-item:hover{transform:translateX(-6px);background:#0f57d6;box-shadow:0 14px 30px rgba(15,87,214,.24);color:#fff}
+.kn-pc-quick-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:0 0 22px}
+.kn-pc-quick-icon svg{display:block;width:22px;height:22px}
+.kn-pc-quick-text{display:block;line-height:1;white-space:nowrap}
+.kn-pc-quick-top{display:flex;align-items:center;justify-content:center;width:52px;height:52px;margin:12px 0 0 auto;border:0;border-radius:50%;background:#0b1b36;color:#fff;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(7,18,38,.22);transition:transform .2s ease,background .2s ease}
+.kn-pc-quick-top:hover{transform:translateY(-4px);background:#0f57d6}
+}
+@media (max-width:991px){
+#ft .kfooter{padding:32px 16px 26px}
+#ft .kfooter-inner{gap:22px}
+#ft .kfooter-logo{flex:0 0 120px}
+#ft .kfooter-info,#ft .kfooter-copy{font-size:14px}
+}
+@media (min-width:769px) and (max-width:1024px){
+.kn-pc-quick{right:16px;bottom:86px}
+.kn-pc-admin{left:16px;bottom:86px}
+.kn-pc-quick-item{min-width:150px;height:48px;padding:0 14px;font-size:14px}
+}
+@media (max-width:768px){
+.kn-pc-quick{display:none!important}
+.kn-pc-admin{display:none!important}
+}
+@media (max-width:767px){
+#ft .kfooter-inner{display:block}
+#ft .kfooter-logo{margin:0 0 18px;max-width:130px}
+#ft .kfooter-info{display:block;line-height:1.9}
+#ft .kfooter-info .bar{display:none}
+#ft .kfooter-copy{margin-top:10px;font-size:14px}
+}
+
+
+.kn-pc-quick-item
+Specificity: (0,1,0)
+ {
+    background: rgb(32 193 60 / 94%);
+}
+</style>
+
+<div id="ft">
+    <div class="kfooter">
+        <div class="kfooter-inner">
+            <div class="kfooter-logo">
+                <img src="/img/logo.png" alt="코리아누수 로고">
+            </div>
+            <div class="kfooter-text">
+                <p class="kfooter-info">
+                    <span>상호명: 코리아누수</span>
+                    <span class="bar">|</span>
+                    <span>주소: 대구광역시 수성구 두산동 79-1, 3층</span>
+                    <span class="bar">|</span>
+                    <span>사업자번호: 387-10-02850</span>
+                    <span class="bar">|</span>
+                    <span>대표: 박태현</span>
+                    <span class="bar">|</span>
+                    <span>대표번호: 010-2169-8148</span>
+                </p>
+                <p class="kfooter-copy">COPYRIGHT <?php echo date('Y'); ?> KOREA NUSU. ALL RIGHTS RESERVED.</p>
+            </div>
+        </div>
+    </div>
+
+    <?php /*
+    <button type="button" id="top_btn">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i><span class="sound_only">상단으로</span>
+    </button>
+    */ ?>
+</div>
+
+<div class="kn-pc-admin" aria-label="관리자 바로가기">
+    <a href="/adm/" class="kn-pc-admin-link" rel="nofollow">관리자 바로가기</a>
+</div>
+
+<div class="kn-pc-quick" id="knPcQuick" aria-label="빠른 메뉴">
+    <div class="kn-pc-quick-list">
+        <?php foreach($korea_nusu_quick_links as $item){ ?>
+        <a href="<?php echo $item['href']; ?>" class="kn-pc-quick-item"<?php echo !empty($item['external']) ? ' target="_blank" rel="noopener"' : ''; ?><?php echo (strpos($item['href'], 'tel:') === 0 ? ' aria-label="전화문의 010-2169-8148"' : ''); ?>>
+            <span class="kn-pc-quick-icon"><?php echo korea_nusu_quick_icon_svg($item['icon']); ?></span>
+            <span class="kn-pc-quick-text"><?php echo $item['label']; ?></span>
+        </a>
+        <?php } ?>
+    </div>
+    <button type="button" class="kn-pc-quick-top" id="knPcQuickTop" aria-label="맨 위로 이동">↑</button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var quickTopBtn = document.getElementById('knPcQuickTop');
+
+    if (quickTopBtn) {
+        quickTopBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+});
+</script>
+
+<?php
+include_once(G5_THEME_PATH.'/tail.sub.php');
+?>

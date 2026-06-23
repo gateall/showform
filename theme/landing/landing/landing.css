@@ -1,0 +1,9 @@
+﻿body.page-landing { background: #f7f9fc; }
+.landing-view { padding: 40px 0; }
+.landing-view__hero { max-width: 1200px; margin: 0 auto; padding: 32px; border-radius: 24px; background: linear-gradient(135deg, #0d1b2a, #17446b); color: #fff; }
+.landing-view__hero h1, .landing-view__hero h2 { margin: 0 0 12px; line-height: 1.15; }
+.landing-view__hero h1 { font-size: clamp(30px, 4vw, 54px); }
+.landing-view__hero h2 { font-size: 28px; }
+.landing-view__hero p { margin: 0 0 12px; font-size: 18px; line-height: 1.8; }
+@media (max-width: 768px) { .landing-view { padding: 20px 0; } .landing-view__hero { padding: 22px; border-radius: 18px; } .landing-view__hero p { font-size: 15px; } }
+@media (max-width: 480px) { .landing-view__hero h1 { font-size: 24px; } .landing-view__hero h2 { font-size: 20px; } }

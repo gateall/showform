@@ -1,0 +1,11 @@
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('landing-inquiry-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // TODO: 추후 폼 전송 AJAX 처리 연동
+            alert('상담 신청이 완료되었습니다. 담당자가 확인 후 연락드리겠습니다.');
+            form.reset();
+        });
+    }
+});

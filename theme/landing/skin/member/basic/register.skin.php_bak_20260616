@@ -1,0 +1,243 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+add_javascript('<script src="'.G5_JS_URL.'/jquery.register_form.js"></script>', 0);
+if ($config['cf_cert_use'] && ($config['cf_cert_simple'] || $config['cf_cert_ipin'] || $config['cf_cert_hp'])) {
+    add_javascript('<script src="'.G5_JS_URL.'/certify.js?v='.G5_JS_VER.'"></script>', 0);
+}
+
+$kakao_login_url = G5_PLUGIN_URL.'/social/popup.php?provider=kakao&url='.urlencode(G5_URL).'&redirect_to_idp=1';
+$member_email = isset($member['mb_email']) ? get_text($member['mb_email']) : '';
+$member_name = isset($member['mb_name']) ? get_text($member['mb_name']) : '';
+$member_hp = isset($member['mb_hp']) ? get_text($member['mb_hp']) : '';
+$member_addr1 = isset($member['mb_addr1']) ? get_text($member['mb_addr1']) : '';
+$member_addr2 = isset($member['mb_addr2']) ? get_text($member['mb_addr2']) : '';
+$member_addr3 = isset($member['mb_addr3']) ? get_text($member['mb_addr3']) : '';
+$member_zip = isset($member['mb_zip1'], $member['mb_zip2']) ? $member['mb_zip1'].$member['mb_zip2'] : '';
+?>
+
+<div class="mbskin signup-page">
+    <div class="signup-card">
+        <form id="fregisterform" name="fregisterform" action="<?php echo $register_action_url ?>" onsubmit="return fregisterform_submit(this);" method="post" enctype="multipart/form-data" autocomplete="off">
+            <input type="hidden" name="w" value="<?php echo $w ?>">
+            <input type="hidden" name="url" value="<?php echo $urlencode ?>">
+            <input type="hidden" name="agree" value="1">
+            <input type="hidden" name="agree2" value="1">
+            <input type="hidden" name="cert_type" value="<?php echo isset($member['mb_certify']) ? $member['mb_certify'] : ''; ?>">
+            <input type="hidden" name="cert_no" value="">
+            <?php if (isset($member['mb_sex'])) { ?><input type="hidden" name="mb_sex" value="<?php echo $member['mb_sex'] ?>"><?php } ?>
+
+            <input type="hidden" name="mb_id" id="reg_mb_id" value="<?php echo $member_email ?>">
+            <input type="hidden" name="mb_nick" id="reg_mb_nick" value="<?php echo $member_name ?>">
+            <input type="hidden" name="mb_zip" id="reg_mb_zip" value="<?php echo $member_zip ?>">
+            <input type="hidden" name="mb_addr3" id="reg_mb_addr3" value="<?php echo $member_addr3 ?>">
+            <input type="hidden" name="mb_addr_jibeon" id="reg_mb_addr_jibeon" value="<?php echo isset($member['mb_addr_jibeon']) ? get_text($member['mb_addr_jibeon']) : ''; ?>">
+
+            <a href="<?php echo $kakao_login_url; ?>" class="signup-social signup-social-kakao social_link">
+                <img src="<?php echo G5_IMG_URL; ?>/kakao.png" alt="" class="signup-social-icon">
+                <span>카카오로 간편 가입하기</span>
+            </a>
+
+            <div class="signup-divider"><span>또는 이메일로 가입하기</span></div>
+
+            <div class="signup-notice">
+                한 번의 가입으로 구매, 생산자 등록, HUB 신청까지 팜마을의 모든 서비스를 자유롭게 이용하실 수 있습니다.
+            </div>
+
+            <div class="signup-fields">
+                <div class="signup-field">
+                    <input type="text" id="reg_mb_name" name="mb_name" value="<?php echo $member_name ?>" required class="frm_input signup-input" placeholder="이름 (실명)">
+                </div>
+
+                <div class="signup-field">
+                    <input type="email" id="reg_mb_email" name="mb_email" value="<?php echo $member_email ?>" required class="frm_input signup-input" placeholder="이메일 주소 (아이디로 사용)">
+                    <div class="field-msg" id="email-validation-msg"></div>
+                </div>
+
+                <div class="signup-field">
+                    <label class="signup-checkline">
+                        <input type="checkbox" id="use_email_as_id" checked disabled>
+                        <span>이메일을 아이디로 사용</span>
+                    </label>
+                </div>
+
+                <div class="signup-field">
+                    <div class="password-wrap">
+                        <input type="password" name="mb_password" id="reg_mb_password" <?php echo $required ?> class="frm_input signup-input" placeholder="비밀번호">
+                        <button type="button" class="pw-toggle" data-target="reg_mb_password" aria-label="비밀번호 보기">보기</button>
+                    </div>
+                    <div class="field-msg" id="password-strength-msg"></div>
+                </div>
+
+                <div class="signup-field">
+                    <div class="password-wrap">
+                        <input type="password" name="mb_password_re" id="reg_mb_password_re" <?php echo $required ?> class="frm_input signup-input" placeholder="비밀번호 확인">
+                        <button type="button" class="pw-toggle" data-target="reg_mb_password_re" aria-label="비밀번호 보기">보기</button>
+                    </div>
+                    <div class="field-msg" id="password-match-msg"></div>
+                </div>
+
+                <div class="signup-field">
+                    <label class="field-label" for="reg_mb_hp">휴대폰 번호</label>
+                    <input type="text" name="mb_hp" value="<?php echo $member_hp ?>" id="reg_mb_hp" required class="frm_input signup-input" placeholder="휴대폰 번호 (- 없이 입력)">
+                </div>
+
+                <div class="signup-field">
+                    <label class="field-label">주소</label>
+                    <div class="address-row">
+                        <input type="text" name="mb_addr1" value="<?php echo $member_addr1 ?>" id="reg_mb_addr1" required class="frm_input signup-input address-main" placeholder="기본 주소" readonly>
+                        <button type="button" class="address-btn" onclick="win_zip('fregisterform', 'mb_zip', 'mb_addr1', 'mb_addr2', 'mb_addr3', 'mb_addr_jibeon');">주소 검색</button>
+                    </div>
+                    <input type="text" name="mb_addr2" value="<?php echo $member_addr2 ?>" id="reg_mb_addr2" required class="frm_input signup-input" placeholder="상세 주소">
+                </div>
+
+                <div class="signup-field">
+                    <label class="signup-agree">
+                        <input type="checkbox" id="agree_terms" required>
+                        <span>이용약관 및 개인정보처리방침에 동의합니다. (필수)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="signup-submit-wrap">
+                <button type="submit" id="btn_submit" class="signup-submit">회원가입 완료</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+var termsContent = {
+    stipulation: <?php echo json_encode(nl2br(get_text($config['cf_stipulation']))); ?>,
+    privacy: <?php echo json_encode(nl2br(get_text($config['cf_privacy']))); ?>
+};
+
+function syncRegisterIdentity() {
+    var email = $('#reg_mb_email').val().trim();
+    var name = $('#reg_mb_name').val().trim();
+    $('#reg_mb_id').val(email);
+    if (!$('#reg_mb_nick').val().trim()) {
+        var base = name.replace(/[^0-9a-zA-Z가-힣]/g, '').substr(0, 12) || 'member';
+        $('#reg_mb_nick').val(base);
+    }
+}
+
+function open_terms_modal(type) {
+    var title = type === 'stipulation' ? '이용약관' : '개인정보처리방침';
+    var content = termsContent[type] || '내용이 없습니다.';
+    $('#modal-title').text(title);
+    $('#modal-body-content').html(content);
+    $('#terms-modal').addClass('is-active');
+}
+
+function close_terms_modal() {
+    $('#terms-modal').removeClass('is-active');
+}
+
+function generateNick(nameVal) {
+    var base = nameVal.replace(/[^0-9a-zA-Z가-힣]/g, '').substr(0, 12) || 'member';
+    return base + Math.floor(1000 + Math.random() * 9000);
+}
+
+function fregisterform_submit(f) {
+    syncRegisterIdentity();
+
+    if (!$('#agree_terms').is(':checked')) {
+        alert('이용약관 및 개인정보처리방침에 동의해 주세요.');
+        return false;
+    }
+
+    if (!f.mb_name.value) return alert('이름을 입력해 주세요.'), f.mb_name.focus(), false;
+    if (!f.mb_email.value) return alert('이메일 주소를 입력해 주세요.'), f.mb_email.focus(), false;
+    if ($('#email-validation-msg').hasClass('error')) return alert('이메일 주소를 확인해 주세요.'), f.mb_email.focus(), false;
+    if (!f.mb_password.value) return alert('비밀번호를 입력해 주세요.'), f.mb_password.focus(), false;
+    if (f.mb_password.value !== f.mb_password_re.value) return alert('비밀번호 확인이 일치하지 않습니다.'), f.mb_password_re.focus(), false;
+    if (!f.mb_hp.value) return alert('휴대폰 번호를 입력해 주세요.'), f.mb_hp.focus(), false;
+    if (!f.mb_addr1.value || !f.mb_addr2.value) return alert('주소를 입력해 주세요.'), false;
+
+    if (!$('#reg_mb_nick').val().trim()) {
+        $('#reg_mb_nick').val(generateNick(f.mb_name.value));
+    }
+    return true;
+}
+
+jQuery(function($) {
+    syncRegisterIdentity();
+
+    $('.pw-toggle').on('click', function() {
+        var target = $('#' + $(this).data('target'));
+        var isPw = target.attr('type') === 'password';
+        target.attr('type', isPw ? 'text' : 'password');
+        $(this).text(isPw ? '숨김' : '보기');
+    });
+
+    $('#reg_mb_hp').on('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    $('#reg_mb_email, #reg_mb_name').on('input blur change', function() {
+        syncRegisterIdentity();
+    });
+
+    $('#reg_mb_email').on('keyup change blur', function() {
+        var email = $(this).val().trim();
+        $('#reg_mb_id').val(email);
+
+        if (!email) {
+            $('#email-validation-msg').text('').removeClass('success error');
+            return;
+        }
+
+        var emailRegex = /^[0-9a-zA-Z._%+\-]+@[0-9a-zA-Z.\-]+\.[A-Za-z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            $('#email-validation-msg').text('올바른 이메일 형식이 아닙니다.').addClass('error').removeClass('success');
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: g5_bbs_url + '/ajax.mb_email.php',
+            data: { reg_mb_email: email, reg_mb_id: encodeURIComponent(email) },
+            success: function(emailMsg) {
+                if (emailMsg) {
+                    $('#email-validation-msg').text(emailMsg).addClass('error').removeClass('success');
+                    return;
+                }
+                $.ajax({
+                    type: 'POST',
+                    url: g5_bbs_url + '/ajax.mb_id.php',
+                    data: { reg_mb_id: encodeURIComponent(email) },
+                    success: function(idMsg) {
+                        if (idMsg) {
+                            $('#email-validation-msg').text(idMsg).addClass('error').removeClass('success');
+                        } else {
+                            $('#email-validation-msg').text('사용 가능한 이메일 주소입니다.').addClass('success').removeClass('error');
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    $('#reg_mb_password').on('keyup change blur', function() {
+        var pw = $(this).val();
+        var $msg = $('#password-strength-msg');
+        if (!pw) return $msg.text('').removeClass('success error info warning');
+        if (pw.length < 8) return $msg.text('최소 8자 이상 입력해 주세요.').addClass('error').removeClass('success info warning');
+        var hasLetter = /[a-zA-Z]/.test(pw);
+        var hasNumber = /[0-9]/.test(pw);
+        if (!hasLetter || !hasNumber) return $msg.text('영문과 숫자를 함께 포함해 주세요.').addClass('error').removeClass('success info warning');
+        $msg.text('사용 가능한 비밀번호입니다.').addClass('success').removeClass('error info warning');
+    });
+
+    $('#reg_mb_password_re').on('keyup change blur', function() {
+        var pw = $('#reg_mb_password').val();
+        var pwRe = $(this).val();
+        var $msg = $('#password-match-msg');
+        if (!pwRe) return $msg.text('').removeClass('success error');
+        if (pw !== pwRe) $msg.text('비밀번호가 일치하지 않습니다.').addClass('error').removeClass('success');
+        else $msg.text('비밀번호가 일치합니다.').addClass('success').removeClass('error');
+    });
+});
+</script>

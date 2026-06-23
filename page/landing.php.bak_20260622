@@ -1,0 +1,159 @@
+<?php
+include_once('./_common.php');
+
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if (!$id) {
+    $id = 1; // 샘플 확인을 위한 기본값 세팅
+}
+
+// DB 조회
+$table_name = $g5['table_prefix'] . 'landing_page';
+// is_use 필드는 생성 스키마에 없으므로 기본 id로만 조회함.
+$sql = " SELECT * FROM {$table_name} WHERE id='{$id}' ";
+$row = sql_fetch($sql);
+
+if (!$row) {
+    include_once(G5_THEME_PATH.'/head.php');
+    echo '<div style="padding:150px 20px; text-align:center;">';
+    echo '<h2 style="font-size:24px; color:#333; margin-bottom:20px;">해당 랜딩페이지를 찾을 수 없습니다.</h2>';
+    if ($is_admin) {
+        echo '<a href="'.G5_ADMIN_URL.'/landing/landing_form.php" style="display:inline-block; padding:12px 24px; background:#111; color:#fff; text-decoration:none; border-radius:6px; font-weight:bold;">랜딩 등록하기</a>';
+    }
+    echo '</div>';
+    include_once(G5_THEME_PATH.'/tail.php');
+    exit;
+}
+
+// SEO 태그를 위한 설정 및 자원 연결
+$g5['title'] = $row['subject'];
+add_stylesheet('<link rel="stylesheet" href="'.G5_THEME_URL.'/css/landing_view.css?v=20260622">', 0);
+add_javascript('<script src="'.G5_THEME_URL.'/js/landing_view.js?v=20260622"></script>', 0);
+
+include_once(G5_THEME_PATH.'/head.php');
+?>
+<!-- SEO 메타태그 자동 출력 -->
+<meta name="description" content="<?php echo htmlspecialchars(strip_tags($row['hero_text'])); ?>">
+<meta property="og:title" content="<?php echo htmlspecialchars($row['subject']); ?>">
+
+<div class="landing-view-wrap">
+    
+    <!-- 섹션1. Hero -->
+    <section class="lv-section lv-hero">
+        <div class="lv-inner">
+            <h1 class="hero-title"><?php echo nl2br(htmlspecialchars($row['hero_text'])); ?></h1>
+            <p class="hero-desc"><?php echo htmlspecialchars($row['company']); ?> - <?php echo htmlspecialchars($row['subject']); ?></p>
+            <?php if(isset($row['hero_image']) && $row['hero_image']) { ?>
+            <img src="<?php echo G5_DATA_URL.'/landing/'.$row['hero_image']; ?>" alt="Hero" class="hero-img">
+            <?php } ?>
+        </div>
+    </section>
+
+    <!-- 섹션2. 업체소개 -->
+    <section class="lv-section lv-intro">
+        <div class="lv-inner">
+            <h2 class="lv-title">업체소개</h2>
+            <div class="lv-desc">
+                <?php echo nl2br(htmlspecialchars($row['intro_text'])); ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션3. 장점 -->
+    <section class="lv-section lv-adv">
+        <div class="lv-inner">
+            <h2 class="lv-title">왜 우리를 선택해야 할까요?</h2>
+            <div class="lv-adv-list">
+                <?php if($row['adv1']) { ?><div class="lv-adv-item"><h3>✔️ <?php echo htmlspecialchars($row['adv1']); ?></h3></div><?php } ?>
+                <?php if($row['adv2']) { ?><div class="lv-adv-item"><h3>✔️ <?php echo htmlspecialchars($row['adv2']); ?></h3></div><?php } ?>
+                <?php if($row['adv3']) { ?><div class="lv-adv-item"><h3>✔️ <?php echo htmlspecialchars($row['adv3']); ?></h3></div><?php } ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션4. 업종 정보 -->
+    <section class="lv-section lv-category">
+        <div class="lv-inner">
+            <h2 class="lv-title">서비스 지역 및 업종</h2>
+            <p class="lv-desc" style="color:#cbd5e1;"><?php echo htmlspecialchars($row['category']); ?> 전문 기업으로, <?php echo htmlspecialchars($row['area']); ?> 지역에서 서비스를 제공합니다.</p>
+        </div>
+    </section>
+
+    <!-- 섹션5. 갤러리 -->
+    <section class="lv-section lv-gallery">
+        <div class="lv-inner">
+            <h2 class="lv-title">포트폴리오 및 갤러리</h2>
+            <div class="lv-gallery-grid">
+                <?php
+                for($i=1; $i<=5; $i++) {
+                    $gal_field = 'gallery'.$i;
+                    if(isset($row[$gal_field]) && $row[$gal_field]) {
+                        echo '<div class="lv-gallery-item"><img src="'.G5_DATA_URL.'/landing/'.$row[$gal_field].'" alt="Gallery '.$i.'"></div>';
+                    }
+                }
+                ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션6. 상담신청 -->
+    <section class="lv-section lv-form" id="contact-form">
+        <div class="lv-inner">
+            <h2 class="lv-title">무료 상담 신청</h2>
+            <p class="lv-desc" style="margin-bottom:30px;">지금 바로 신청하시고 특별한 혜택을 받아보세요.</p>
+            <div class="lv-form-box">
+                <form id="landing-inquiry-form">
+                    <input type="hidden" name="landing_id" value="<?php echo $row['id']; ?>">
+                    <div class="lv-form-group">
+                        <label>이름</label>
+                        <input type="text" name="name" required placeholder="이름을 입력하세요">
+                    </div>
+                    <div class="lv-form-group">
+                        <label>연락처</label>
+                        <input type="tel" name="tel" required placeholder="연락처를 입력하세요">
+                    </div>
+                    <div class="lv-form-group">
+                        <label>이메일</label>
+                        <input type="email" name="email" placeholder="이메일을 입력하세요">
+                    </div>
+                    <div class="lv-form-group">
+                        <label>문의내용</label>
+                        <textarea name="content" rows="4" placeholder="문의하실 내용을 입력하세요"></textarea>
+                    </div>
+                    <button type="submit" class="lv-btn-submit">상담 신청하기</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션7. 지도 -->
+    <section class="lv-section lv-map">
+        <div class="lv-inner">
+            <h2 class="lv-title">오시는 길</h2>
+            <?php if(isset($row['map_url']) && $row['map_url']) { ?>
+            <div class="lv-map-container">
+                <iframe src="<?php echo htmlspecialchars($row['map_url']); ?>" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+            </div>
+            <?php } else { ?>
+            <div class="lv-map-container">
+                <p>지도 연동 준비 중입니다.</p>
+            </div>
+            <?php } ?>
+        </div>
+    </section>
+
+    <!-- 여백 확보 (CTA 하단 고정 고려) -->
+    <div style="height:100px;"></div>
+
+    <!-- 섹션8. 하단 CTA -->
+    <div class="lv-cta">
+        <a href="#contact-form" class="lv-cta-btn lv-cta-form">상담 폼 작성</a>
+        <?php if($row['tel']) { ?>
+        <a href="tel:<?php echo htmlspecialchars($row['tel']); ?>" class="lv-cta-btn lv-cta-tel">📞 전화 문의</a>
+        <?php } ?>
+    </div>
+
+</div>
+
+<?php
+include_once(G5_THEME_PATH.'/tail.php');
+?>

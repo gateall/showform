@@ -12,6 +12,11 @@ if (function_exists('social_log_file_delete')) {
 $g5['title'] = '관리자메인';
 require_once './admin.head.php';
 
+?>
+
+
+
+<?php
 $new_member_rows = 5;
 $new_point_rows = 5;
 $new_write_rows = 5;

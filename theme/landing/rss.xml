@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>코리아누수</title>
+    <link>http://koreaieak.com/</link>
+    <description>대구 전지역 누수탐지, 배관공사, 방수공사, 보험처리 안내를 빠르게 돕는 코리아누수</description>
+    <language>ko-kr</language>
+    <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+    <lastBuildDate>Fri, 18 Apr 2026 00:00:00 +0900</lastBuildDate>
+    <generator>ChatGPT</generator>
+    <managingEditor>koreaieak04@gmail.com</managingEditor>
+    <webMaster>koreaieak04@gmail.com</webMaster>
+
+    <item>
+      <title>코리아누수 메인페이지</title>
+      <link>http://koreaieak.com/</link>
+      <description>대구 전지역 누수탐지, 배관공사, 방수공사, 보험처리 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/</guid>
+    </item>
+
+    <item>
+      <title>누수탐지공사</title>
+      <link>http://koreaieak.com/content/nusu01.php</link>
+      <description>누수 원인 진단과 현장 점검 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/nusu01.php</guid>
+    </item>
+
+    <item>
+      <title>배관공사</title>
+      <link>http://koreaieak.com/content/nusu02.php</link>
+      <description>배관 보수, 교체, 설비 관련 시공 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/nusu02.php</guid>
+    </item>
+
+    <item>
+      <title>수전교체 및 시공</title>
+      <link>http://koreaieak.com/content/nusu03.php</link>
+      <description>수전 교체와 관련 시공 서비스 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/nusu03.php</guid>
+    </item>
+
+    <item>
+      <title>하수구소통</title>
+      <link>http://koreaieak.com/content/nusu04.php</link>
+      <description>막힘, 역류, 배수 문제 해결 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/nusu04.php</guid>
+    </item>
+
+    <item>
+      <title>방수공사</title>
+      <link>http://koreaieak.com/content/nusu05.php</link>
+      <description>옥상, 외벽, 베란다 등 방수공사 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/nusu05.php</guid>
+    </item>
+
+    <item>
+      <title>상담문의</title>
+      <link>http://koreaieak.com/content/online.php</link>
+      <description>전화상담 및 온라인 접수 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/online.php</guid>
+    </item>
+
+    <item>
+      <title>회사소개</title>
+      <link>http://koreaieak.com/content/company.php</link>
+      <description>코리아누수 회사소개 및 서비스 안내</description>
+      <pubDate>Fri, 18 Apr 2026 00:00:00 +0900</pubDate>
+      <guid>http://koreaieak.com/content/company.php</guid>
+    </item>
+  </channel>
+</rss>

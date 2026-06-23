@@ -211,5 +211,130 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 
     <div id="container" class="<?php echo $adm_menu_cookie['container']; ?>">
 
+<style>
+.sf-admin-shortcut-wrap {
+    margin: 30px 20px 20px;
+    padding: 18px;
+    background: #f8f8f8;
+    border: 1px solid #e5e5e5;
+}
+.sf-admin-shortcut-title {
+    margin: 0 0 8px;
+    color: #ff0033;
+    font-weight: 700;
+}
+.sf-admin-shortcut-desc {
+    margin: 0 0 22px;
+    color: #111;
+}
+.sf-admin-shortcut-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+.sf-admin-shortcut-card {
+    min-height: 230px;
+    padding: 22px 18px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+}
+.sf-admin-shortcut-card h3 {
+    margin: 0 0 16px;
+    font-size: 20px;
+    color: #000;
+}
+.sf-admin-shortcut-card a {
+    display: block;
+    margin: 0 0 13px;
+    color: #0046cc;
+    text-decoration: none;
+    font-weight: 700;
+}
+.sf-admin-shortcut-card a span {
+    display: block;
+    margin-top: 2px;
+    color: #666;
+    font-size: 12px;
+    font-weight: 400;
+}
+.sf-admin-shortcut-card a:hover {
+    color: #ff0033;
+}
+@media (max-width: 900px) {
+    .sf-admin-shortcut-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="sf-admin-shortcut-wrap">
+    <p class="sf-admin-shortcut-title">ShowForm 랜딩 자동화 관리자 바로가기</p>
+    <p class="sf-admin-shortcut-desc">
+        랜딩페이지 자동 생성, 문의관리, AI 문구 생성 관련 메뉴를 바로 확인할 수 있습니다.
+    </p>
+
+    <div class="sf-admin-shortcut-grid">
+
+        <div class="sf-admin-shortcut-card">
+            <h3>랜딩관리</h3>
+
+            <a href="/adm/landing/landing_list.php">
+                랜딩목록
+                <span>/adm/landing/landing_list.php</span>
+            </a>
+
+            <a href="/adm/landing/landing_form.php">
+                랜딩생성
+                <span>/adm/landing/landing_form.php</span>
+            </a>
+
+            <a href="/adm/landing/template_list.php">
+                템플릿관리
+                <span>/adm/landing/template_list.php</span>
+            </a>
+
+            <a href="/adm/landing/category_list.php">
+                업종관리
+                <span>/adm/landing/category_list.php</span>
+            </a>
+        </div>
+
+        <div class="sf-admin-shortcut-card">
+            <h3>문의관리</h3>
+
+            <a href="/adm/landing/inquiry_list.php">
+                문의목록
+                <span>/adm/landing/inquiry_list.php</span>
+            </a>
+
+            <a href="/adm/landing/inquiry_stats.php">
+                문의통계
+                <span>/adm/landing/inquiry_stats.php</span>
+            </a>
+        </div>
+
+        <div class="sf-admin-shortcut-card">
+            <h3>AI관리</h3>
+
+            <a href="/adm/landing/ai_prompt.php">
+                프롬프트관리
+                <span>/adm/landing/ai_prompt.php</span>
+            </a>
+
+            <a href="/adm/landing/ai_log.php">
+                생성로그
+                <span>/adm/landing/ai_log.php</span>
+            </a>
+
+            <a href="/adm/landing/ai_setting.php">
+                API설정
+                <span>/adm/landing/ai_setting.php</span>
+            </a>
+        </div>
+
+    </div>
+</div>
+
         <h1 id="container_title"><?php echo $g5['title'] ?></h1>
         <div class="container_wr">

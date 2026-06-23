@@ -1,0 +1,491 @@
+/* ShowForm Main Renewal CSS */
+.sf-page{font-family:'Arial','Noto Sans KR',sans-serif;color:#111;line-height:1.6;background:#fff}
+.sf-wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+.sf-hero{position:relative;height:850px;overflow:hidden;background:#0f172a}
+.sf-hero .swiper,.sf-hero .swiper-wrapper,.sf-hero .swiper-slide{height:100%}
+.sf-hero-slide{position:relative;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;background-size:cover;background-position:center}
+.sf-hero-slide::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.sf-hero-inner{position:relative;z-index:2;width:100%;padding:0 20px}
+.sf-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);backdrop-filter:blur(10px);font-weight:700;margin-bottom:20px}
+.sf-hero h1{margin:0 auto 18px;max-width:980px;font-size:58px;line-height:1.12;font-weight:900;letter-spacing:-2px;text-shadow:0 3px 12px rgba(0,0,0,.5)}
+.sf-hero p{margin:0 auto 32px;max-width:780px;font-size:21px;color:#e5e7eb;text-shadow:0 3px 12px rgba(0,0,0,.5)}
+.sf-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.sf-btn{display:inline-flex;align-items:center;justify-content:center;min-width:210px;height:56px;padding:0 28px;border-radius:50px;font-size:18px;font-weight:800;transition:.3s ease;box-shadow:0 12px 30px rgba(0,0,0,.15);text-decoration:none !important;}
+.sf-btn:hover{transform:translateY(-5px);box-shadow:0 18px 36px rgba(0,0,0,.22)}
+.sf-btn-primary{background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff !important;}
+.sf-btn-line{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.35);color:#fff !important;}
+.sf-indicator{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);z-index:3;display:flex;gap:8px}
+.sf-indicator span{width:12px;height:12px;border-radius:999px;background:rgba(255,255,255,.35);cursor:pointer;}
+.sf-indicator span.active{background:#fff}
+.sf-section{padding:100px 0}
+.sf-section h2{margin:0 0 16px;font-size:40px;line-height:1.2;letter-spacing:-1px;font-weight:900;text-align:center}
+.sf-lead{max-width:820px;margin:0 auto 42px;text-align:center;font-size:19px;color:#475569}
+.sf-gray{background:#f8fafc}
+.sf-grid{display:grid;gap:20px}
+.sf-grid-2{grid-template-columns:repeat(2,1fr)}
+.sf-grid-3{grid-template-columns:repeat(3,1fr)}
+.sf-grid-4{grid-template-columns:repeat(4,1fr)}
+.sf-card{padding:30px 24px;border:1px solid rgba(226,232,240,.9);border-radius:20px;background:rgba(255,255,255,.72);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(15,23,42,.06);transition:.3s ease}
+.sf-card:hover{transform:translateY(-5px);box-shadow:0 18px 36px rgba(15,23,42,.12)}
+.sf-card strong{display:block;margin-bottom:10px;font-size:22px;color:#0f172a}
+.sf-card p{margin:0;color:#64748b}
+.sf-step{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.sf-step .num{width:66px;height:66px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;font-size:22px;font-weight:900}
+.sf-tags{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.sf-tags span{padding:12px 20px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;font-weight:700;color:#334155}
+.sf-sample{display:block;padding:24px;border-radius:18px;background:#fff;border:1px solid #e2e8f0;text-align:center;color:#0f172a;box-shadow:0 10px 30px rgba(15,23,42,.06);transition:.3s ease;text-decoration:none !important;}
+.sf-sample:hover{transform:translateY(-5px);box-shadow:0 18px 36px rgba(15,23,42,.12)}
+.sf-sample i{display:block;font-size:40px;margin-bottom:14px;color:#2563eb}
+.sf-review{display:flex;flex-direction:column;gap:12px}
+.sf-review .stars{color:#f59e0b;font-size:18px}
+.sf-faq details{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px 20px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+.sf-faq details+details{margin-top:14px}
+.sf-faq summary{cursor:pointer;font-weight:800;font-size:18px;color:#111827}
+.sf-faq p{margin:12px 0 0;color:#475569}
+.sf-contact{background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff}
+.sf-contact .sf-lead{color:#dbeafe}
+.sf-form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:900px;margin:0 auto}
+.sf-form input,.sf-form select,.sf-form textarea{width:100%;padding:16px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;outline:none}
+.sf-form textarea{grid-column:1/-1;min-height:120px;resize:vertical}
+.sf-form ::placeholder{color:#cbd5e1}
+.sf-form .full{grid-column:1/-1}
+.sf-submit{grid-column:1/-1;height:58px;border:none;border-radius:999px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;font-size:18px;font-weight:900;box-shadow:0 16px 30px rgba(239,68,68,.28);transition:.3s ease;cursor:pointer;}
+.sf-submit:hover{transform:translateY(-5px)}
+.sf-footer-cta{padding:24px 0 110px;text-align:center;color:#64748b;font-weight:700;}
+
+/* 햄버거 메뉴 숨김 방지 (모바일용) */
+@media (max-width:1200px){.sf-grid-4{grid-template-columns:repeat(2,1fr)}.sf-hero h1{font-size:48px}.sf-hero p{font-size:18px}}
+@media (max-width:768px){
+    .sf-section{padding:70px 20px}
+    .sf-grid-2,.sf-grid-3,.sf-grid-4,.sf-form{grid-template-columns:1fr}
+    .sf-hero{height:650px}
+    .sf-hero h1{font-size:34px}
+    .sf-hero p{font-size:16px}
+    .sf-btn{width:100%}
+}
+
+.sf-samples-section {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, .12), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.sf-section-head {
+    text-align: center;
+    margin-bottom: 42px;
+}
+
+.sf-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    margin-bottom: 14px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, .1);
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+
+.sf-sample-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.sf-sample-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 178px;
+    padding: 28px 24px;
+    border: 1px solid rgba(15, 23, 42, .08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .9);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+    text-decoration: none;
+    color: #0f172a;
+    transition: all .28s ease;
+}
+
+.sf-sample-card::after {
+    content: "바로보기";
+    position: absolute;
+    right: 22px;
+    bottom: 22px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #2563eb;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: all .28s ease;
+}
+
+.sf-sample-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(37, 99, 235, .35);
+    box-shadow: 0 28px 70px rgba(37, 99, 235, .18);
+}
+
+.sf-sample-card:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.sf-sample-icon {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 22px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #fff;
+    font-size: 24px;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, .25);
+}
+
+.sf-sample-card strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.sf-sample-card em {
+    font-style: normal;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+    .sf-sample-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .sf-sample-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .sf-sample-card {
+        min-height: auto;
+        padding: 22px 20px;
+        border-radius: 20px;
+    }
+
+    .sf-sample-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 21px;
+        margin-bottom: 16px;
+    }
+
+    .sf-sample-card strong {
+        font-size: 20px;
+    }
+}
+
+.sf-contact-premium {
+    position: relative;
+    overflow: hidden;
+    padding: 110px 0;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(96, 165, 250, .35), transparent 32%),
+        radial-gradient(circle at 85% 80%, rgba(168, 85, 247, .28), transparent 34%),
+        linear-gradient(135deg, #0f172a 0%, #1e1b4b 52%, #111827 100%);
+}
+
+.sf-contact-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: .5;
+    pointer-events: none;
+}
+
+.sf-contact-box {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 460px;
+    gap: 48px;
+    align-items: center;
+    padding: 56px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 34px;
+    background: rgba(255,255,255,.08);
+    box-shadow: 0 30px 90px rgba(0,0,0,.28);
+    backdrop-filter: blur(18px);
+}
+
+.sf-contact-copy h2, .sf-contact-premium .sf-contact-copy h2 {
+    margin: 18px 0 20px;
+    color: #ffffff !important;
+    font-size: clamp(32px, 4vw, 54px);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.04em;
+    text-shadow: 0 4px 18px rgba(0,0,0,.45);
+}
+
+.sf-contact-copy p {
+    margin: 0 0 28px;
+    color: rgba(255,255,255,.86) !important;
+    font-size: 18px;
+    line-height: 1.75;
+}
+
+.sf-contact-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.14);
+    color: #bfdbfe;
+    font-size: 14px;
+    font-weight: 800;
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+.sf-contact-points {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sf-contact-points li {
+    color: rgba(255,255,255,.9);
+    font-size: 16px;
+}
+
+.sf-contact-points i {
+    width: 26px;
+    height: 26px;
+    margin-right: 8px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #22c55e;
+    color: #fff;
+    font-size: 12px;
+}
+
+.sf-form-premium {
+    padding: 30px;
+    border-radius: 26px;
+    background: #ffffff;
+    box-shadow: 0 22px 60px rgba(0,0,0,.22);
+}
+
+.sf-form-premium input,
+.sf-form-premium textarea {
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 17px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 15px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all .25s ease;
+}
+
+.sf-form-premium textarea {
+    min-height: 130px;
+    resize: vertical;
+}
+
+.sf-form-premium input:focus,
+.sf-form-premium textarea:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+}
+
+.sf-submit-premium {
+    width: 100%;
+    height: 58px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 16px 35px rgba(37,99,235,.35);
+    transition: all .28s ease;
+}
+
+.sf-submit-premium:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 48px rgba(124,58,237,.42);
+}
+
+.sf-submit-premium i {
+    margin-left: 8px;
+}
+
+@media (max-width: 1024px) {
+    .sf-contact-box {
+        grid-template-columns: 1fr;
+        padding: 42px;
+    }
+}
+
+@media (max-width: 640px) {
+    .sf-contact-premium {
+        padding: 70px 0;
+    }
+
+    .sf-contact-box {
+        padding: 28px 20px;
+        border-radius: 24px;
+        gap: 28px;
+    }
+
+    .sf-contact-copy h2, .sf-contact-premium .sf-contact-copy h2 {
+        font-size: 32px;
+    }
+
+    .sf-contact-copy p {
+        font-size: 16px;
+    }
+
+    .sf-form-premium {
+        padding: 22px;
+        border-radius: 22px;
+    }
+}
+
+/* sf-review-section 하단 여백 제거 및 프리미엄 스타일 보강 */
+.sf-review-section {
+    padding-top: 80px;
+    padding-bottom: 40px !important;
+}
+.sf-review-section .sf-wrap {
+    margin-bottom: 0;
+}
+.sf-review-section .swiper {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+.sf-review-section .swiper-wrapper {
+    margin-bottom: 0 !important;
+}
+.sf-review-section .swiper-slide {
+    height: auto;
+}
+.sf-review-section .sf-review {
+    margin-bottom: 0;
+}
+.sf-review-section .swiper-pagination {
+    display: none;
+}
+.sf-review-section h2 {
+    margin-bottom: 15px;
+}
+.sf-review-section .sf-lead {
+    margin-bottom: 30px;
+}
+.sfReviewSwiper {
+    overflow: hidden;
+}
+
+/* 고객후기 + FAQ 섹션 간격 압축 */
+.sf-review-section {
+    padding-top: 80px !important;
+    padding-bottom: 35px !important;
+}
+
+.sf-faq-section {
+    padding-top: 35px !important;
+    padding-bottom: 80px !important;
+}
+
+/* 고객후기 내부 여백 정리 */
+.sf-review-section h2 {
+    margin-bottom: 12px !important;
+}
+
+.sf-review-section .sf-lead {
+    margin-bottom: 30px !important;
+}
+
+.sf-review-section .sfReviewSwiper {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.sf-review-section .swiper-wrapper {
+    margin-bottom: 0 !important;
+}
+
+.sf-review-section .swiper-slide {
+    height: auto !important;
+}
+
+.sf-review-section .sf-card,
+.sf-review-section .sf-review {
+    margin-bottom: 0 !important;
+}
+
+.sf-review-section .swiper-notification {
+    display: none !important;
+}
+
+/* FAQ 내부 여백 정리 */
+.sf-faq-section h2 {
+    margin-bottom: 12px !important;
+}
+
+.sf-faq-section .sf-lead {
+    margin-bottom: 28px !important;
+}
+
+.sf-faq {
+    margin-top: 0 !important;
+}
+
+.sf-faq details {
+    margin-bottom: 14px;
+}
+
+.sf-faq details:last-child {
+    margin-bottom: 0;
+}
+
+/* 모바일 */
+@media (max-width: 768px) {
+    .sf-review-section {
+        padding-top: 60px !important;
+        padding-bottom: 25px !important;
+    }
+
+    .sf-faq-section {
+        padding-top: 25px !important;
+        padding-bottom: 60px !important;
+    }
+
+    .sf-review-section .sf-lead,
+    .sf-faq-section .sf-lead {
+        margin-bottom: 22px !important;
+    }
+}

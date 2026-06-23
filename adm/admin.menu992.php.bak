@@ -1,0 +1,8 @@
+<?php
+if (!defined('_GNUBOARD_')) exit;
+$menu['menu992'] = array (
+    array('992000', 'AI관리', '#', 'ai'),
+    array('992100', '프롬프트', '#', 'ai_prompt'),
+    array('992200', '생성로그', '#', 'ai_log')
+);
+?>
