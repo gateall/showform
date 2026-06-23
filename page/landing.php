@@ -1,226 +1,211 @@
 <?php
 include_once('./_common.php');
 
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 1;
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id < 1) {
-    $id = 1;
+    alert('잘못된 접근입니다.', G5_URL);
 }
 
-$table = G5_TABLE_PREFIX . 'landing_page';
-$row = sql_fetch(" select * from {$table} where id = '{$id}' ");
-
-if ($row && isset($row['is_display']) && $row['is_display'] == 'N') {
-    if ($is_admin != 'super') {
-        alert('현재 일시적으로 접근이 차단된 페이지입니다.', G5_URL);
-    }
-}
+$table = G5_TABLE_PREFIX . 'landing_pages';
+$row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
 
 if (!$row) {
-    $row = array(
-        'id' => 1,
-        'subject' => '단 하나의 완벽한 골프 휴양, Hun Golf 프리미엄 필리핀 투어',
-        'industry' => '골프투어',
-        'phone' => '010-0000-0000',
-        'hero_title' => '단 하나의 완벽한 골프 휴양, Hun Golf 프리미엄 필리핀 투어',
-        'hero_text' => '필리핀 풀빌라/골프 패키지 상품! 명문 골프장 티오프 타임 전격 확보 및 단독 풀빌라 전용 숙박을 제공합니다.',
-        'cta_text' => '무료 상담 신청하기',
-        'cta_link' => '#contact',
-        'problem_1' => '최고급 단독 풀빌라가 필요한가요?',
-        'problem_2' => '명문 골프장 티오프 타임 확보가 어려우신가요?',
-        'problem_3' => '단독 차량 및 전담 가이드 케어가 필요하신가요?',
-        'service_1' => '최고급 단독 풀빌라 전용 숙박',
-        'service_2' => '명문 골프장 티오프 타임 전격 확보',
-        'service_3' => '단독 차량 및 전담 가이드 케어',
-        'service_4' => 'VIP 맞춤형 밀착 서비스 제공',
-        'privacy_text' => '개인정보 수집 및 이용에 동의합니다.',
-        'kakao_link' => 'http://pf.kakao.com/test'
-    );
+    alert('랜딩페이지를 찾을 수 없습니다.', G5_URL);
 }
 
-$g5['title'] = $row['subject'] ?: $row['hero_title'];
-
-// PV 자동 집계 로직
-$stat_table = G5_TABLE_PREFIX . 'landing_page_stats';
-$today = G5_TIME_YMD;
-sql_query(" CREATE TABLE IF NOT EXISTS `{$stat_table}` (
-  `stat_date` date NOT NULL,
-  `landing_id` int(11) NOT NULL,
-  `pv_count` int(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`stat_date`, `landing_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 ", false);
-
-sql_query(" insert into {$stat_table} (stat_date, landing_id, pv_count) values ('{$today}', '{$id}', 1) on duplicate key update pv_count = pv_count + 1 ", false);
-
-// GrapesJS 커스텀 CSS가 없으면 기본 테마 CSS 로드
-if (empty($row['custom_css'])) {
-    add_stylesheet('<link rel="stylesheet" href="'.G5_THEME_URL.'/css/landing_view.css?ver='.G5_CSS_VER.'">', 20);
-    add_javascript('<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = 1;
-                    entry.target.style.transform = "translateY(0)";
-                }
-            });
-        });
-        document.querySelectorAll(".lv-section h2, .lv-card, .lv-review-card, .lv-steps div").forEach(el => {
-            el.style.opacity = 0;
-            el.style.transform = "translateY(20px)";
-            el.style.transition = "opacity 0.6s ease-out, transform 0.6s ease-out";
-            observer.observe(el);
-        });
-    });
-    </script>', 20);
+if (isset($row['is_active']) && (string)$row['is_active'] !== 'Y') {
+    alert('현재 비공개 상태인 랜딩페이지입니다.', G5_URL);
 }
 
-include_once(G5_THEME_PATH.'/head.php');
+$g5['title'] = !empty($row['company_name']) ? $row['company_name'] : 'ShowForm Landing';
 
-if (!empty($row['custom_html'])) {
-    // 빌더 에디터로 제작한 커스텀 템플릿 렌더링
-    echo "<style>{$row['custom_css']}</style>";
-    echo "<div class='grapesjs-custom-wrap'>";
-    echo $row['custom_html'];
-    echo "</div>";
-} else {
-    // 기존 설정 기반 템플릿 렌더링
+$phone = isset($row['phone']) ? trim($row['phone']) : '';
+$kakao_url = isset($row['kakao_url']) ? trim($row['kakao_url']) : '';
+$main_image = isset($row['main_image']) ? trim($row['main_image']) : '';
+$template_type = isset($row['template_type']) ? trim($row['template_type']) : 'service';
+$theme_color = !empty($row['theme_color']) ? $row['theme_color'] : '#0f766e';
+$area_name = isset($row['area_name']) ? $row['area_name'] : '';
+$company_name = isset($row['company_name']) ? $row['company_name'] : '';
+$intro_text = isset($row['intro_text']) ? $row['intro_text'] : '';
+$main_copy = isset($row['main_copy']) ? $row['main_copy'] : '';
+$sub_copy = isset($row['sub_copy']) ? $row['sub_copy'] : '';
+
+$hero_kicker = $area_name && $company_name ? $area_name . ' ' . $company_name : $company_name;
+$phone_href = $phone ? 'tel:' . preg_replace('/[^0-9\+]/', '', $phone) : '#contact';
+$contact_label = $template_type === 'hospital' ? '빠른 예약 상담하기' : ($template_type === 'local' ? '무료 상담받기' : '지금 무료 상담받기');
+
+include_once(G5_THEME_PATH . '/head.php');
 ?>
-<div class="lv-stickybar">
-    <div class="lv-stickybar__inner">
-        <div class="lv-stickybar__copy">
-            <strong><?php echo get_text($row['cta_text']); ?></strong>
-            <span>무료 현장 상담 신청</span>
-        </div>
-        <div class="lv-stickybar__actions">
-            <a href="<?php echo get_text($row['cta_link']); ?>" class="lv-stickybar__btn lv-stickybar__btn--primary">예약하기</a>
-            <a href="tel:<?php echo get_text($row['phone']); ?>" class="lv-stickybar__btn lv-stickybar__btn--ghost">전화하기</a>
-        </div>
-    </div>
-</div>
+<style>
+:root {
+    --sf-primary: <?php echo get_text($theme_color); ?>;
+    --sf-bg: #f7f7fb;
+    --sf-text: #0f172a;
+    --sf-muted: #64748b;
+    --sf-card: #ffffff;
+    --sf-border: #e2e8f0;
+}
+body { background: var(--sf-bg); color: var(--sf-text); }
+.sf-wrap { width:100%; }
+.sf-container { width:min(1120px, calc(100% - 32px)); margin:0 auto; }
+.sf-hero { background: linear-gradient(135deg, rgba(15,23,42,.94), rgba(15,118,110,.88)); color:#fff; padding:56px 0 34px; position:relative; overflow:hidden; }
+.sf-hero::after { content:''; position:absolute; inset:auto -10% -40% auto; width:280px; height:280px; border-radius:50%; background:rgba(255,255,255,.08); }
+.sf-kicker { display:inline-flex; padding:8px 14px; border-radius:999px; background:rgba(255,255,255,.12); font-size:14px; font-weight:700; margin-bottom:16px; }
+.sf-hero h1 { margin:0; font-size:clamp(28px, 4vw, 48px); line-height:1.15; letter-spacing:-0.03em; }
+.sf-hero p { margin:14px 0 0; color:rgba(255,255,255,.88); line-height:1.7; font-size:16px; }
+.sf-hero-actions, .sf-cta-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; }
+.sf-btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 18px; border-radius:14px; text-decoration:none; font-weight:800; transition:transform .15s ease, opacity .15s ease; }
+.sf-btn:hover { transform:translateY(-1px); }
+.sf-btn-primary { background:#fff; color:#0f172a; }
+.sf-btn-dark { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.22); }
+.sf-btn-solid { background:var(--sf-primary); color:#fff; }
+.sf-section { padding:28px 0; }
+.sf-card { background:var(--sf-card); border:1px solid var(--sf-border); border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,.05); }
+.sf-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; }
+@media (max-width: 900px) { .sf-grid-2 { grid-template-columns:1fr; } }
+.sf-image { border-radius:18px; overflow:hidden; background:#e2e8f0; min-height:280px; display:flex; align-items:center; justify-content:center; }
+.sf-image img { width:100%; height:100%; object-fit:cover; display:block; }
+.sf-image .placeholder { color:#94a3b8; font-weight:700; }
+.sf-section-title { margin:0 0 14px; font-size:24px; letter-spacing:-0.02em; }
+.sf-section-desc { margin:0 0 18px; color:var(--sf-muted); line-height:1.7; }
+.sf-pill-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+@media (max-width: 900px) { .sf-pill-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 520px) { .sf-pill-grid { grid-template-columns:1fr; } }
+.sf-pill { background:#f8fafc; border:1px solid var(--sf-border); border-radius:16px; padding:16px; font-weight:700; color:#0f172a; }
+.sf-step-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+@media (max-width: 640px) { .sf-step-grid { grid-template-columns:1fr; } }
+.sf-step { padding:16px; border-radius:16px; background:#f8fafc; border:1px solid var(--sf-border); }
+.sf-step b { display:block; margin-bottom:8px; color:var(--sf-primary); }
+.sf-faq details { border:1px solid var(--sf-border); border-radius:16px; background:#fff; padding:14px 16px; }
+.sf-faq details + details { margin-top:10px; }
+.sf-faq summary { cursor:pointer; font-weight:800; }
+.sf-faq p { margin:10px 0 0; color:var(--sf-muted); line-height:1.7; }
+.sf-form .sf-form-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; }
+@media (max-width: 640px) { .sf-form .sf-form-grid { grid-template-columns:1fr; } }
+.sf-form label { display:block; }
+.sf-form span { display:block; margin-bottom:6px; font-weight:700; }
+.sf-form input, .sf-form textarea { width:100%; box-sizing:border-box; border:1px solid var(--sf-border); border-radius:14px; padding:14px; background:#fff; }
+.sf-form .sf-full { grid-column:1/-1; }
+.sf-form-note { margin-top:10px; color:var(--sf-muted); font-size:14px; }
+.sf-mobile-bar { position:fixed; left:0; right:0; bottom:0; z-index:99; display:grid; grid-template-columns:1fr 1fr <?php echo $kakao_url ? '1fr' : '0'; ?>; gap:8px; padding:10px 12px; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-top:1px solid var(--sf-border); }
+.sf-mobile-bar a { text-align:center; border-radius:14px; padding:14px 10px; font-weight:800; text-decoration:none; }
+.sf-mobile-bar .tel { background:var(--sf-primary); color:#fff; }
+.sf-mobile-bar .inquiry { background:#0f172a; color:#fff; }
+.sf-mobile-bar .kakao { background:#f7e600; color:#111827; }
+.sf-spacer { height:88px; }
+</style>
 
-<main class="lv-page">
-    <section class="lv-hero" id="hero">
-        <div class="lv-container">
-            <div class="lv-badge"><?php echo get_text($row['industry']); ?> 프리미엄 투어</div>
-            <h1><?php echo get_text($row['hero_title']); ?></h1>
-            <p class="lv-hero-desc"><?php echo nl2br(get_text($row['hero_text'])); ?></p>
-            <div class="lv-hero-actions">
-                <a href="<?php echo get_text($row['cta_link']); ?>" class="lv-btn lv-btn--primary"><?php echo get_text($row['cta_text']); ?></a>
-                <a href="tel:<?php echo get_text($row['phone']); ?>" class="lv-btn lv-btn--line">전화 문의하기</a>
+<div class="sf-wrap">
+    <section class="sf-hero">
+        <div class="sf-container">
+            <div class="sf-kicker"><?php echo get_text($hero_kicker); ?></div>
+            <h1><?php echo get_text($main_copy); ?></h1>
+            <p><?php echo nl2br(get_text($sub_copy)); ?></p>
+            <?php if (!empty($intro_text)) { ?><p><?php echo nl2br(get_text($intro_text)); ?></p><?php } ?>
+            <div class="sf-hero-actions">
+                <?php if ($phone) { ?><a class="sf-btn sf-btn-primary" href="<?php echo $phone_href; ?>">전화하기</a><?php } ?>
+                <?php if ($kakao_url) { ?><a class="sf-btn sf-btn-dark" href="<?php echo get_text($kakao_url); ?>" target="_blank" rel="noopener">카카오상담</a><?php } ?>
+                <a class="sf-btn sf-btn-solid" href="#contact"><?php echo get_text($contact_label); ?></a>
             </div>
         </div>
     </section>
 
-    <section class="lv-section lv-service">
-        <div class="lv-container">
-            <h2>타사 대비 차별화된 핵심 서비스</h2>
-            <div class="lv-card-grid lv-card-grid--six lv-card-grid--accent">
-                <?php if($row['service_1']) { ?><div class="lv-card"><?php echo get_text($row['service_1']); ?></div><?php } ?>
-                <?php if($row['service_2']) { ?><div class="lv-card"><?php echo get_text($row['service_2']); ?></div><?php } ?>
-                <?php if($row['service_3']) { ?><div class="lv-card"><?php echo get_text($row['service_3']); ?></div><?php } ?>
-                <?php if($row['service_4']) { ?><div class="lv-card"><?php echo get_text($row['service_4']); ?></div><?php } ?>
-                <div class="lv-card">프리미엄 라운지 이용권 제공</div>
-                <div class="lv-card">고품격 조식 & 다이닝 서비스</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="lv-section lv-problem">
-        <div class="lv-container">
-            <h2>이런 분들께 완벽한 솔루션을 제공합니다</h2>
-            <div class="lv-card-grid lv-card-grid--six">
-                <?php if($row['problem_1']) { ?><div class="lv-card"><?php echo get_text($row['problem_1']); ?></div><?php } ?>
-                <?php if($row['problem_2']) { ?><div class="lv-card"><?php echo get_text($row['problem_2']); ?></div><?php } ?>
-                <?php if($row['problem_3']) { ?><div class="lv-card"><?php echo get_text($row['problem_3']); ?></div><?php } ?>
-                <div class="lv-card">비즈니스 접대용 럭셔리 투어가 필요하신 분</div>
-                <div class="lv-card">언어 장벽 없이 편안한 일정을 원하시는 분</div>
-                <div class="lv-card">가족/지인과 프라이빗한 시간을 보내고 싶으신 분</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="lv-section lv-gallery">
-        <div class="lv-container">
-            <h2>프라이빗 갤러리</h2>
-            <div class="lv-gallery-grid">
-                <div class="lv-gallery-item lv-gallery-item--placeholder" style="background:#09130b; color:#D4AF37;">단독 풀빌라 전경</div>
-                <div class="lv-gallery-item lv-gallery-item--placeholder" style="background:#09130b; color:#D4AF37;">프리미엄 골프장</div>
-                <div class="lv-gallery-item lv-gallery-item--placeholder" style="background:#09130b; color:#D4AF37;">VIP 의전 차량</div>
-                <div class="lv-gallery-item lv-gallery-item--placeholder" style="background:#09130b; color:#D4AF37;">고급 다이닝</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="lv-section lv-process">
-        <div class="lv-container">
-            <h2>투어 예약 프로세스</h2>
-            <div class="lv-steps">
-                <div><span>1</span>상담 신청</div>
-                <div><span>2</span>일정 및 견적 확인</div>
-                <div><span>3</span>예약금 결제</div>
-                <div><span>4</span>바우처 발송</div>
-                <div><span>5</span>현지 의전 미팅</div>
-                <div><span>6</span>투어 시작</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="lv-section lv-review">
-        <div class="lv-container">
-            <h2>실제 고객 만족 리뷰</h2>
-            <div class="lv-review-grid">
-                <div class="lv-review-card">"풀빌라 퀄리티가 정말 압도적이었습니다. 비즈니스 파트너들과 함께했는데 모두가 만족했던 최고의 투어였어요."</div>
-                <div class="lv-review-card">"골프장 티오프 타임을 황금시간대로 잡아주셔서 너무 편했습니다. 가이드분도 친절하고 완벽했습니다."</div>
-                <div class="lv-review-card">"전담 차량으로 이동하니 피로감이 전혀 없었고, 음식부터 숙박까지 모든 것이 프리미엄이었습니다."</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="lv-section lv-contact" id="contact">
-        <div class="lv-container">
-            <h2>상담 예약 및 문의하기</h2>
-            <p class="lv-section-desc">아래 폼으로 접수하시면 담당자가 확인 후 신속하게 예약 확정 안내를 드립니다.</p>
-            <form id="landingInquiryForm" class="lv-form" method="post" action="/adm/landing/inquiry_update.php">
-                <input type="hidden" name="landing_id" value="<?php echo (int) $row['id']; ?>">
-                <div class="lv-form-grid">
-                    <label>
-                        <span>예약자 성함</span>
-                        <input type="text" name="name" required>
-                    </label>
-                    <label>
-                        <span>연락처</span>
-                        <input type="tel" name="tel" required>
-                    </label>
-                    <label>
-                        <span>희망 일정</span>
-                        <input type="text" name="schedule" placeholder="예: 2026.08.15 ~ 08.18" required>
-                    </label>
-                    <label>
-                        <span>참여 인원</span>
-                        <input type="text" name="people" placeholder="예: 4명">
-                    </label>
-                    <label class="lv-form-full">
-                        <span>요청 및 문의 사항</span>
-                        <textarea name="content" rows="5" required></textarea>
-                    </label>
-                    <label class="lv-form-agree lv-form-full">
-                        <input type="checkbox" name="agree" value="1" required> <?php echo get_text($row['privacy_text'] ?: '개인정보 수집 및 이용에 동의합니다.'); ?>
-                    </label>
+    <main class="sf-container sf-section">
+        <div class="sf-grid-2">
+            <div class="sf-card">
+                <h2 class="sf-section-title"><?php echo get_text($main_copy); ?></h2>
+                <p class="sf-section-desc"><?php echo nl2br(get_text($sub_copy)); ?></p>
+                <div class="sf-cta-row">
+                    <?php if ($phone) { ?><a class="sf-btn sf-btn-solid" href="<?php echo $phone_href; ?>">전화 상담</a><?php } ?>
+                    <?php if ($kakao_url) { ?><a class="sf-btn sf-btn-dark" style="background:#f7e600;color:#111827;border-color:#f7e600;" href="<?php echo get_text($kakao_url); ?>" target="_blank" rel="noopener">카카오 문의</a><?php } ?>
+                    <a class="sf-btn sf-btn-primary" href="#contact">문의 남기기</a>
                 </div>
-                <button type="submit" class="lv-form-submit"><?php echo get_text($row['cta_text'] ?: '예약 신청하기'); ?></button>
+            </div>
+            <div class="sf-image">
+                <?php if ($main_image) { ?><img src="<?php echo get_text($main_image); ?>" alt="<?php echo get_text($company_name); ?>"><?php } else { ?><div class="placeholder">대표 이미지 준비중</div><?php } ?>
+            </div>
+        </div>
+    </main>
+
+    <section class="sf-container sf-section">
+        <div class="sf-card">
+            <h2 class="sf-section-title">주요 강점</h2>
+            <div class="sf-pill-grid">
+                <div class="sf-pill">빠른 상담 응대</div>
+                <div class="sf-pill">지역 맞춤 안내</div>
+                <div class="sf-pill">전환 중심 랜딩</div>
+                <div class="sf-pill">모바일 최적화</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="sf-container sf-section">
+        <div class="sf-card">
+            <h2 class="sf-section-title">업종별 안내</h2>
+            <div class="sf-step-grid">
+                <?php if ($template_type === 'hospital') { ?>
+                <div class="sf-step"><b>진료 안내</b>환자 중심 상담 흐름을 구성합니다.</div>
+                <div class="sf-step"><b>예약 문의</b>빠른 예약과 전화 연결을 강조합니다.</div>
+                <div class="sf-step"><b>시설 소개</b>신뢰를 높이는 정보 배치를 준비합니다.</div>
+                <div class="sf-step"><b>후기 영역</b>고객 신뢰를 확보하는 구조로 확장합니다.</div>
+                <?php } elseif ($template_type === 'local') { ?>
+                <div class="sf-step"><b>지역 안내</b><?php echo get_text($area_name); ?>에서 쉽게 찾는 구조입니다.</div>
+                <div class="sf-step"><b>방문 유도</b>상담과 방문 예약을 강조합니다.</div>
+                <div class="sf-step"><b>메뉴/서비스</b>핵심 서비스를 빠르게 안내합니다.</div>
+                <div class="sf-step"><b>문의 연결</b>전화와 카카오 문의를 분리 노출합니다.</div>
+                <?php } else { ?>
+                <div class="sf-step"><b>긴급 문의</b>빠른 접수가 필요한 상황을 강조합니다.</div>
+                <div class="sf-step"><b>현장 대응</b>현장 출동과 진단 프로세스를 보여줍니다.</div>
+                <div class="sf-step"><b>서비스 소개</b>업종별 핵심 해결책을 배치합니다.</div>
+                <div class="sf-step"><b>신뢰 확보</b>문의 전환을 높이는 구조를 유지합니다.</div>
+                <?php } ?>
+            </div>
+        </div>
+    </section>
+
+    <section class="sf-container sf-section sf-faq">
+        <div class="sf-card">
+            <h2 class="sf-section-title">FAQ</h2>
+            <details open>
+                <summary>문의는 어떻게 접수되나요?</summary>
+                <p>아래 문의폼을 통해 접수되며, Stage 04에서 DB 저장을 연결할 예정입니다.</p>
+            </details>
+            <details>
+                <summary>카카오 상담 버튼은 항상 보이나요?</summary>
+                <p>아니요. `kakao_url` 값이 있을 때만 노출됩니다.</p>
+            </details>
+            <details>
+                <summary>모바일에서도 잘 보이나요?</summary>
+                <p>모바일 우선 기준으로 구성되어 있습니다.</p>
+            </details>
+        </div>
+    </section>
+
+    <section class="sf-container sf-section" id="contact">
+        <div class="sf-card sf-form">
+            <h2 class="sf-section-title">문의하기</h2>
+            <p class="sf-section-desc">Stage 04에서 실제 문의 저장이 연결됩니다. 현재는 화면 구조만 준비되어 있습니다.</p>
+            <form method="post" action="#" onsubmit="return false;">
+                <div class="sf-form-grid">
+                    <label><span>이름</span><input type="text" name="name" placeholder="이름"></label>
+                    <label><span>연락처</span><input type="tel" name="phone" placeholder="연락처"></label>
+                    <label class="sf-full"><span>문의내용</span><textarea name="message" rows="5" placeholder="문의 내용을 입력하세요"></textarea></label>
+                    <label class="sf-full"><span><input type="checkbox" disabled> 개인정보 수집 및 이용 동의</span></label>
+                </div>
+                <button type="button" class="sf-btn sf-btn-solid" style="margin-top:14px;">문의 보내기</button>
             </form>
         </div>
     </section>
 
-    <div class="lv-bottom-spacer"></div>
-</main>
-
-<div class="lv-mobile-bottom">
-    <a href="tel:<?php echo get_text($row['phone']); ?>">전화상담</a>
-    <a href="<?php echo get_text($row['cta_link']); ?>">상담예약</a>
+    <div class="sf-spacer"></div>
 </div>
 
-<?php 
-}
-include_once(G5_THEME_PATH.'/tail.php'); 
-?>
+<?php if ($phone) { ?>
+<div class="sf-mobile-bar">
+    <a class="tel" href="<?php echo $phone_href; ?>">전화하기</a>
+    <a class="inquiry" href="#contact"><?php echo get_text($contact_label); ?></a>
+    <?php if ($kakao_url) { ?><a class="kakao" href="<?php echo get_text($kakao_url); ?>" target="_blank" rel="noopener">카카오</a><?php } ?>
+</div>
+<?php } ?>
+
+<?php include_once(G5_THEME_PATH . '/tail.php'); ?>
