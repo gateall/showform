@@ -29,6 +29,10 @@ $defaults = array(
     'intro_text' => '',
     'main_copy' => '',
     'sub_copy' => '',
+    'problem_text' => '',
+    'strength_text' => '',
+    'faq_text' => '',
+    'cta_text' => '',
     'theme_color' => '#0f766e',
     'main_image' => '',
     'is_active' => 'Y'
@@ -65,8 +69,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             </select>
         </div>
         <div class="sf-field">
-            <label>업종</label>
-            <input type="text" name="industry" value="<?php echo get_text($row['industry']); ?>" class="frm_input" placeholder="예: 누수, 병원, 식당">
+            <label>업종 <button type="button" class="btn btn_03 btn_xs" onclick="applyPreset(false)">프리셋 적용</button> <button type="button" class="btn btn_03 btn_xs" onclick="applyPreset(true)">프리셋 다시 적용</button></label>
+            <input type="text" name="industry" id="industry" value="<?php echo get_text($row['industry']); ?>" class="frm_input" placeholder="예: 누수, 병원, 식당">
         </div>
         <div class="sf-field">
             <label>회사명</label>
@@ -104,6 +108,22 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             <label>서브 문구</label>
             <input type="text" name="sub_copy" value="<?php echo get_text($row['sub_copy']); ?>" class="frm_input">
         </div>
+        <div class="sf-field" style="grid-column:1/-1;">
+            <label>문제점/공감 텍스트</label>
+            <textarea name="problem_text" rows="3" class="frm_input" style="width:100%;"><?php echo get_text($row['problem_text']); ?></textarea>
+        </div>
+        <div class="sf-field" style="grid-column:1/-1;">
+            <label>특장점 텍스트</label>
+            <textarea name="strength_text" rows="3" class="frm_input" style="width:100%;"><?php echo get_text($row['strength_text']); ?></textarea>
+        </div>
+        <div class="sf-field" style="grid-column:1/-1;">
+            <label>FAQ 텍스트</label>
+            <textarea name="faq_text" rows="4" class="frm_input" style="width:100%;"><?php echo get_text($row['faq_text']); ?></textarea>
+        </div>
+        <div class="sf-field">
+            <label>CTA 버튼 텍스트</label>
+            <input type="text" name="cta_text" value="<?php echo get_text($row['cta_text']); ?>" class="frm_input" placeholder="예: 무료 상담받기">
+        </div>
         <div class="sf-field">
             <label>테마 색상</label>
             <input type="text" name="theme_color" value="<?php echo get_text($row['theme_color']); ?>" class="frm_input" placeholder="#0f766e">
@@ -127,5 +147,42 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </div>
 </div>
 </form>
+
+<script>
+function applyPreset(force) {
+    var industry = $('#industry').val();
+    if (!industry) {
+        alert('업종을 입력해주세요.');
+        return;
+    }
+    $.ajax({
+        url: './preset_get.php',
+        type: 'POST',
+        data: { industry: industry },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                var d = res.data;
+                var keys = ['main_copy', 'sub_copy', 'problem_text', 'strength_text', 'faq_text', 'cta_text'];
+                for (var i = 0; i < keys.length; i++) {
+                    var k = keys[i];
+                    var el = $('[name="' + k + '"]');
+                    if (el.length > 0) {
+                        if (force || $.trim(el.val()) === '') {
+                            el.val(d[k]);
+                        }
+                    }
+                }
+                alert('프리셋이 적용되었습니다.');
+            } else {
+                alert('해당 업종의 프리셋을 찾을 수 없습니다.');
+            }
+        },
+        error: function() {
+            alert('프리셋을 불러오는 중 오류가 발생했습니다.');
+        }
+    });
+}
+</script>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php'); ?>
