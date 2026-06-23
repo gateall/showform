@@ -18,12 +18,23 @@ $data = array(
     'intro_text' => isset($_POST['intro_text']) ? trim($_POST['intro_text']) : '',
     'main_copy' => isset($_POST['main_copy']) ? trim($_POST['main_copy']) : '',
     'sub_copy' => isset($_POST['sub_copy']) ? trim($_POST['sub_copy']) : '',
+    'problem_text' => isset($_POST['problem_text']) ? trim($_POST['problem_text']) : '',
+    'strength_text' => isset($_POST['strength_text']) ? trim($_POST['strength_text']) : '',
+    'faq_text' => isset($_POST['faq_text']) ? trim($_POST['faq_text']) : '',
+    'cta_text' => isset($_POST['cta_text']) ? trim($_POST['cta_text']) : '',
     'theme_color' => isset($_POST['theme_color']) ? trim($_POST['theme_color']) : '',
+    'short_alias' => isset($_POST['short_alias']) ? trim($_POST['short_alias']) : '',
+    'short_url' => isset($_POST['short_url']) ? trim($_POST['short_url']) : '',
+    'qr_code_path' => isset($_POST['qr_code_path']) ? trim($_POST['qr_code_path']) : '',
+    'tracking_code' => isset($_POST['tracking_code']) ? trim($_POST['tracking_code']) : '',
+    'utm_source' => isset($_POST['utm_source']) ? trim($_POST['utm_source']) : '',
+    'utm_medium' => isset($_POST['utm_medium']) ? trim($_POST['utm_medium']) : '',
+    'utm_campaign' => isset($_POST['utm_campaign']) ? trim($_POST['utm_campaign']) : '',
     'is_active' => isset($_POST['is_active']) ? trim($_POST['is_active']) : 'Y'
 );
 
 if ($data['company_name'] === '') {
-    alert('회사명을 입력하세요.', './landing_form.php' . ($id ? '?id=' . $id : ''));
+    alert('???? ?????.', './landing_form.php' . ($id ? '?id=' . $id : ''));
 }
 
 $main_image = '';
@@ -40,13 +51,12 @@ if (!is_dir($upload_dir)) {
     @chmod($upload_dir, G5_DIR_PERMISSION);
 }
 
-if (isset($_FILES['main_image_file']) && isset($_FILES['main_image_file']['name']) && $_FILES['main_image_file']['name'] !== '') {
+if (!empty($_FILES['main_image_file']['name'])) {
     $ext = strtolower(pathinfo($_FILES['main_image_file']['name'], PATHINFO_EXTENSION));
     $allow = array('jpg', 'jpeg', 'png', 'gif', 'webp');
     if (!in_array($ext, $allow, true)) {
-        alert('이미지 파일만 업로드 가능합니다.', './landing_form.php' . ($id ? '?id=' . $id : ''));
+        alert('??? ??? ??? ?????.', './landing_form.php' . ($id ? '?id=' . $id : ''));
     }
-
     $filename = 'landing_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
     $dest = $upload_dir . '/' . $filename;
     if (move_uploaded_file($_FILES['main_image_file']['tmp_name'], $dest)) {
@@ -54,6 +64,26 @@ if (isset($_FILES['main_image_file']) && isset($_FILES['main_image_file']['name'
         $main_image = '/data/landing/' . $filename;
     }
 }
+
+$add_cols = array('problem_text', 'strength_text', 'faq_text', 'cta_text', 'short_alias', 'short_url', 'qr_code_path', 'tracking_code', 'utm_source', 'utm_medium', 'utm_campaign');
+foreach ($add_cols as $col) {
+    $res = sql_query("SHOW COLUMNS FROM {$table} LIKE '{$col}'", false);
+    if (!sql_fetch_array($res)) {
+        if (in_array($col, array('utm_source', 'utm_medium', 'utm_campaign', 'short_alias'), true)) {
+            sql_query("ALTER TABLE {$table} ADD `{$col}` varchar(100) NOT NULL DEFAULT ''", false);
+        } elseif ($col === 'short_url') {
+            sql_query("ALTER TABLE {$table} ADD `{$col}` varchar(255) NOT NULL DEFAULT ''", false);
+        } else {
+            sql_query("ALTER TABLE {$table} ADD `{$col}` text NOT NULL", false);
+        }
+    }
+}
+
+$short_alias = trim((string)$data['short_alias']);
+if ($short_alias !== '') {
+    $short_alias = strtolower(preg_replace('/[^a-z0-9_-]/i', '', $short_alias));
+}
+$short_url = $short_alias !== '' ? '/s/' . $short_alias : '';
 
 $set_sql = "
     template_type = '" . sql_real_escape_string($data['template_type']) . "',
@@ -67,17 +97,33 @@ $set_sql = "
     intro_text = '" . sql_real_escape_string($data['intro_text']) . "',
     main_copy = '" . sql_real_escape_string($data['main_copy']) . "',
     sub_copy = '" . sql_real_escape_string($data['sub_copy']) . "',
+    problem_text = '" . sql_real_escape_string($data['problem_text']) . "',
+    strength_text = '" . sql_real_escape_string($data['strength_text']) . "',
+    faq_text = '" . sql_real_escape_string($data['faq_text']) . "',
+    cta_text = '" . sql_real_escape_string($data['cta_text']) . "',
     theme_color = '" . sql_real_escape_string($data['theme_color']) . "',
     main_image = '" . sql_real_escape_string($main_image) . "',
+    short_alias = '" . sql_real_escape_string($short_alias) . "',
+    short_url = '" . sql_real_escape_string($short_url) . "',
+    qr_code_path = '" . sql_real_escape_string($data['qr_code_path']) . "',
+    tracking_code = '" . sql_real_escape_string($data['tracking_code']) . "',
+    utm_source = '" . sql_real_escape_string($data['utm_source']) . "',
+    utm_medium = '" . sql_real_escape_string($data['utm_medium']) . "',
+    utm_campaign = '" . sql_real_escape_string($data['utm_campaign']) . "',
     is_active = '" . sql_real_escape_string($data['is_active']) . "',
     updated_at = '" . G5_TIME_YMDHIS . "'
 ";
 
 if ($id) {
-    sql_query(" update {$table} set {$set_sql} where id = '{$id}' ");
-    alert('랜딩페이지를 수정했습니다.', './landing_form.php?id=' . $id);
+    if ($short_url === '') {
+        $short_url = '/s/' . (int)$id;
+    }
+    sql_query(" update {$table} set {$set_sql}, short_url = '" . sql_real_escape_string($short_url) . "' where id = '{$id}' ");
+    alert('?????? ??????.', './landing_form.php?id=' . $id);
 }
 
-sql_query(" insert into {$table} set {$set_sql}, created_at = '" . G5_TIME_YMDHIS . "' ");
+sql_query(" insert into {$table} set {$set_sql}, short_alias = '', short_url = '', created_at = '" . G5_TIME_YMDHIS . "' ");
 $new_id = sql_insert_id();
-alert('랜딩페이지를 생성했습니다.', './landing_form.php?id=' . $new_id);
+$short_url = '/s/' . (int)$new_id;
+sql_query(" update {$table} set short_url = '" . sql_real_escape_string($short_url) . "' where id = '{$new_id}' ");
+alert('?????? ??????.', './landing_form.php?id=' . $new_id);

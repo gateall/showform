@@ -1,38 +1,11 @@
 <?php
 include_once('./_common.php');
 
-auth_check_menu($auth, '900500', 'r');
+auth_check_menu($auth, '900600', 'r');
 
-$g5['title'] = '유튜브관리';
-$yt_table = G5_TABLE_PREFIX . 'landing_youtube';
+$g5['title'] = '공지관리';
+$notice_table = G5_TABLE_PREFIX . 'landing_notices';
 $page_table = G5_TABLE_PREFIX . 'landing_pages';
-
-function sf_extract_youtube_id($url)
-{
-    $url = trim((string)$url);
-    if ($url === '') {
-        return '';
-    }
-
-    $patterns = array(
-        '~(?:https?://)?(?:www\.)?youtu\.be/([A-Za-z0-9_-]{11})~i',
-        '~(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([A-Za-z0-9_-]{11})~i',
-        '~(?:https?://)?(?:www\.)?youtube\.com/embed/([A-Za-z0-9_-]{11})~i',
-        '~(?:https?://)?(?:www\.)?youtube\.com/shorts/([A-Za-z0-9_-]{11})~i',
-    );
-
-    foreach ($patterns as $pattern) {
-        if (preg_match($pattern, $url, $m)) {
-            return $m[1];
-        }
-    }
-
-    if (preg_match('~[?&]v=([A-Za-z0-9_-]{11})~i', $url, $m)) {
-        return $m[1];
-    }
-
-    return '';
-}
 
 $landing_id = isset($_GET['landing_id']) ? (int)$_GET['landing_id'] : 0;
 $stx = isset($_GET['stx']) ? trim($_GET['stx']) : '';
@@ -49,11 +22,11 @@ if ($stx !== '') {
     $sql_search .= " and (p.company_name like '%{$safe}%' or a.title like '%{$safe}%') ";
 }
 
-$row_count = sql_fetch(" select count(*) as cnt from {$yt_table} a left join {$page_table} p on p.id = a.landing_id {$sql_search} ");
+$row_count = sql_fetch(" select count(*) as cnt from {$notice_table} a left join {$page_table} p on p.id = a.landing_id {$sql_search} ");
 $total_count = isset($row_count['cnt']) ? (int)$row_count['cnt'] : 0;
 $total_page = $rows > 0 ? ceil($total_count / $rows) : 1;
 
-$sql = " select a.*, p.company_name from {$yt_table} a left join {$page_table} p on p.id = a.landing_id {$sql_search} order by a.sort_order asc, a.id desc limit {$offset}, {$rows} ";
+$sql = " select a.*, p.company_name from {$notice_table} a left join {$page_table} p on p.id = a.landing_id {$sql_search} order by a.id desc limit {$offset}, {$rows} ";
 $result = sql_query($sql, false);
 $landing_list = sql_query(" select id, company_name from {$page_table} order by id desc ");
 
@@ -70,7 +43,6 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 .sf-on { background:#dcfce7; color:#166534; }
 .sf-off { background:#fee2e2; color:#991b1b; }
 .sf-actions a { margin-right:8px; text-decoration:none; font-weight:700; }
-.sf-url { word-break:break-all; }
 </style>
 
 <div class="sf-admin-shell">
@@ -85,7 +57,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="회사명, 제목 검색">
         <button type="submit" class="btn_submit btn">검색</button>
     </form>
-    <div><span class="btn_ov01"><span class="ov_txt">총 영상</span><span class="ov_num"> <?php echo number_format($total_count); ?>건</span></span></div>
+    <div><span class="btn_ov01"><span class="ov_txt">총 공지</span><span class="ov_num"> <?php echo number_format($total_count); ?>건</span></span></div>
 </div>
 
 <div class="sf-table-wrap">
@@ -94,10 +66,9 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             <tr>
                 <th scope="col">ID</th>
                 <th scope="col">랜딩회사명</th>
-                <th scope="col">제목</th>
-                <th scope="col">YouTube URL</th>
-                <th scope="col">정렬</th>
+                <th scope="col">공지 제목</th>
                 <th scope="col">노출</th>
+                <th scope="col">등록일</th>
                 <th scope="col">관리</th>
             </tr>
         </thead>
@@ -111,17 +82,16 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 <td class="td_num"><?php echo (int)$row['id']; ?></td>
                 <td><a href="/page/landing.php?id=<?php echo (int)$row['landing_id']; ?>" target="_blank"><?php echo get_text($row['company_name'] ? $row['company_name'] : '랜딩 #' . (int)$row['landing_id']); ?></a></td>
                 <td><?php echo get_text($row['title']); ?></td>
-                <td class="sf-url"><?php echo get_text($row['youtube_url']); ?></td>
-                <td class="td_num"><?php echo (int)$row['sort_order']; ?></td>
                 <td><span class="sf-status <?php echo $row['is_active'] === 'Y' ? 'sf-on' : 'sf-off'; ?>"><?php echo $row['is_active'] === 'Y' ? '노출' : '숨김'; ?></span></td>
+                <td><?php echo get_text($row['created_at']); ?></td>
                 <td class="sf-actions">
-                    <a href="./youtube_form.php?id=<?php echo (int)$row['id']; ?>">수정</a>
-                    <a href="./youtube_delete.php?id=<?php echo (int)$row['id']; ?>" onclick="return confirm('삭제하시겠습니까?');" style="color:#dc2626;">삭제</a>
+                    <a href="./notice_form.php?id=<?php echo (int)$row['id']; ?>">수정</a>
+                    <a href="./notice_delete.php?id=<?php echo (int)$row['id']; ?>" onclick="return confirm('삭제하시겠습니까?');" style="color:#dc2626;">삭제</a>
                 </td>
             </tr>
         <?php }
         if ($count === 0) {
-            echo '<tr><td colspan="7" class="empty_table">등록된 유튜브가 없습니다.</td></tr>';
+            echo '<tr><td colspan="6" class="empty_table">등록된 공지가 없습니다.</td></tr>';
         }
         ?>
         </tbody>

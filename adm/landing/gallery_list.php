@@ -32,6 +32,9 @@ $landing_list = sql_query(" select id, company_name from {$page_table} order by 
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
+<link rel="stylesheet" href="<?php echo G5_ADMIN_URL; ?>/landing/landing_admin.css">
+<?php
+?>
 <style>
 .sf-top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
 .sf-search { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -43,7 +46,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 .sf-actions a { margin-right:8px; text-decoration:none; font-weight:700; }
 </style>
 
-<div class="sf-top">
+<div class="sf-admin-shell">
+    <div class="sf-admin-top">
     <form method="get" class="sf-search">
         <select name="landing_id">
             <option value="0">전체 랜딩</option>
@@ -57,7 +61,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <div><span class="btn_ov01"><span class="ov_txt">총 갤러리</span><span class="ov_num"> <?php echo number_format($total_count); ?>건</span></span></div>
 </div>
 
-<div class="tbl_head01 tbl_wrap">
+<div class="sf-table-wrap">
     <table>
         <thead>
             <tr>
@@ -100,4 +104,5 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <?php echo get_paging(G5_IS_MOBILE ? $config['cf_mobile_pages'] : $config['cf_write_pages'], $page, $total_page, '?landing_id='.urlencode((string)$landing_id).'&stx='.urlencode($stx).'&page='); ?>
 
+</div>
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php'); ?>

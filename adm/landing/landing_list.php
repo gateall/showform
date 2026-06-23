@@ -40,7 +40,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <a href="./landing_form.php" class="sf-btn sf-btn-primary">??</a>
     </div>
     <div class="sf-table-wrap">
-        <table>
+        <table class="sf-data-table">
             <thead>
                 <tr>
                     <th>ID</th><th>???</th><th>??</th><th>???</th><th>??</th><th>??</th><th>??</th><th>??</th>
