@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id < 1) {
     alert('잘못된 접근입니다.', G5_URL);
 }
@@ -29,6 +29,7 @@ $company_name = isset($row['company_name']) ? $row['company_name'] : '';
 $intro_text = isset($row['intro_text']) ? $row['intro_text'] : '';
 $main_copy = isset($row['main_copy']) ? $row['main_copy'] : '';
 $sub_copy = isset($row['sub_copy']) ? $row['sub_copy'] : '';
+$privacy_text = '개인정보 수집 및 이용에 동의합니다.';
 
 $hero_kicker = $area_name && $company_name ? $area_name . ' ' . $company_name : $company_name;
 $phone_href = $phone ? 'tel:' . preg_replace('/[^0-9\+]/', '', $phone) : '#contact';
@@ -185,14 +186,15 @@ body { background: var(--sf-bg); color: var(--sf-text); }
         <div class="sf-card sf-form">
             <h2 class="sf-section-title">문의하기</h2>
             <p class="sf-section-desc">Stage 04에서 실제 문의 저장이 연결됩니다. 현재는 화면 구조만 준비되어 있습니다.</p>
-            <form method="post" action="#" onsubmit="return false;">
+            <form method="post" action="/page/landing_inquiry_update.php">
+                <input type="hidden" name="landing_id" value="<?php echo (int)$row['id']; ?>">
                 <div class="sf-form-grid">
-                    <label><span>이름</span><input type="text" name="name" placeholder="이름"></label>
-                    <label><span>연락처</span><input type="tel" name="phone" placeholder="연락처"></label>
+                    <label><span>이름</span><input type="text" name="name" placeholder="이름" required></label>
+                    <label><span>연락처</span><input type="tel" name="phone" placeholder="연락처" required></label>
                     <label class="sf-full"><span>문의내용</span><textarea name="message" rows="5" placeholder="문의 내용을 입력하세요"></textarea></label>
-                    <label class="sf-full"><span><input type="checkbox" disabled> 개인정보 수집 및 이용 동의</span></label>
+                    <label class="sf-full"><span><input type="checkbox" name="agree" value="1" required> <?php echo get_text($privacy_text); ?></span></label>
                 </div>
-                <button type="button" class="sf-btn sf-btn-solid" style="margin-top:14px;">문의 보내기</button>
+                <button type="submit" class="sf-btn sf-btn-solid" style="margin-top:14px;">문의 보내기</button>
             </form>
         </div>
     </section>
