@@ -42,7 +42,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <div class="sf-table-wrap">
         <table class="sf-data-table">
             <thead>
-                <tr>
+                <tr class="sf-row-main">
                     <th>ID</th><th>???</th><th>??</th><th>???</th><th>??</th><th>??</th><th>??</th><th>??</th>
                 </tr>
             </thead>
