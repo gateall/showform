@@ -1,0 +1,51 @@
+
+# ShowForm Roadmap
+
+## Phase 1
+
+STAGE_01_DB
+STAGE_02_ADMIN
+STAGE_03_RENDER
+
+목표
+
+랜딩 생성 가능
+
+---
+
+## Phase 2
+
+STAGE_04_INQUIRY
+STAGE_05_REVIEW
+STAGE_06_GALLERY
+STAGE_07_YOUTUBE
+STAGE_08_NOTICE
+
+목표
+
+콘텐츠 관리 가능
+
+---
+
+## Phase 3
+
+STAGE_09_TEMPLATE
+STAGE_10_PRESET
+STAGE_11_AI
+
+목표
+
+업종 자동화
+
+---
+
+## Phase 4
+
+STAGE_12_MARKETING
+STAGE_13_UI
+STAGE_14_QA
+STAGE_15_MVP
+
+목표
+
+실서비스 오픈
