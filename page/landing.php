@@ -6,9 +6,37 @@ if ($id < 1) {
     alert('잘못된 접근입니다.', G5_URL);
 }
 
+function sf_extract_youtube_id($url)
+{
+    $url = trim((string)$url);
+    if ($url === '') {
+        return '';
+    }
+
+    $patterns = array(
+        '~(?:https?://)?(?:www\.)?youtu\.be/([A-Za-z0-9_-]{11})~i',
+        '~(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([A-Za-z0-9_-]{11})~i',
+        '~(?:https?://)?(?:www\.)?youtube\.com/embed/([A-Za-z0-9_-]{11})~i',
+        '~(?:https?://)?(?:www\.)?youtube\.com/shorts/([A-Za-z0-9_-]{11})~i',
+    );
+
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $m)) {
+            return $m[1];
+        }
+    }
+
+    if (preg_match('~[?&]v=([A-Za-z0-9_-]{11})~i', $url, $m)) {
+        return $m[1];
+    }
+
+    return '';
+}
+
 $table = G5_TABLE_PREFIX . 'landing_pages';
 $review_table = G5_TABLE_PREFIX . 'landing_reviews';
 $gallery_table = G5_TABLE_PREFIX . 'landing_gallery';
+$youtube_table = G5_TABLE_PREFIX . 'landing_youtube';
 $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
 
 if (!$row) {
@@ -46,6 +74,17 @@ $gallery_result = sql_query(" select * from {$gallery_table} where landing_id = 
 if ($gallery_result) {
     while ($gallery_row = sql_fetch_array($gallery_result)) {
         $gallery_list[] = $gallery_row;
+    }
+}
+
+$youtube_list = array();
+$youtube_result = sql_query(" select * from {$youtube_table} where landing_id = '{$id}' and is_active = 'Y' order by sort_order asc, id desc ", false);
+if ($youtube_result) {
+    while ($youtube_row = sql_fetch_array($youtube_result)) {
+        $youtube_row['video_id'] = sf_extract_youtube_id($youtube_row['youtube_url']);
+        if ($youtube_row['video_id'] !== '') {
+            $youtube_list[] = $youtube_row;
+        }
     }
 }
 
@@ -107,6 +146,14 @@ body { background: var(--sf-bg); color: var(--sf-text); }
 .sf-gallery-item .sf-gallery-body { padding:14px; }
 .sf-gallery-item .sf-gallery-title { font-weight:800; margin:0 0 6px; }
 .sf-gallery-item .sf-gallery-desc { color:var(--sf-muted); line-height:1.6; font-size:14px; }
+.sf-video-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+@media (max-width: 700px) { .sf-video-grid { grid-template-columns:1fr; } }
+.sf-video-card { border:1px solid var(--sf-border); border-radius:18px; background:#fff; overflow:hidden; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+.sf-video-frame { position:relative; padding-top:56.25%; background:#0f172a; }
+.sf-video-frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.sf-video-body { padding:14px; }
+.sf-video-title { font-weight:800; margin-bottom:6px; }
+.sf-video-desc { color:var(--sf-muted); line-height:1.6; font-size:14px; }
 .sf-faq details { border:1px solid var(--sf-border); border-radius:16px; background:#fff; padding:14px 16px; }
 .sf-faq details + details { margin-top:10px; }
 .sf-faq summary { cursor:pointer; font-weight:800; }
@@ -204,6 +251,27 @@ body { background: var(--sf-bg); color: var(--sf-text); }
                     <div class="sf-gallery-body">
                         <div class="sf-gallery-title"><?php echo get_text($gallery['title']); ?></div>
                         <?php if (!empty($gallery['description'])) { ?><div class="sf-gallery-desc"><?php echo nl2br(get_text($gallery['description'])); ?></div><?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
+            </div>
+        </div>
+    </section>
+    <?php } ?>
+
+    <?php if ($youtube_list) { ?>
+    <section class="sf-container sf-section">
+        <div class="sf-card">
+            <h2 class="sf-section-title">유튜브 영상</h2>
+            <div class="sf-video-grid">
+                <?php foreach ($youtube_list as $video) { ?>
+                <div class="sf-video-card">
+                    <div class="sf-video-frame">
+                        <iframe src="https://www.youtube.com/embed/<?php echo get_text($video['video_id']); ?>" title="<?php echo get_text($video['title']); ?>" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    <div class="sf-video-body">
+                        <div class="sf-video-title"><?php echo get_text($video['title']); ?></div>
+                        <?php if (!empty($video['description'])) { ?><div class="sf-video-desc"><?php echo nl2br(get_text($video['description'])); ?></div><?php } ?>
                     </div>
                 </div>
                 <?php } ?>
