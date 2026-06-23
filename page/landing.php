@@ -1,12 +1,14 @@
 <?php
 include_once('./_common.php');
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id < 1) {
     alert('잘못된 접근입니다.', G5_URL);
 }
 
 $table = G5_TABLE_PREFIX . 'landing_pages';
+$review_table = G5_TABLE_PREFIX . 'landing_reviews';
+$gallery_table = G5_TABLE_PREFIX . 'landing_gallery';
 $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
 
 if (!$row) {
@@ -30,6 +32,22 @@ $intro_text = isset($row['intro_text']) ? $row['intro_text'] : '';
 $main_copy = isset($row['main_copy']) ? $row['main_copy'] : '';
 $sub_copy = isset($row['sub_copy']) ? $row['sub_copy'] : '';
 $privacy_text = '개인정보 수집 및 이용에 동의합니다.';
+
+$review_list = array();
+$review_result = sql_query(" select * from {$review_table} where landing_id = '{$id}' and is_active = 'Y' order by sort_order asc, id desc limit 6 ", false);
+if ($review_result) {
+    while ($review_row = sql_fetch_array($review_result)) {
+        $review_list[] = $review_row;
+    }
+}
+
+$gallery_list = array();
+$gallery_result = sql_query(" select * from {$gallery_table} where landing_id = '{$id}' and is_active = 'Y' order by sort_order asc, id desc ", false);
+if ($gallery_result) {
+    while ($gallery_row = sql_fetch_array($gallery_result)) {
+        $gallery_list[] = $gallery_row;
+    }
+}
 
 $hero_kicker = $area_name && $company_name ? $area_name . ' ' . $company_name : $company_name;
 $phone_href = $phone ? 'tel:' . preg_replace('/[^0-9\+]/', '', $phone) : '#contact';
@@ -77,6 +95,18 @@ body { background: var(--sf-bg); color: var(--sf-text); }
 @media (max-width: 640px) { .sf-step-grid { grid-template-columns:1fr; } }
 .sf-step { padding:16px; border-radius:16px; background:#f8fafc; border:1px solid var(--sf-border); }
 .sf-step b { display:block; margin-bottom:8px; color:var(--sf-primary); }
+.sf-review-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+@media (max-width: 900px) { .sf-review-grid { grid-template-columns:1fr; } }
+.sf-review { padding:16px; border-radius:16px; background:#f8fafc; border:1px solid var(--sf-border); line-height:1.7; }
+.sf-review strong { display:block; margin-bottom:8px; }
+.sf-gallery-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+@media (max-width: 900px) { .sf-gallery-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 640px) { .sf-gallery-grid { grid-template-columns:1fr; } }
+.sf-gallery-item { border-radius:18px; overflow:hidden; background:#fff; border:1px solid var(--sf-border); box-shadow:0 8px 24px rgba(15,23,42,.04); }
+.sf-gallery-item img { width:100%; height:220px; object-fit:cover; display:block; }
+.sf-gallery-item .sf-gallery-body { padding:14px; }
+.sf-gallery-item .sf-gallery-title { font-weight:800; margin:0 0 6px; }
+.sf-gallery-item .sf-gallery-desc { color:var(--sf-muted); line-height:1.6; font-size:14px; }
 .sf-faq details { border:1px solid var(--sf-border); border-radius:16px; background:#fff; padding:14px 16px; }
 .sf-faq details + details { margin-top:10px; }
 .sf-faq summary { cursor:pointer; font-weight:800; }
@@ -87,7 +117,6 @@ body { background: var(--sf-bg); color: var(--sf-text); }
 .sf-form span { display:block; margin-bottom:6px; font-weight:700; }
 .sf-form input, .sf-form textarea { width:100%; box-sizing:border-box; border:1px solid var(--sf-border); border-radius:14px; padding:14px; background:#fff; }
 .sf-form .sf-full { grid-column:1/-1; }
-.sf-form-note { margin-top:10px; color:var(--sf-muted); font-size:14px; }
 .sf-mobile-bar { position:fixed; left:0; right:0; bottom:0; z-index:99; display:grid; grid-template-columns:1fr 1fr <?php echo $kakao_url ? '1fr' : '0'; ?>; gap:8px; padding:10px 12px; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-top:1px solid var(--sf-border); }
 .sf-mobile-bar a { text-align:center; border-radius:14px; padding:14px 10px; font-weight:800; text-decoration:none; }
 .sf-mobile-bar .tel { background:var(--sf-primary); color:#fff; }
@@ -161,6 +190,43 @@ body { background: var(--sf-bg); color: var(--sf-text); }
                 <div class="sf-step"><b>신뢰 확보</b>문의 전환을 높이는 구조를 유지합니다.</div>
                 <?php } ?>
             </div>
+        </div>
+    </section>
+
+    <?php if ($gallery_list) { ?>
+    <section class="sf-container sf-section">
+        <div class="sf-card">
+            <h2 class="sf-section-title">갤러리</h2>
+            <div class="sf-gallery-grid">
+                <?php foreach ($gallery_list as $gallery) { ?>
+                <div class="sf-gallery-item">
+                    <?php if (!empty($gallery['image_path'])) { ?><img src="<?php echo get_text($gallery['image_path']); ?>" alt="<?php echo get_text($gallery['title']); ?>"><?php } else { ?><div style="height:220px;background:#e2e8f0;"></div><?php } ?>
+                    <div class="sf-gallery-body">
+                        <div class="sf-gallery-title"><?php echo get_text($gallery['title']); ?></div>
+                        <?php if (!empty($gallery['description'])) { ?><div class="sf-gallery-desc"><?php echo nl2br(get_text($gallery['description'])); ?></div><?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
+            </div>
+        </div>
+    </section>
+    <?php } ?>
+
+    <section class="sf-container sf-section">
+        <div class="sf-card">
+            <h2 class="sf-section-title">고객 후기</h2>
+            <?php if ($review_list) { ?>
+            <div class="sf-review-grid">
+                <?php foreach ($review_list as $review) { ?>
+                <div class="sf-review">
+                    <strong><?php echo get_text($review['customer_name']); ?> <?php echo str_repeat('★', (int)$review['rating']); ?></strong>
+                    <div><?php echo nl2br(get_text($review['content'])); ?></div>
+                </div>
+                <?php } ?>
+            </div>
+            <?php } else { ?>
+            <div class="sf-review">등록된 후기가 없습니다.</div>
+            <?php } ?>
         </div>
     </section>
 
