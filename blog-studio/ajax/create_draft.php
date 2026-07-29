@@ -15,10 +15,7 @@ auth_check_menu($auth, '360000', 'w');
 $now = G5_TIME_YMDHIS;
 $sql = "INSERT INTO g5_blog_posts
         SET project_id = 0,
-            advertiser_id = 0,
-            site_id = 0,
             title = '새 포스팅',
-            status = 'draft',
             created_at = '{$now}',
             updated_at = '{$now}'";
 $result = sql_query($sql, false);
@@ -27,5 +24,5 @@ if ($result) {
     $post_id = sql_insert_id();
     echo json_encode(['success' => true, 'post_id' => $post_id]);
 } else {
-    echo json_encode(['success' => false, 'message' => '초안 생성에 실패했습니다. DB 확인 필요']);
+    echo json_encode(['success' => false, 'message' => '초안 생성에 실패했습니다. DB 확인 필요: ' . sql_error_info()]);
 }
