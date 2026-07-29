@@ -79,6 +79,64 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </div>
 </form>
 
+<?php if ($id > 0 && $row['masked_hint']) { ?>
+<div class="ai-test-wrap" style="margin: 20px 0; padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 5px;">
+    <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">연결 테스트</h3>
+    <p style="margin-bottom: 15px; color: #666;">저장된 API 키를 사용하여 제공자와의 연결 및 인증 상태를 확인합니다. 과금이 큰 생성 요청 대신 안전한 최소 확인을 수행합니다.</p>
+    <button type="button" id="btn_test_connection" class="btn btn_03" style="min-height: 48px; font-size: 16px; padding: 0 20px;">연결 테스트 실행</button>
+    <div id="test_result_area" style="display: none; margin-top: 15px; padding: 15px; border-radius: 4px; border: 1px solid #ccc; background: #fafafa; word-break: break-all;">
+        <!-- 결과 출력 영역 -->
+    </div>
+</div>
+
+<script>
+$(function() {
+    $('#btn_test_connection').on('click', function() {
+        var $btn = $(this);
+        var $result = $('#test_result_area');
+        
+        $btn.prop('disabled', true).text('테스트 진행 중...');
+        $result.hide().html('');
+        
+        $.ajax({
+            url: './ai_provider_test.php',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                token: '<?php echo get_admin_token(); ?>',
+                id: <?php echo $id; ?>
+            },
+            success: function(res) {
+                $result.show();
+                if (res.ok) {
+                    $result.css({'border-color': '#28a745', 'background-color': '#eaf9ed', 'color': '#155724'}).html(
+                        '<div><strong style="font-size:16px;">[연결 성공]</strong> ' + res.provider + ' 서버와 정상 연결되었습니다.</div>' +
+                        '<div style="margin-top:8px;"><strong>테스트 모델:</strong> ' + res.model + ' <em>(' + res.model_status + ')</em></div>' +
+                        '<div style="margin-top:4px;"><strong>응답 상태:</strong> HTTP ' + res.http_code + ' (' + res.elapsed_ms + 'ms)</div>' +
+                        '<div style="margin-top:8px; font-size:12px; color:#555;">테스트 일시: ' + res.timestamp + '</div>'
+                    );
+                } else {
+                    $result.css({'border-color': '#dc3545', 'background-color': '#fceeed', 'color': '#721c24'}).html(
+                        '<div><strong style="font-size:16px;">[연결 실패]</strong></div>' +
+                        '<div style="margin-top:8px;">' + res.error + '</div>'
+                    );
+                }
+            },
+            error: function(xhr, status, error) {
+                $result.show().css({'border-color': '#dc3545', 'background-color': '#fceeed', 'color': '#721c24'}).html(
+                    '<div><strong style="font-size:16px;">[통신 오류]</strong></div>' +
+                    '<div style="margin-top:8px;">서버와 통신 중 문제가 발생했습니다. (' + error + ')</div>'
+                );
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('연결 테스트 실행');
+            }
+        });
+    });
+});
+</script>
+<?php } ?>
+
 <script>
 function faiproviderform_submit(f) {
     if (f.provider_code && !f.provider_code.readOnly && !f.provider_code.value.trim()) {
