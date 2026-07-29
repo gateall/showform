@@ -54,17 +54,79 @@ const Builder = {
         }
     },
     
+    gatherData: function() {
+        const data = {
+            advertiser_id: document.getElementById('pb_advertiser_id') ? document.getElementById('pb_advertiser_id').value : '',
+            site_id: document.getElementById('pb_site_id') ? document.getElementById('pb_site_id').value : '',
+            post_type: document.getElementById('pb_post_type') ? document.getElementById('pb_post_type').value : '',
+            target_date: document.getElementById('pb_target_date') ? document.getElementById('pb_target_date').value : '',
+            target_audience: document.getElementById('pb_target_audience') ? document.getElementById('pb_target_audience').value : '',
+            tone: document.getElementById('pb_tone') ? document.getElementById('pb_tone').value : '',
+            main_keyword: document.getElementById('pb_main_keyword') ? document.getElementById('pb_main_keyword').value : '',
+            sub_keywords: document.getElementById('pb_sub_keywords') ? document.getElementById('pb_sub_keywords').value : '',
+            post_title: document.getElementById('pb_post_title') ? document.getElementById('pb_post_title').value : '',
+            intro_text: document.getElementById('pb_intro_text') ? document.getElementById('pb_intro_text').value : '',
+            closing_text: document.getElementById('pb_closing_text') ? document.getElementById('pb_closing_text').value : '',
+            company_name: document.getElementById('pb_company_name') ? document.getElementById('pb_company_name').value : '',
+            company_tel: document.getElementById('pb_company_tel') ? document.getElementById('pb_company_tel').value : '',
+            company_addr: document.getElementById('pb_company_addr') ? document.getElementById('pb_company_addr').value : '',
+            company_link: document.getElementById('pb_company_link') ? document.getElementById('pb_company_link').value : ''
+        };
+        
+        // TOC
+        const tocs = [];
+        document.querySelectorAll('.pb-toc-item').forEach(el => tocs.push(el.value));
+        data.toc_list = tocs;
+        
+        // Body blocks
+        const blocks = [];
+        document.querySelectorAll('.pb-block').forEach(el => {
+            const inputs = el.querySelectorAll('.frm_input');
+            if (inputs.length >= 2) {
+                blocks.push({
+                    title: inputs[0].value,
+                    content: inputs[1].value
+                });
+            }
+        });
+        data.body_blocks = blocks;
+        
+        return data;
+    },
+    
     saveStep: function(step) {
-        // TODO: AJAX call to post_builder_ajax.php?action=save_step&step=N
         console.log("Saving step " + step + "...");
         
-        const now = new Date();
-        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                        now.getMinutes().toString().padStart(2, '0');
-        document.getElementById('pb-saved-time').innerText = timeStr;
+        const stateData = this.gatherData();
+        const payload = new URLSearchParams();
+        payload.append('action', step === 'all' ? 'save_all' : 'save_step');
+        payload.append('step', step);
+        payload.append('project_id', this.projectId);
+        payload.append('post_id', this.postId);
+        payload.append('advertiser_id', stateData.advertiser_id);
+        payload.append('site_id', stateData.site_id);
+        payload.append('builder_state', JSON.stringify(stateData));
         
-        // 임시 알럿 (실제론 toast 알림 사용 권장)
-        // alert(step + '단계가 저장되었습니다.');
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.ok) {
+                if (res.project_id > 0) this.projectId = res.project_id;
+                if (res.post_id > 0) this.postId = res.post_id;
+                
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                                now.getMinutes().toString().padStart(2, '0');
+                document.getElementById('pb-saved-time').innerText = timeStr;
+                
+                // alert(res.message);
+            } else {
+                alert('저장 실패: ' + res.error);
+            }
+        });
     },
     
     saveCurrentStep: function() {
@@ -115,7 +177,47 @@ const Builder = {
     generateTitles: function() { alert('AI 제목 생성 (API 연결 예정)'); },
     generateIntro: function() { alert('AI 도입부 생성 (API 연결 예정)'); },
     generateBlockAI: function(id) { alert('블록 ' + id + ' AI 작성 (API 연결 예정)'); },
-    uploadImages: function() { alert('이미지 업로드 (AJAX 연결 예정)'); },
+    uploadImages: function() {
+        const fileInput = document.getElementById('pb_image_upload');
+        if (fileInput.files.length === 0) {
+            alert('업로드할 이미지를 선택해 주세요.');
+            return;
+        }
+        if (this.projectId === 0) {
+            alert('기본정보(1단계)를 먼저 저장해 주세요.');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'upload_images');
+        formData.append('project_id', this.projectId);
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append('images[]', fileInput.files[i]);
+        }
+        
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.ok) {
+                alert(res.message);
+                const grid = document.getElementById('pb_image_list');
+                res.images.forEach(img => {
+                    grid.innerHTML += `
+                        <div class="pb-img-item" style="display:inline-block; margin:5px; text-align:center;">
+                            <img src="${img.url}" style="width:100px; height:100px; object-fit:cover; border:1px solid #ddd; border-radius:4px;"><br>
+                            <small>${img.name}</small>
+                        </div>
+                    `;
+                });
+                fileInput.value = '';
+            } else {
+                alert('업로드 실패: ' + res.error);
+            }
+        });
+    },
     loadCompanyInfo: function() { alert('광고주/사이트 정보 불러오기 완료'); },
     runSeoCheck: function() { 
         document.getElementById('pb_seo_results').innerHTML = '<span style="color:green;font-weight:bold;">양호</span> (검색어 포함, 분량 적절)';
@@ -125,12 +227,60 @@ const Builder = {
     },
     completePost: function() {
         if(confirm("모든 단계를 종합하여 최종 포스팅을 생성하시겠습니까?")) {
-            alert("포스팅이 완성되었습니다!");
-            document.getElementById('pb_post_actions').style.display = 'block';
+            this.saveStep('all');
+            
+            const payload = new URLSearchParams();
+            payload.append('action', 'complete_post');
+            payload.append('project_id', this.projectId);
+            payload.append('builder_state', JSON.stringify(this.gatherData()));
+            
+            fetch('post_builder_ajax.php', {
+                method: 'POST',
+                body: payload
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.ok) {
+                    alert(res.message);
+                    document.getElementById('pb_preview_area').innerHTML = res.html;
+                    document.getElementById('pb_post_actions').style.display = 'block';
+                } else {
+                    alert('완성 실패: ' + res.error);
+                }
+            });
         }
     },
+    
+    copyHtml: function() {
+        const html = document.getElementById('pb_preview_area').innerHTML;
+        navigator.clipboard.writeText(html).then(() => {
+            alert('HTML 내용이 클립보드에 복사되었습니다.');
+        }).catch(err => {
+            alert('복사 실패: ' + err);
+        });
+    },
+    
     showPublishModal: function() {
-        alert("즉시/예약 발행 팝업을 띄웁니다.");
+        if(confirm("선택한 사이트로 바로 발행 대기열에 등록하시겠습니까? (스케줄러가 자동 처리합니다)")) {
+            const payload = new URLSearchParams();
+            payload.append('action', 'publish_post');
+            payload.append('project_id', this.projectId);
+            payload.append('post_id', this.postId);
+            payload.append('site_id', document.getElementById('pb_site_id').value);
+            
+            fetch('post_builder_ajax.php', {
+                method: 'POST',
+                body: payload
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.ok) {
+                    alert(res.message);
+                } else {
+                    alert('발행 등록 실패: ' + res.error);
+                }
+            });
+        }
     }
 };
 

@@ -52,8 +52,32 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                         <div class="pb-form-group">
                             <label>사이트 선택</label>
                             <select id="pb_site_id" class="frm_input">
-                                <option value="">선택하세요</option>
+                                <option value="">광고주를 먼저 선택하세요</option>
                             </select>
+                            <script>
+                                const ADV_SITES = {
+                                    <?php
+                                    $sites_res = sql_query("select id, advertiser_id, name from ".bp_table('sites')." order by name");
+                                    $adv_sites = [];
+                                    while($s = sql_fetch_array($sites_res)) {
+                                        $adv_sites[$s['advertiser_id']][] = $s;
+                                    }
+                                    foreach ($adv_sites as $adv => $sites) {
+                                        echo "'$adv': " . json_encode($sites) . ",\n";
+                                    }
+                                    ?>
+                                };
+                                document.getElementById('pb_advertiser_id').addEventListener('change', function() {
+                                    const adv = this.value;
+                                    const siteSelect = document.getElementById('pb_site_id');
+                                    siteSelect.innerHTML = '<option value="">선택하세요</option>';
+                                    if(ADV_SITES[adv]) {
+                                        ADV_SITES[adv].forEach(s => {
+                                            siteSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                                        });
+                                    }
+                                });
+                            </script>
                         </div>
                         <div class="pb-form-group">
                             <label>포스팅 유형</label>
