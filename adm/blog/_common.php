@@ -9,6 +9,7 @@ require_once __DIR__ . '/lib/blog_ai_service.lib.php';
 require_once __DIR__ . '/lib/blog_quality.lib.php';
 require_once __DIR__ . '/lib/blog_publisher.lib.php';
 require_once __DIR__ . '/lib/blog_report.lib.php';
+require_once __DIR__ . '/lib/blog_naver.lib.php';
 
 bp_ensure_utf8mb4_connection();
 

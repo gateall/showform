@@ -21,7 +21,7 @@ if ($advertiser_id < 1) {
 if ($name === '') {
     alert('사이트명을 입력해 주세요.');
 }
-if (!in_array($platform, array('wordpress', 'php', 'naver'), true)) {
+if (!in_array($platform, array('wordpress', 'php', 'naver', 'naver_blog'), true)) {
     $platform = 'wordpress';
 }
 

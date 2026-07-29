@@ -430,8 +430,80 @@ function bp_get_publisher(string $platform): BlogPublisherInterface
         return new BlogPhpPublisher();
     } elseif ($platform === 'naver') {
         return new BlogNaverPackager();
+    } elseif ($platform === 'naver_blog') {
+        // 'naver'(수동 발행 ZIP 패키지, Stage 5)와는 별개 플랫폼 값 — 네이버 공식 오픈 API를
+        // 통한 실제 자동 발행(Stage 10). 기존 'naver' 값이 가리키는 기능을 바꾸지 않기 위해
+        // 의도적으로 다른 문자열을 쓴다.
+        return new BlogNaverBlogPublisher();
     }
     return new BlogMockPublisher();
+}
+
+// 네이버 블로그 공식 오픈 API(/blog/writePost) 실연동 — Stage 10.
+// OAuth 토큰 발급·갱신은 blog_naver.lib.php가 담당하고, 이 클래스는 발행 요청 자체만 맡는다.
+class BlogNaverBlogPublisher implements BlogPublisherInterface
+{
+    private $transport;
+
+    public function __construct(?callable $transport = null)
+    {
+        $this->transport = $transport !== null ? $transport : 'bp_naver_curl_transport';
+    }
+
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array
+    {
+        $token_result = bp_naver_get_valid_access_token((int) $site_row['id'], $this->transport);
+        if (!$token_result['ok']) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => $token_result['error'], 'error_code' => '401');
+        }
+
+        $title = isset($post_target_row['title']) ? $post_target_row['title'] : '';
+        $contents = isset($post_target_row['body']) ? $post_target_row['body'] : '';
+        if (trim($title) === '' || trim($contents) === '') {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '제목 또는 본문이 비어 있습니다.', 'error_code' => '400');
+        }
+
+        $post_fields = http_build_query(array(
+            'title' => $title,
+            'contents' => $contents,
+        ));
+        $headers = array(
+            'token: ' . $token_result['access_token'],
+            'Content-Type: application/x-www-form-urlencoded',
+        );
+
+        $transport = $this->transport;
+        $res = call_user_func($transport, 'POST', BP_NAVER_BLOG_WRITE_URL, $headers, $post_fields);
+
+        if (!empty($res['error'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('네이버 연결 오류: ' . $res['error']), 'error_code' => '0');
+        }
+
+        $http_code = (int) $res['http_code'];
+        $parsed = json_decode((string) $res['body'], true);
+
+        if ($http_code === 401 || $http_code === 403) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '네이버 인증 실패 — 연동을 다시 진행해 주세요.', 'error_code' => (string) $http_code);
+        }
+        if ($http_code < 200 || $http_code >= 300) {
+            $msg = is_array($parsed) && isset($parsed['message']) ? $parsed['message'] : ('HTTP ' . $http_code);
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('네이버 오류: ' . $msg), 'error_code' => (string) $http_code);
+        }
+
+        // 네이버 오픈API 가이드는 성공 응답의 상세 스키마를 공개 문서에 명시하지 않는다 —
+        // HTTP 200과 message 필드 유무로 최대한 방어적으로 판정한다. 실제 운영 계정으로
+        // 검증하기 전까지는 이 판정 로직이 최종본이 아닐 수 있음을 문서에 남겨둔다.
+        if (is_array($parsed) && isset($parsed['message']) && $parsed['message'] !== 'success') {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('네이버 응답: ' . $parsed['message']), 'error_code' => (string) $http_code);
+        }
+
+        return array(
+            'ok' => true,
+            'external_post_id' => is_array($parsed) && isset($parsed['id']) ? (string) $parsed['id'] : '',
+            'published_url' => is_array($parsed) && isset($parsed['url']) ? (string) $parsed['url'] : '',
+            'error' => '',
+        );
+    }
 }
 
 // 승인 취소(approved -> pending_approval) 가드 — 이 프로젝트의 발행 대상 중 하나라도

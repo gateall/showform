@@ -28,6 +28,8 @@ if ($id > 0) {
     $g5['title'] = '발행 사이트 등록';
 }
 
+$naver_tokens = $id > 0 ? bp_naver_load_tokens($id) : null;
+
 $advertisers = sql_query(" select id, name from {$adv_table} where status = 'Y' order by name asc ");
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
@@ -61,7 +63,9 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                             <option value="wordpress" <?php echo $row['platform'] === 'wordpress' ? 'selected' : ''; ?>>워드프레스</option>
                             <option value="php" <?php echo $row['platform'] === 'php' ? 'selected' : ''; ?>>자체 PHP 사이트</option>
                             <option value="naver" <?php echo $row['platform'] === 'naver' ? 'selected' : ''; ?>>네이버 (등록 패키지)</option>
+                            <option value="naver_blog" <?php echo $row['platform'] === 'naver_blog' ? 'selected' : ''; ?>>네이버 블로그 (API 자동 발행)</option>
                         </select>
+                        <span class="help_txt">"네이버 (등록 패키지)"는 수동 업로드용 ZIP을 만들고, "네이버 블로그 (API 자동 발행)"는 네이버 오픈API로 직접 발행합니다. 후자는 저장 후 아래 채널 연동에서 로그인 연결이 필요합니다.</span>
                     </td></tr>
                 <tr><th scope="row"><label for="base_url">사이트 주소</label></th>
                     <td><input type="text" name="base_url" id="base_url" value="<?php echo get_text($row['base_url']); ?>" class="frm_input" maxlength="255" placeholder="https://example.com"></td></tr>
@@ -114,6 +118,34 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <a href="./site_list.php" class="btn btn_02">목록</a>
     </div>
 </form>
+
+<?php if ($id > 0) { ?>
+<div class="tbl_frm01 tbl_wrap" style="margin-top:15px;">
+    <table>
+        <caption>네이버 블로그 API 연동 (Stage 10)</caption>
+        <tbody>
+            <tr><th scope="row">연동 상태</th>
+                <td>
+                    <?php if ($naver_tokens) { ?>
+                        <span style="color:#0a0;">연결됨</span>
+                    <?php } else { ?>
+                        <span style="color:#c00;">연결 안 됨</span>
+                    <?php } ?>
+                    <span class="help_txt">플랫폼을 "네이버 블로그 (API 자동 발행)"로 저장한 뒤 아래 버튼으로 네이버 로그인 연동을 진행하세요. 채널 앱(client_id/secret)이 먼저 등록되어 있어야 합니다.</span>
+                </td></tr>
+            <tr><th scope="row">연동 실행</th>
+                <td>
+                    <form method="post" action="./naver_oauth_start.php" style="display:inline;">
+                        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+                        <input type="hidden" name="site_id" value="<?php echo (int) $id; ?>">
+                        <button type="submit" class="btn btn_02"><?php echo $naver_tokens ? '재연동(다시 로그인)' : '네이버 로그인으로 연동'; ?></button>
+                    </form>
+                    <a href="<?php echo G5_ADMIN_URL; ?>/blog/channel_app_list.php" class="btn btn_02" style="margin-left:8px;">채널 앱 설정</a>
+                </td></tr>
+        </tbody>
+    </table>
+</div>
+<?php } ?>
 
 <script>
 function fsiteform_submit(f) {
