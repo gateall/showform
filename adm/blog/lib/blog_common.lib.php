@@ -1,6 +1,12 @@
 <?php
 if (!defined('_GNUBOARD_')) exit;
 
+// 운영 DB에 아직 아무 테이블도 없는 시점에 blog_ 네임스페이스로 확정했다(PM 지시,
+// 2026-07-29). advertisers/sites 등은 애초 서비스 중립 공통 테이블로 설계됐으나
+// (BLOG_AUTOMATION_DATA_MODEL.md 6절 — 원래는 blog_ 접두어 금지 방침이었음) 실제
+// 운영 설치 직전에 이 방침을 뒤집고 전부 blog_ 네임스페이스로 통일하기로 결정했다.
+// 실제 테이블명은 {G5_TABLE_PREFIX}blog_{name} 형태이며, 호출부는 이 짧은 이름만
+// 그대로 쓰면 된다(bp_table('advertisers') 호출 자체는 변경 없음, 매핑만 바뀜).
 function bp_table(string $name): string
 {
     $allowed = array(
@@ -12,7 +18,7 @@ function bp_table(string $name): string
     if (!in_array($name, $allowed, true)) {
         alert('잘못된 테이블 요청입니다.');
     }
-    return G5_TABLE_PREFIX . $name;
+    return G5_TABLE_PREFIX . 'blog_' . $name;
 }
 
 // 비밀값을 화면에 다시 표시하지 않기 위한 마스킹 힌트 생성 (BLOG_AUTOMATION_SECURITY.md)

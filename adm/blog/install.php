@@ -29,9 +29,10 @@ function bp_install_check_extensions(): array
 
 // 테이블 존재 여부로 설치 상태를 판단한다 — 비밀정보 노출 없이
 // information_schema 대신 SHOW TABLES LIKE 를 사용해 최소 권한으로도 동작하게 한다.
+// bp_table()과 동일하게 blog_ 네임스페이스를 여기서 붙인다 — 호출부는 짧은 이름만 전달.
 function bp_install_table_exists(string $prefix, string $table): bool
 {
-    $like = sql_real_escape_string($prefix . $table);
+    $like = sql_real_escape_string($prefix . 'blog_' . $table);
     $result = sql_query(" show tables like '{$like}' ", false);
     return $result && sql_num_rows($result) > 0;
 }
