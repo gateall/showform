@@ -377,9 +377,25 @@ if ($mode === 'update_target_schedule') {
         }
         $scheduled_sql = "'" . date('Y-m-d H:i:s', $ts) . "'";
         $log_detail = "target#{$post_target_id} -> " . date('Y-m-d H:i', $ts);
+        
+        $failed_job = sql_fetch(" select id from {$jobs_table} where post_target_id = '{$post_target_id}' and status = 'failed' order by id desc limit 1 ");
+        if ($failed_job) {
+            sql_query(" update {$jobs_table} set status = 'pending', scheduled_at = {$scheduled_sql}, next_retry_at = NULL, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$failed_job['id'] . "' ");
+        } else {
+            sql_query(" insert into {$jobs_table}
+                            set post_target_id = '{$post_target_id}',
+                                status = 'pending',
+                                active_lock_key = 'sched_' . '{$post_target_id}',
+                                scheduled_at = {$scheduled_sql},
+                                attempt_count = 0,
+                                created_at = '" . G5_TIME_YMDHIS . "',
+                                updated_at = '" . G5_TIME_YMDHIS . "' ");
+        }
     } else {
         $scheduled_sql = 'NULL';
         $log_detail = "target#{$post_target_id} -> (해제)";
+        // 예약 해제 시 pending 작업 삭제 (또는 failed로 되돌리기)
+        sql_query(" delete from {$jobs_table} where post_target_id = '{$post_target_id}' and status = 'pending' ");
     }
 
     sql_query(" update {$targets_table} set scheduled_at = {$scheduled_sql}, updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$post_target_id}' ");

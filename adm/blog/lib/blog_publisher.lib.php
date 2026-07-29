@@ -5,7 +5,7 @@ if (!defined('_GNUBOARD_')) exit;
 // $site_row는 base_url·platform 등 발행 대상 사이트 정보, $credentials_row는 인증정보(없을 수 있음).
 interface BlogPublisherInterface
 {
-    // 반환: array('ok'=>bool, 'external_post_id'=>string, 'published_url'=>string, 'error'=>string)
+    // 반환: array('ok'=>bool, 'external_post_id'=>string, 'published_url'=>string, 'error'=>string, 'error_code'=>string)
     public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array;
 }
 
@@ -22,6 +22,7 @@ class BlogMockPublisher implements BlogPublisherInterface
                 'external_post_id' => '',
                 'published_url' => '',
                 'error' => 'Mock Publisher: 의도적 실패 트리거(FAIL_TEST)',
+                'error_code' => '500',
             );
         }
 
@@ -31,6 +32,7 @@ class BlogMockPublisher implements BlogPublisherInterface
             'external_post_id' => $fake_id,
             'published_url' => 'https://mock.local/posts/' . $fake_id,
             'error' => '',
+            'error_code' => '',
         );
     }
 }
@@ -55,16 +57,16 @@ class BlogWordPressPublisher implements BlogPublisherInterface
     {
         $base_url = isset($site_row['base_url']) ? rtrim($site_row['base_url'], '/') : '';
         if (strpos($base_url, 'https://') !== 0) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'HTTPS 사이트만 발행할 수 있습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'HTTPS 사이트만 발행할 수 있습니다.', 'error_code' => '400');
         }
 
         if (!$credentials_row || empty($credentials_row['cred_username']) || empty($credentials_row['cred_value_enc'])) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '이 사이트에 워드프레스 인증정보가 설정되지 않았습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '이 사이트에 워드프레스 인증정보가 설정되지 않았습니다.', 'error_code' => '401');
         }
 
         $app_password = bp_decrypt_secret($credentials_row['cred_value_enc']);
         if ($app_password === '') {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.', 'error_code' => '401');
         }
 
         $existing_id = isset($post_target_row['external_post_id']) ? trim((string) $post_target_row['external_post_id']) : '';
@@ -89,22 +91,22 @@ class BlogWordPressPublisher implements BlogPublisherInterface
         // $app_password/$auth는 여기서 스코프를 벗어나며, 아래로는 절대 전달하지 않는다.
 
         if (!empty($res['error'])) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 연결 오류: ' . $res['error']));
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 연결 오류: ' . $res['error']), 'error_code' => '503');
         }
 
         $http_code = (int) $res['http_code'];
         if ($http_code === 401 || $http_code === 403) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 인증 실패(HTTP ' . $http_code . ') — Application Password를 확인해 주세요.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 인증 실패(HTTP ' . $http_code . ') — Application Password를 확인해 주세요.', 'error_code' => (string)$http_code);
         }
         if ($http_code < 200 || $http_code >= 300) {
             $parsed = json_decode((string) $res['body'], true);
             $msg = isset($parsed['message']) ? $parsed['message'] : ('HTTP ' . $http_code);
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 오류: ' . $msg));
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 오류: ' . $msg), 'error_code' => (string)$http_code);
         }
 
         $parsed = json_decode((string) $res['body'], true);
         if (!is_array($parsed) || !isset($parsed['id'])) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 응답을 해석할 수 없습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 응답을 해석할 수 없습니다.', 'error_code' => '500');
         }
 
         return array(
@@ -112,6 +114,7 @@ class BlogWordPressPublisher implements BlogPublisherInterface
             'external_post_id' => (string) $parsed['id'],
             'published_url' => isset($parsed['link']) ? (string) $parsed['link'] : '',
             'error' => '',
+            'error_code' => '',
         );
     }
 
@@ -157,17 +160,17 @@ class BlogPhpPublisher implements BlogPublisherInterface
     {
         $base_url = isset($site_row['base_url']) ? rtrim($site_row['base_url'], '/') : '';
         if (!$base_url) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '사이트 URL이 없습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '사이트 URL이 없습니다.', 'error_code' => '400');
         }
 
         if (!$credentials_row || empty($credentials_row['cred_username']) || empty($credentials_row['cred_value_enc'])) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API Key/Secret이 설정되지 않았습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API Key/Secret이 설정되지 않았습니다.', 'error_code' => '401');
         }
 
         $api_key = $credentials_row['cred_username'];
         $api_secret = bp_decrypt_secret($credentials_row['cred_value_enc']);
         if ($api_secret === '') {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.', 'error_code' => '401');
         }
 
         // 카테고리 매핑 조회
@@ -234,14 +237,14 @@ class BlogPhpPublisher implements BlogPublisherInterface
         $res = $transport('POST', $api_url, $headers, $json_payload);
 
         if (!empty($res['error'])) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('연결 오류: ' . $res['error']));
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('연결 오류: ' . $res['error']), 'error_code' => '503');
         }
 
         $http_code = (int) $res['http_code'];
         $parsed = @json_decode((string) $res['body'], true);
 
         if ($http_code === 401 || $http_code === 403) {
-            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API 인증 실패 (HTTP ' . $http_code . ')');
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API 인증 실패 (HTTP ' . $http_code . ')', 'error_code' => (string)$http_code);
         }
 
         if ($http_code === 200 && $parsed && !empty($parsed['success'])) {
@@ -250,11 +253,12 @@ class BlogPhpPublisher implements BlogPublisherInterface
                 'external_post_id' => (string) ($parsed['remote_post_id'] ?? ''),
                 'published_url' => (string) ($parsed['published_url'] ?? ''),
                 'error' => '',
+                'error_code' => ''
             );
         }
 
         $msg = isset($parsed['message']) ? $parsed['message'] : ('HTTP ' . $http_code);
-        return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('발행 오류: ' . $msg));
+        return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('발행 오류: ' . $msg), 'error_code' => (string)$http_code);
     }
 
     private function curlTransport(string $method, string $url, array $headers, ?string $body): array
@@ -304,12 +308,12 @@ class BlogNaverPackager implements BlogPublisherInterface
 
         // zip 생성
         if (!class_exists('ZipArchive')) {
-            return array('ok' => false, 'error' => 'ZipArchive 클래스가 지원되지 않습니다 (PHP 모듈 누락).');
+            return array('ok' => false, 'error' => 'ZipArchive 클래스가 지원되지 않습니다 (PHP 모듈 누락).', 'error_code' => '500');
         }
 
         $zip = new ZipArchive();
         if ($zip->open($filepath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            return array('ok' => false, 'error' => 'ZIP 파일을 생성할 수 없습니다.');
+            return array('ok' => false, 'error' => 'ZIP 파일을 생성할 수 없습니다.', 'error_code' => '500');
         }
 
         // 1. content.html
@@ -363,7 +367,8 @@ class BlogNaverPackager implements BlogPublisherInterface
             'ok' => true,
             'external_post_id' => 'pkg_' . $pkg_id,
             'published_url' => G5_ADMIN_URL . '/blog/naver_package_download.php?id=' . $pkg_id,
-            'error' => ''
+            'error' => '',
+            'error_code' => ''
         );
     }
 }
@@ -455,8 +460,8 @@ function bp_get_or_create_publish_job(int $post_target_id): ?array
 
     $active = sql_fetch(" select * from {$jobs_table}
                             where post_target_id = '{$post_target_id}'
-                              and status in ('pending','claimed','processing')
-                            limit 1 ");
+                              and status in ('pending','claimed','processing','failed')
+                            order by id desc limit 1 ");
     if ($active) {
         return $active;
     }
@@ -528,70 +533,32 @@ function bp_dispatch_publish_job(int $post_target_id, string $actor): array
         return array('ok' => false, 'error' => "이미 '{$job['status']}' 상태로 처리 중인 작업입니다(중복 발행 방지).", 'job_id' => $job['id']);
     }
 
-    // claim: pending -> claimed (조건부 UPDATE로 원자적으로 한 번만 성공하도록 함)
+    // claim: pending -> processing (조건부 UPDATE로 원자적으로 한 번만 성공하도록 함)
     $worker_id = 'admin:' . $actor . ':' . uniqid('', true);
+    $lock_token = 'manual_' . uniqid('', true);
     global $g5;
     sql_query(" update {$jobs_table}
-                    set status = 'claimed', claimed_at = '" . G5_TIME_YMDHIS . "', worker_id = '" . sql_real_escape_string($worker_id) . "', updated_at = '" . G5_TIME_YMDHIS . "'
-                    where id = '" . (int)$job['id'] . "' and status = 'pending' ");
-    // pending 상태였던 행에만 UPDATE가 적용되므로, 다른 요청이 먼저 claim 했다면 영향받은 행이 0건이다.
+                    set status = 'processing', 
+                        claimed_at = '" . G5_TIME_YMDHIS . "', 
+                        worker_id = '" . sql_real_escape_string($worker_id) . "', 
+                        locked_at = '" . G5_TIME_YMDHIS . "',
+                        lock_token = '" . sql_real_escape_string($lock_token) . "',
+                        updated_at = '" . G5_TIME_YMDHIS . "'
+                    where id = '" . (int)$job['id'] . "' and status in ('pending', 'failed') ");
+    
     $affected = isset($g5['connect_db']) ? @mysqli_affected_rows($g5['connect_db']) : null;
     if ($affected !== null && $affected < 1) {
         return array('ok' => false, 'error' => '다른 요청이 먼저 이 작업을 선점했습니다(중복 발행 방지).', 'job_id' => $job['id']);
     }
 
-    sql_query(" update {$jobs_table} set status = 'processing', attempt_count = attempt_count + 1, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$job['id'] . "' ");
     bp_transition_project($project['id'], 'publishing', $actor, 'job#' . $job['id']);
 
-    $site = sql_fetch(" select * from {$sites_table} where id = '" . (int)$target['site_id'] . "' ");
-    $cred = sql_fetch(" select * from {$creds_table} where site_id = '" . (int)$target['site_id'] . "' limit 1 ");
-    if (!$site) {
-        return array('ok' => false, 'error' => '발행 대상 사이트를 찾을 수 없습니다.');
-    }
-
-    $publisher = bp_get_publisher($site['platform']);
-    $target['job_id'] = $job['id'];
-    $result = $publisher->publish($target, $site, $cred);
-
-    $attempt_no = (int) $job['attempt_count'] + 1;
-    $status = $result['ok'] ? 'success' : 'failed';
-    $safe_message = bp_scrub_secrets(mb_substr($result['error'], 0, 500));
-    sql_query(" insert into {$attempts_table}
-                    set publish_job_id = '" . (int)$job['id'] . "',
-                        attempt_no = '{$attempt_no}',
-                        status = '" . sql_real_escape_string($status) . "',
-                        response_code = '" . ($result['ok'] ? '200' : 'ERR') . "',
-                        response_message = '" . sql_real_escape_string($safe_message) . "',
-                        created_at = '" . G5_TIME_YMDHIS . "' ");
-
-    if ($result['ok']) {
-        sql_query(" update {$targets_table}
-                        set publish_status = 'published',
-                            external_post_id = '" . sql_real_escape_string($result['external_post_id']) . "',
-                            published_url = '" . sql_real_escape_string($result['published_url']) . "',
-                            last_error = '',
-                            updated_at = '" . G5_TIME_YMDHIS . "'
-                        where id = '{$post_target_id}' ");
-        sql_query(" update {$jobs_table} set status = 'published', active_lock_key = NULL, next_retry_at = NULL, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$job['id'] . "' ");
-        bp_transition_project($project['id'], 'published', $actor, 'job#' . $job['id'] . ' success');
-        return array('ok' => true, 'external_post_id' => $result['external_post_id'], 'published_url' => $result['published_url']);
-    }
-
-    $backoff_minutes = bp_next_retry_backoff_minutes((int) $job['attempt_count'] + 1);
-    sql_query(" update {$targets_table}
-                    set publish_status = 'failed',
-                        last_error = '" . sql_real_escape_string($safe_message) . "',
-                        retry_count = retry_count + 1,
-                        updated_at = '" . G5_TIME_YMDHIS . "'
-                    where id = '{$post_target_id}' ");
-    sql_query(" update {$jobs_table}
-                    set status = 'failed', active_lock_key = NULL,
-                        next_retry_at = DATE_ADD('" . G5_TIME_YMDHIS . "', INTERVAL {$backoff_minutes} MINUTE),
-                        updated_at = '" . G5_TIME_YMDHIS . "'
-                    where id = '" . (int)$job['id'] . "' ");
-    bp_transition_project($project['id'], 'failed', $actor, 'job#' . $job['id'] . ' ' . $safe_message);
-
-    return array('ok' => false, 'error' => $result['error'], 'job_id' => $job['id']);
+    // 스케줄러 라이브러리 로드 후 단일 작업 처리 위임
+    include_once(G5_ADMIN_PATH . '/blog/lib/blog_scheduler.lib.php');
+    
+    // DB에서 lock된 job 정보를 갱신하여 넘김
+    $locked_job = sql_fetch(" select * from {$jobs_table} where id = '" . (int)$job['id'] . "' ");
+    return bp_scheduler_process_job($locked_job);
 }
 
 // 재시도 진입점 — project_action.php mode=retry가 호출한다. 시도 횟수 상한과 백오프 대기

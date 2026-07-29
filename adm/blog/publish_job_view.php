@@ -82,7 +82,7 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin_extend_s
                 <th scope="row">현재 상태</th>
                 <td colspan="3">
                     <span style="font-size:1.2em; font-weight:bold; color:<?php 
-                        if($job['status']=='succeeded') echo '#008000';
+                        if($job['status']=='published') echo '#008000';
                         else if($job['status']=='failed') echo '#ff0000';
                         else if($job['status']=='processing') echo '#ff9900';
                         else echo '#0066cc';
