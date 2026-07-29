@@ -76,9 +76,25 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <p>광고주·계약에 종속된 블로그 콘텐츠 프로젝트를 관리합니다. 승인(approved) 이전에는 발행할 수 없습니다.</p>
 </div>
 
-<div class="bp-list-toolbar">
-    <a href="./project_form.php" class="bp-btn-primary-lg">+ 새 블로그 글 만들기</a>
+<div class="bp-list-toolbar" style="display: flex; gap: 10px;">
+    <a href="./project_form.php" class="bp-btn-primary-lg" style="background:#4a5568;">+ (구버전) 포스팅 프로젝트 등록</a>
+    <button type="button" class="bp-btn-primary-lg" style="background:#3182ce; color:#fff; border:none; cursor:pointer;" onclick="createNewPost()">+ 🚀 새 프론트 스튜디오에서 포스팅 작성</button>
 </div>
+<script>
+function createNewPost() {
+    if(confirm('새 포스팅 작성을 시작하시겠습니까? (초안이 생성되고 넓은 작성 화면으로 이동합니다)')) {
+        fetch('<?php echo G5_URL; ?>/blog-studio/ajax/create_draft.php', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '<?php echo G5_URL; ?>/blog-studio/write.php?post_id=' + data.post_id;
+            } else {
+                alert('초안 생성 실패: ' + data.message);
+            }
+        });
+    }
+}
+</script>
 
 <details class="bp-filter-wrap" <?php echo ($stx_title || $stx_advertiser || $stx_site || $status || $ai_provider || $date_from || $date_to) ? 'open' : ''; ?>>
     <summary class="bp-filter-summary">검색·필터</summary>
