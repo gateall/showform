@@ -65,7 +65,10 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <p>상태: <strong><?php echo isset($status_label[$project['status']]) ? $status_label[$project['status']] : get_text($project['status']); ?></strong>
        (<?php echo get_text($project['status']); ?>) — 광고주: <?php echo get_text($project['advertiser_name']); ?>
        <?php if ($project['quality_score'] !== null) { ?> — 품질 점수: <?php echo (int) $project['quality_score']; ?>점<?php } ?></p>
-    <p><a href="./keyword_list.php?project_id=<?php echo (int)$id; ?>" class="btn btn_02">키워드 관리</a>
+    <p><?php if (in_array($project['status'], array('draft', 'pending_approval'), true)) { ?>
+       <a href="./project_form.php?id=<?php echo (int)$id; ?>" class="btn btn_02">기본정보 수정</a>
+       <?php } ?>
+       <a href="./keyword_list.php?project_id=<?php echo (int)$id; ?>" class="btn btn_02">키워드 관리</a>
        <a href="./project_list.php" class="btn btn_02">목록으로</a></p>
 </div>
 

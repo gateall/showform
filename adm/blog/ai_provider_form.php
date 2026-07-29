@@ -8,33 +8,56 @@ if ($is_admin != 'super') {
     alert('최고관리자만 접근 가능합니다.');
 }
 
-$g5['title'] = 'AI 공급자 설정';
-
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $table = bp_table('ai_providers');
-$row = sql_fetch(" select * from {$table} where provider_code = 'openai' ");
-if (!$row) {
+
+if ($id > 0) {
+    $row = sql_fetch(" select * from {$table} where id = '{$id}' ");
+    if (!$row) {
+        alert('AI 공급자를 찾을 수 없습니다.', G5_ADMIN_URL . '/blog/ai_provider_list.php');
+    }
+} else {
     $row = array(
-        'provider_code' => 'openai', 'display_name' => 'OpenAI', 'is_active' => 'N',
+        'provider_code' => '', 'display_name' => '', 'is_active' => 'N',
         'masked_hint' => '', 'default_model' => 'gpt-4o', 'max_tokens' => 2000, 'temperature' => 0.70,
     );
 }
 
+$g5['title'] = $id > 0 ? 'AI 공급자 수정' : 'AI 공급자 등록';
+
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
-    <p>Phase 1에서는 저장된 값이 있어도 실제 외부 API를 호출하지 않고 템플릿 생성기를 사용합니다(BLOG_AUTOMATION_MVP_PHASE1 작업지시서). 이 화면은 Phase 2 실연동을 위한 설정 구조만 미리 마련합니다.</p>
+    <p>실제 외부 API 호출은 <code>provider_code</code>가 <code>openai</code>인 활성 레코드에서만 지원됩니다. 그 외 코드는 레코드로 등록·관리는 되지만, 실제 생성 시에는 안전한 템플릿 생성기로 자동 전환됩니다(추후 단계에서 라우팅 확장 예정).</p>
 </div>
 
 <form name="faiproviderform" method="post" action="./ai_provider_update.php">
     <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+    <?php if ($id > 0) { ?>
+    <input type="hidden" name="id" value="<?php echo (int) $id; ?>">
+    <?php } ?>
     <div class="tbl_frm01 tbl_wrap">
         <table>
-            <caption>OpenAI 설정</caption>
+            <caption><?php echo get_text($g5['title']); ?></caption>
             <tbody>
+                <tr><th scope="row"><label for="provider_code">공급자 코드</label></th>
+                    <td>
+                        <?php if ($id > 0) { ?>
+                            <input type="text" value="<?php echo get_text($row['provider_code']); ?>" class="frm_input" readonly style="background:#f5f5f5;">
+                            <input type="hidden" name="provider_code" value="<?php echo get_text($row['provider_code']); ?>">
+                            <span class="help_txt">등록 후에는 코드를 변경할 수 없습니다.</span>
+                        <?php } else { ?>
+                            <input type="text" name="provider_code" id="provider_code" value="" class="frm_input" maxlength="30" placeholder="예: openai" required>
+                            <span class="help_txt">영문 소문자·숫자·밑줄만 사용하세요. 등록 후 변경 불가.</span>
+                        <?php } ?>
+                    </td></tr>
+                <tr><th scope="row"><label for="display_name">공급자명</label></th>
+                    <td><input type="text" name="display_name" id="display_name" value="<?php echo get_text($row['display_name']); ?>" class="frm_input" maxlength="100" required></td></tr>
                 <tr><th scope="row">사용 여부</th>
                     <td>
                         <label><input type="radio" name="is_active" value="Y" <?php echo $row['is_active'] === 'Y' ? 'checked' : ''; ?>> 사용함</label>
-                        <label style="margin-left:15px;"><input type="radio" name="is_active" value="N" <?php echo $row['is_active'] === 'N' ? 'checked' : ''; ?>> 사용안함(Phase 1 기본값)</label>
+                        <label style="margin-left:15px;"><input type="radio" name="is_active" value="N" <?php echo $row['is_active'] === 'N' ? 'checked' : ''; ?>> 사용안함</label>
+                        <span class="help_txt">"사용함"으로 저장하면 다른 공급자는 자동으로 "사용안함"으로 전환됩니다(활성 공급자는 항상 1개).</span>
                     </td></tr>
                 <tr><th scope="row"><label for="api_key">API Key</label></th>
                     <td>
@@ -44,9 +67,9 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 <tr><th scope="row"><label for="default_model">기본 모델</label></th>
                     <td><input type="text" name="default_model" id="default_model" value="<?php echo get_text($row['default_model']); ?>" class="frm_input"></td></tr>
                 <tr><th scope="row"><label for="max_tokens">최대 토큰</label></th>
-                    <td><input type="number" name="max_tokens" id="max_tokens" value="<?php echo (int)$row['max_tokens']; ?>" class="frm_input" min="100" max="8000"></td></tr>
+                    <td><input type="number" name="max_tokens" id="max_tokens" value="<?php echo (int) $row['max_tokens']; ?>" class="frm_input" min="100" max="8000"></td></tr>
                 <tr><th scope="row"><label for="temperature">Temperature</label></th>
-                    <td><input type="number" name="temperature" id="temperature" value="<?php echo (float)$row['temperature']; ?>" class="frm_input" min="0" max="1" step="0.1"></td></tr>
+                    <td><input type="number" name="temperature" id="temperature" value="<?php echo (float) $row['temperature']; ?>" class="frm_input" min="0" max="1" step="0.1"></td></tr>
             </tbody>
         </table>
     </div>
@@ -55,5 +78,20 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <a href="./ai_provider_list.php" class="btn btn_02">목록</a>
     </div>
 </form>
+
+<script>
+function faiproviderform_submit(f) {
+    if (f.provider_code && !f.provider_code.readOnly && !f.provider_code.value.trim()) {
+        alert('공급자 코드를 입력해 주세요.');
+        return false;
+    }
+    if (!f.display_name.value.trim()) {
+        alert('공급자명을 입력해 주세요.');
+        return false;
+    }
+    return true;
+}
+document.forms['faiproviderform'].onsubmit = function() { return faiproviderform_submit(this); };
+</script>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php');

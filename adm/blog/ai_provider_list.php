@@ -27,6 +27,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <thead>
             <tr>
                 <th scope="col">번호</th>
+                <th scope="col">코드</th>
                 <th scope="col">공급자명</th>
                 <th scope="col">기본 모델</th>
                 <th scope="col">API 키</th>
@@ -40,6 +41,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 <?php while ($row = sql_fetch_array($result)) { ?>
                     <tr>
                         <td><?php echo (int)$row['id']; ?></td>
+                        <td><code><?php echo get_text($row['provider_code']); ?></code></td>
                         <td style="text-align:left;"><a href="./ai_provider_form.php?id=<?php echo (int)$row['id']; ?>"><strong><?php echo get_text($row['display_name']); ?></strong></a></td>
                         <td><?php echo get_text($row['default_model']); ?></td>
                         <td><?php echo $row['masked_hint'] ? get_text($row['masked_hint']) : '<span style="color:#999;">미설정</span>'; ?></td>
@@ -51,7 +53,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     </tr>
                 <?php } ?>
             <?php } else { ?>
-                <tr><td colspan="7" class="empty_table">등록된 AI 공급자가 없습니다. 먼저 공급자를 등록해 주세요.</td></tr>
+                <tr><td colspan="8" class="empty_table">등록된 AI 공급자가 없습니다. 먼저 공급자를 등록해 주세요.</td></tr>
             <?php } ?>
         </tbody>
     </table>
