@@ -64,7 +64,7 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_ADMIN_URL . '/css/admin_exte
 ?>
 <div class="local_desc01 local_desc">
     <p>발행 작업·시도 데이터를 기준으로 집계한 요약입니다. 차트 없이 표로 확인할 수 있습니다.
-       PDF·엑셀 내보내기, 주간·월간·광고주별 보고서, 콘텐츠 성과 기록은 이번 단계에서 아직 구현되지 않았습니다.</p>
+       PDF 내보내기는 아직 구현되지 않았습니다(엑셀은 각 보고서 화면에서 다운로드할 수 있습니다).</p>
 </div>
 
 <div class="bp-report-cards">
@@ -80,7 +80,11 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_ADMIN_URL . '/css/admin_exte
 
 <div class="bp-report-nav">
     <a href="./report_daily.php" class="btn btn_02">일간 발행 보고서</a>
+    <a href="./report_weekly.php" class="btn btn_02">주간 운영 보고서</a>
+    <a href="./report_monthly_adv.php" class="btn btn_02">월간 광고주 보고서</a>
+    <a href="./report_stats.php" class="btn btn_02">성공·실패 통계</a>
     <a href="./report_site.php" class="btn btn_02">사이트별 발행 통계</a>
+    <a href="./report_performance.php" class="btn btn_02">콘텐츠 성과</a>
 </div>
 
 <div class="tbl_head01 tbl_wrap" style="margin-top:20px;">

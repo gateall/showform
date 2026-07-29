@@ -2,8 +2,8 @@
 if (!defined('_GNUBOARD_')) exit;
 
 // 블로그 자동화 보고서 집계 라이브러리 (Stage 8).
-// 이번 단계에서 실제 구현하는 보고서(대시보드/일간/사이트별)만 지원한다 — 주간·월간·
-// 콘텐츠 성과·PDF·Excel·자동 생성 일정은 이 라이브러리 범위 밖(별도 단계로 남김).
+// 대시보드/일간/사이트별/주간/성공·실패 통계 화면을 지원한다 — 월간 광고주 보고서·
+// 콘텐츠 성과·PDF·자동 생성 일정은 이 라이브러리 범위 밖(별도 라운드로 남김).
 //
 // 상태값은 실제 코드에 존재하는 값만 사용한다(작업지시서 예시의 'blocked'는 이 코드베이스의
 // publish_jobs 상태머신에 존재하지 않아 사용하지 않음 — 아래 bp_report_job_status_map() 참조).
@@ -65,6 +65,13 @@ function bp_report_period_range(string $preset, string $custom_from = '', string
             $from = $lastMonth->format('Y-m-01');
             $to = $lastMonth->format('Y-m-t');
             return array('from' => "{$from} 00:00:00", 'to' => "{$to} 23:59:59", 'label' => '지난달');
+        }
+        case 'custom_week': {
+            // $custom_from에 담긴 임의의 날짜가 속한 주(월~일)를 계산한다 — 주간 보고서의 주 선택용.
+            $ref = preg_match('/^\d{4}-\d{2}-\d{2}$/', $custom_from) ? new DateTime($custom_from, new DateTimeZone('Asia/Seoul')) : (clone $now);
+            $monday = (clone $ref)->modify('monday this week')->format('Y-m-d');
+            $sunday = (clone $ref)->modify('sunday this week')->format('Y-m-d');
+            return array('from' => "{$monday} 00:00:00", 'to' => "{$sunday} 23:59:59", 'label' => "{$monday} ~ {$sunday}");
         }
         case 'custom':
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $custom_from) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $custom_to) && $custom_from <= $custom_to) {
@@ -342,4 +349,107 @@ function bp_report_site_stats(string $from, string $to, array $filters = array()
         $rows[] = $r;
     }
     return $rows;
+}
+
+// 실패한 시도(attempt)를 원인별로 분류·집계한다(§8.2/§3.4). 시도 단위이므로 한 작업에
+// 여러 번 실패해도 각 실패 시도가 각자의 원인으로 개별 집계된다(재시도 통계 왜곡 방지).
+function bp_report_error_breakdown(string $from, string $to, array $filters = array()): array
+{
+    $tbl_attempts = bp_table('publish_attempts');
+    $tbl_jobs = bp_table('publish_jobs');
+    $tbl_targets = bp_table('post_targets');
+    $tbl_posts = bp_table('posts');
+    $tbl_projects = bp_table('content_projects');
+
+    $where = bp_report_build_filters($filters, 'prj', 't');
+    $where_sql = $where ? ' and ' . implode(' and ', $where) : '';
+
+    $sql = " select a.response_code, a.response_message
+             from {$tbl_attempts} a
+             inner join {$tbl_jobs} j on j.id = a.publish_job_id
+             inner join {$tbl_targets} t on t.id = j.post_target_id
+             inner join {$tbl_posts} po on po.id = t.post_id
+             inner join {$tbl_projects} prj on prj.id = po.project_id
+             where a.status = 'failed' and a.created_at between '{$from}' and '{$to}' {$where_sql} ";
+    $res = sql_query($sql);
+    $breakdown = array();
+    while ($r = sql_fetch_array($res)) {
+        $category = bp_report_classify_error($r['response_code'], $r['response_message']);
+        if (!isset($breakdown[$category])) $breakdown[$category] = 0;
+        $breakdown[$category]++;
+    }
+    arsort($breakdown);
+    return $breakdown;
+}
+
+// 플랫폼별 통계(§3.4 "플랫폼별 실패율") — bp_report_site_stats()와 동일한 job 집계 방식을
+// site 대신 platform 기준으로 묶는다.
+function bp_report_platform_stats(string $from, string $to, array $filters = array()): array
+{
+    $tbl_sites = bp_table('sites');
+    $tbl_targets = bp_table('post_targets');
+    $tbl_jobs = bp_table('publish_jobs');
+
+    $adv_where = '';
+    if (!empty($filters['advertiser_id'])) {
+        $adv_where = " and s.advertiser_id = '" . (int) $filters['advertiser_id'] . "' ";
+    }
+
+    $sql = " select s.platform,
+                    count(j.id) as total_jobs,
+                    sum(case when j.status = 'published' then 1 else 0 end) as succeeded,
+                    sum(case when j.status = 'failed' then 1 else 0 end) as failed
+             from {$tbl_sites} s
+             left join {$tbl_targets} t on t.site_id = s.id
+             left join {$tbl_jobs} j on j.post_target_id = t.id
+                    and (j.scheduled_at between '{$from}' and '{$to}' or j.completed_at between '{$from}' and '{$to}')
+             where 1=1 {$adv_where}
+             group by s.platform
+             having total_jobs > 0
+             order by total_jobs desc ";
+    $res = sql_query($sql);
+    $rows = array();
+    while ($r = sql_fetch_array($res)) {
+        $total = (int) $r['total_jobs'];
+        $r['success_rate'] = $total > 0 ? round(((int) $r['succeeded'] / $total) * 100, 1) : 0.0;
+        $r['failure_rate'] = $total > 0 ? round(((int) $r['failed'] / $total) * 100, 1) : 0.0;
+        $rows[] = $r;
+    }
+    return $rows;
+}
+
+// Job 단위 확장 통계(§3.4) — 성공·실패 통계 전용 화면에서 Attempt 통계와 절대 섞지 않고
+// 별도 구역에 표시하기 위한 job 전용 집계.
+function bp_report_job_extended_stats(string $from, string $to, array $filters = array()): array
+{
+    $tbl_jobs = bp_table('publish_jobs');
+    $tbl_targets = bp_table('post_targets');
+    $tbl_posts = bp_table('posts');
+    $tbl_projects = bp_table('content_projects');
+
+    $where = bp_report_build_filters($filters, 'prj', 't');
+    $where_sql = $where ? ' and ' . implode(' and ', $where) : '';
+
+    $base = " from {$tbl_jobs} j
+              inner join {$tbl_targets} t on t.id = j.post_target_id
+              inner join {$tbl_posts} po on po.id = t.post_id
+              inner join {$tbl_projects} prj on prj.id = po.project_id
+              where 1=1 {$where_sql} ";
+
+    // 재시도 중: 현재 대기·처리중이면서 이미 최소 1회 이상 시도한 작업(=재시도 대기 중).
+    $retrying = sql_fetch(" select count(*) as cnt {$base}
+                             and j.status in ('pending','claimed','processing') and j.attempt_count > 0
+                             and j.created_at between '{$from}' and '{$to}' ");
+
+    // 평균 시도 횟수: 기간 내 완료(성공/실패)된 작업 기준.
+    $avg = sql_fetch(" select avg(j.attempt_count) as avg_attempts {$base}
+                        and j.status in ('published','failed') and j.completed_at between '{$from}' and '{$to}' ");
+
+    $total = sql_fetch(" select count(*) as cnt {$base} and j.created_at between '{$from}' and '{$to}' ");
+
+    return array(
+        'total_jobs' => $total ? (int) $total['cnt'] : 0,
+        'retrying' => $retrying ? (int) $retrying['cnt'] : 0,
+        'avg_attempts' => ($avg && $avg['avg_attempts'] !== null) ? round((float) $avg['avg_attempts'], 2) : 0.0,
+    );
 }

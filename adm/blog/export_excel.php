@@ -1,9 +1,22 @@
 <?php
 include_once('./_common.php');
 
+$sub_menu = '361000';
+auth_check_menu($auth, $sub_menu, 'r');
+
 $type = isset($_GET['type']) ? $_GET['type'] : '';
 if (!$type) {
     alert('내보내기 유형이 지정되지 않았습니다.');
+}
+
+// 엑셀 수식 주입 방지 — HTML 표 기반 .xls라도 값이 =,+,-,@로 시작하면 안전 문자를 붙여 텍스트로만 해석되게 한다.
+function bp_export_safe(string $v): string
+{
+    $v = (string) $v;
+    if ($v !== '' && strpos('=+-@', $v[0]) !== false) {
+        $v = "'" . $v;
+    }
+    return get_text($v);
 }
 
 // 엑셀 다운로드용 헤더 설정
@@ -88,15 +101,15 @@ if ($type === 'weekly') {
     echo "<thead><tr><th>발행 일시</th><th>사이트명</th><th>플랫폼</th><th>포스트 제목</th><th>발행된 외부 URL</th></tr></thead><tbody>";
     while ($r = sql_fetch_array($res)) {
         echo "<tr>";
-        echo "<td>{$r['completed_at']}</td>";
-        echo "<td>{$r['site_name']}</td>";
-        echo "<td>{$r['platform']}</td>";
-        echo "<td>{$r['post_title']}</td>";
-        echo "<td>{$r['published_url']}</td>";
+        echo "<td>" . bp_export_safe($r['completed_at']) . "</td>";
+        echo "<td>" . bp_export_safe($r['site_name']) . "</td>";
+        echo "<td>" . bp_export_safe($r['platform']) . "</td>";
+        echo "<td>" . bp_export_safe($r['post_title']) . "</td>";
+        echo "<td>" . bp_export_safe($r['published_url']) . "</td>";
         echo "</tr>";
     }
     echo "</tbody>";
-    
+
 } elseif ($type === 'performance') {
     $stx = isset($_GET['stx']) ? trim($_GET['stx']) : '';
     $tbl_perf = bp_table('post_performance');
@@ -128,19 +141,104 @@ if ($type === 'weekly') {
     echo "<thead><tr><th>포스트 제목</th><th>광고주</th><th>사이트</th><th>발행 외부 URL</th><th>조회수</th><th>공감</th><th>댓글</th><th>공유</th><th>동기화 일시</th></tr></thead><tbody>";
     while ($r = sql_fetch_array($res)) {
         echo "<tr>";
-        echo "<td>{$r['post_title']}</td>";
-        echo "<td>{$r['advertiser_name']}</td>";
-        echo "<td>{$r['site_name']}</td>";
-        echo "<td>{$r['published_url']}</td>";
+        echo "<td>" . bp_export_safe($r['post_title']) . "</td>";
+        echo "<td>" . bp_export_safe($r['advertiser_name']) . "</td>";
+        echo "<td>" . bp_export_safe($r['site_name']) . "</td>";
+        echo "<td>" . bp_export_safe($r['published_url']) . "</td>";
         echo "<td class='num'>".(int)$r['view_count']."</td>";
         echo "<td class='num'>".(int)$r['like_count']."</td>";
         echo "<td class='num'>".(int)$r['comment_count']."</td>";
         echo "<td class='num'>".(int)$r['share_count']."</td>";
-        echo "<td>{$r['last_synced_at']}</td>";
+        echo "<td>" . bp_export_safe($r['last_synced_at']) . "</td>";
         echo "</tr>";
     }
     echo "</tbody>";
-    
+
+} elseif ($type === 'daily') {
+    $date = isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date']) ? $_GET['date'] : date('Y-m-d');
+    $period = bp_report_period_range('custom', $date, $date);
+    $status = isset($_GET['status']) ? trim($_GET['status']) : '';
+    if ($status !== '') $filters['status'] = $status;
+    $rows = bp_report_daily_detail($period['from'], $period['to'], $filters, 5000);
+    $status_map = bp_report_job_status_map();
+
+    echo "<caption>일간 발행 보고서 ({$date})</caption>";
+    echo "<thead><tr><th>작업ID</th><th>예약시각</th><th>완료시각</th><th>광고주</th><th>사이트</th><th>포스트 제목</th><th>상태</th><th>재시도</th><th>외부URL</th><th>오류</th></tr></thead><tbody>";
+    foreach ($rows as $r) {
+        $lbl = isset($status_map[$r['status']]) ? $status_map[$r['status']]['label'] : $r['status'];
+        echo "<tr>";
+        echo "<td>" . bp_export_safe($r['job_id']) . "</td>";
+        echo "<td>" . bp_export_safe($r['scheduled_at']) . "</td>";
+        echo "<td>" . bp_export_safe($r['completed_at']) . "</td>";
+        echo "<td>" . bp_export_safe($r['advertiser_name']) . "</td>";
+        echo "<td>" . bp_export_safe($r['site_name']) . "</td>";
+        echo "<td>" . bp_export_safe($r['post_title']) . "</td>";
+        echo "<td>" . bp_export_safe($lbl) . "</td>";
+        echo "<td class='num'>" . (int) $r['attempt_count'] . "</td>";
+        echo "<td>" . bp_export_safe($r['published_url']) . "</td>";
+        echo "<td>" . bp_export_safe(mb_substr((string) $r['last_error'], 0, 200)) . "</td>";
+        echo "</tr>";
+    }
+    echo "</tbody>";
+
+} elseif ($type === 'site') {
+    $preset = isset($_GET['period']) ? trim($_GET['period']) : 'this_month';
+    $period = bp_report_period_range($preset);
+    $site_rows = bp_report_site_stats($period['from'], $period['to'], $filters);
+
+    echo "<caption>사이트별 발행 통계 ({$period['label']})</caption>";
+    echo "<thead><tr><th>사이트</th><th>광고주</th><th>채널</th><th>전체시도</th><th>성공</th><th>실패</th><th>성공률</th><th>대기</th><th>취소</th><th>재시도합계</th></tr></thead><tbody>";
+    foreach ($site_rows as $s) {
+        echo "<tr>";
+        echo "<td>" . bp_export_safe($s['site_name']) . "</td>";
+        echo "<td>" . bp_export_safe($s['advertiser_name']) . "</td>";
+        echo "<td>" . bp_export_safe($s['platform']) . "</td>";
+        echo "<td class='num'>" . (int) $s['total_attempts_jobs'] . "</td>";
+        echo "<td class='num'>" . (int) $s['succeeded'] . "</td>";
+        echo "<td class='num'>" . (int) $s['failed'] . "</td>";
+        echo "<td class='num'>" . $s['success_rate'] . "%</td>";
+        echo "<td class='num'>" . (int) $s['pending'] . "</td>";
+        echo "<td class='num'>" . (int) $s['cancelled'] . "</td>";
+        echo "<td class='num'>" . (int) $s['total_retries'] . "</td>";
+        echo "</tr>";
+    }
+    echo "</tbody>";
+
+} elseif ($type === 'stats') {
+    $preset = isset($_GET['period']) ? trim($_GET['period']) : 'this_month';
+    $period = bp_report_period_range($preset);
+    $job_counts = bp_report_job_counts($period['from'], $period['to'], $filters);
+    $job_ext = bp_report_job_extended_stats($period['from'], $period['to'], $filters);
+    $attempt_counts = bp_report_attempt_counts($period['from'], $period['to'], $filters);
+    $success_rate = bp_report_success_rate($attempt_counts['success'], $attempt_counts['total']);
+    $error_breakdown = bp_report_error_breakdown($period['from'], $period['to'], $filters);
+
+    echo "<caption>성공·실패 통계 ({$period['label']})</caption>";
+    echo "<thead><tr><th>구분</th><th>지표</th><th>값</th></tr></thead><tbody>";
+    $metrics = array(
+        array('Job', '전체 Job', $job_ext['total_jobs']),
+        array('Job', '최종 성공', $job_counts['succeeded']),
+        array('Job', '최종 실패', $job_counts['failed']),
+        array('Job', '재시도 중', $job_ext['retrying']),
+        array('Job', '평균 시도 횟수', $job_ext['avg_attempts']),
+        array('Attempt', '전체 시도', $attempt_counts['total']),
+        array('Attempt', '성공 시도', $attempt_counts['success']),
+        array('Attempt', '실패 시도', $attempt_counts['failed']),
+        array('Attempt', '최초 시도 성공', $attempt_counts['first_try_success']),
+        array('Attempt', '재시도 후 성공', $attempt_counts['retry_success']),
+        array('Attempt', '성공률(%)', $attempt_counts['total'] > 0 ? $success_rate : 0),
+    );
+    foreach ($metrics as $m) {
+        echo "<tr><td>" . bp_export_safe($m[0]) . "</td><td>" . bp_export_safe($m[1]) . "</td><td class='num'>" . bp_export_safe((string) $m[2]) . "</td></tr>";
+    }
+    echo "</tbody></table><table style='margin-top:10px;'>";
+    echo "<caption>실패 원인 분류</caption>";
+    echo "<thead><tr><th>원인</th><th>건수</th></tr></thead><tbody>";
+    foreach ($error_breakdown as $cat => $cnt) {
+        echo "<tr><td>" . bp_export_safe($cat) . "</td><td class='num'>" . (int) $cnt . "</td></tr>";
+    }
+    echo "</tbody>";
+
 } else {
     echo "<tr><td>지원하지 않는 내보내기 유형입니다.</td></tr>";
 }

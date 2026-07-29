@@ -77,6 +77,10 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_ADMIN_URL . '/css/admin_exte
     </form>
 </details>
 
+<div class="bp-report-nav">
+    <a href="./export_excel.php?type=site&period=<?php echo get_text($preset); ?>&advertiser_id=<?php echo $advertiser_id; ?>" class="btn btn_02">엑셀 다운로드</a>
+</div>
+
 <div class="tbl_head01 tbl_wrap" style="margin-top:15px;">
     <table>
         <caption>사이트별 발행 통계</caption>

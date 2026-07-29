@@ -74,6 +74,10 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_ADMIN_URL . '/css/admin_exte
     </form>
 </details>
 
+<div class="bp-report-nav">
+    <a href="./export_excel.php?type=daily&date=<?php echo get_text($date); ?>&advertiser_id=<?php echo $advertiser_id; ?>&site_id=<?php echo $site_id; ?>&status=<?php echo get_text($status); ?>" class="btn btn_02">엑셀 다운로드</a>
+</div>
+
 <div class="bp-report-cards" style="margin-top:15px;">
     <div class="bp-report-card"><span class="bp-report-card-label">발행 예정</span><span class="bp-report-card-value"><?php echo (int) $job_counts['scheduled']; ?></span></div>
     <div class="bp-report-card"><span class="bp-report-card-label">발행 시도</span><span class="bp-report-card-value"><?php echo (int) $attempt_counts['total']; ?></span></div>
