@@ -1,6 +1,7 @@
 <?php
-$sub_menu = "900250"; // 문의 통계 서브메뉴 추가 권장 (admin.menu900.php에 900250 없으면 임의 매핑)
 include_once('./_common.php');
+
+auth_check_menu($auth, '910200', 'r');
 
 $g5['title'] = '랜딩페이지 문의 통계 대시보드';
 
