@@ -111,99 +111,218 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 
 <div id="to_content"><a href="#container">본문 바로가기</a></div>
 
-<header id="hd">
-    <h1><?php echo $config['cf_title'] ?></h1>
-    <div id="hd_top">
-        <button type="button" id="btn_gnb" class="btn_gnb_close <?php echo $adm_menu_cookie['btn_gnb']; ?>">메뉴</button>
-        <div id="logo"><a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img/logo.png" alt="<?php echo get_text($config['cf_title']); ?> 관리자"></a></div>
+<?php
+// Function to find the auth key based on URL from the original $menu arrays
+function get_sf_auth_key_by_url($url) {
+    global $menu;
+    foreach($menu as $key => $sub_menus) {
+        foreach($sub_menus as $idx => $m) {
+            if ($idx > 0 && isset($m[2]) && $m[2] === $url) {
+                return $m[0];
+            }
+        }
+    }
+    return null;
+}
 
-        <div id="tnb">
-            <ul>
-                <?php if (defined('G5_USE_SHOP') && G5_USE_SHOP) { ?>
-                    <li class="tnb_li"><a href="<?php echo G5_SHOP_URL ?>/" class="tnb_shop" target="_blank" title="쇼핑몰 바로가기">쇼핑몰 바로가기</a></li>
-                <?php } ?>
-                <li class="tnb_li"><a href="<?php echo G5_URL ?>/" class="tnb_community" target="_blank" title="커뮤니티 바로가기">커뮤니티 바로가기</a></li>
-                <li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/service.php" class="tnb_service">부가서비스</a></li>
-                <li class="tnb_li"><button type="button" class="tnb_mb_btn">관리자<span class="./img/btn_gnb.png">메뉴열기</span></button>
-                    <ul class="tnb_mb_area">
-                        <li><a href="<?php echo G5_ADMIN_URL ?>/member_form.php?w=u&amp;mb_id=<?php echo $member['mb_id'] ?>">관리자정보</a></li>
-                        <li id="tnb_logout"><a href="<?php echo G5_BBS_URL ?>/logout.php">로그아웃</a></li>
-                    </ul>
-                </li>
-            </ul>
+$sf_menus = array(
+    '쇼폼' => array(
+        array('title' => '쇼폼 대시보드', 'href' => '#'),
+        array('title' => '쇼폼 관리', 'href' => '#'),
+        array('title' => '쇼폼 등록', 'href' => '#'),
+        array('title' => '신청·문의 관리', 'href' => '#'),
+        array('title' => '고객 관리', 'href' => '#'),
+        array('title' => '템플릿 관리', 'href' => '#'),
+        array('title' => '사용 현황', 'href' => '#'),
+        array('title' => '쇼폼 설정', 'href' => '#'),
+    ),
+    '블로그' => array(
+        array('title' => '블로그 대시보드', 'href' => G5_ADMIN_URL.'/blog/project_list.php'),
+        array('title' => '광고주 관리', 'href' => G5_ADMIN_URL.'/blog/advertiser_list.php'),
+        array('title' => '사이트 관리', 'href' => G5_ADMIN_URL.'/blog/site_list.php'),
+        array('title' => '계정 관리', 'href' => '#'),
+        array('title' => 'AI 제공자 관리', 'href' => G5_ADMIN_URL.'/blog/ai_provider_list.php'),
+        array('title' => '콘텐츠 프로젝트', 'href' => G5_ADMIN_URL.'/blog/project_list.php'),
+        array('title' => '키워드 관리', 'href' => '#'),
+        array('title' => '포스트 관리', 'href' => '#'),
+        array('title' => '발행 대상 관리', 'href' => '#'),
+        array('title' => '발행 작업', 'href' => '#'),
+        array('title' => '발행 시도', 'href' => '#'),
+        array('title' => '활동 로그', 'href' => '#'),
+        array('title' => '블로그 설정', 'href' => G5_ADMIN_URL.'/blog/install.php'),
+    ),
+    '랜딩' => array(
+        array('title' => '랜딩 대시보드', 'href' => G5_ADMIN_URL.'/landing/landing_list.php'),
+        array('title' => '랜딩페이지 관리', 'href' => G5_ADMIN_URL.'/landing/landing_list.php'),
+        array('title' => '랜딩페이지 등록', 'href' => G5_ADMIN_URL.'/landing/landing_form.php'),
+        array('title' => '템플릿 관리', 'href' => G5_ADMIN_URL.'/landing/template_list.php'),
+        array('title' => '상담·문의 관리', 'href' => G5_ADMIN_URL.'/landing/inquiry_list.php'),
+        array('title' => '고객 관리', 'href' => '#'),
+        array('title' => '도메인 관리', 'href' => '#'),
+        array('title' => '방문·전환 통계', 'href' => G5_ADMIN_URL.'/landing/inquiry_stats.php'),
+        array('title' => '랜딩 설정', 'href' => G5_ADMIN_URL.'/landing/ai_setting.php'),
+    ),
+    'SaaS 관리' => array(
+        array('title' => 'SaaS 대시보드', 'href' => '#'),
+        array('title' => '고객사 관리', 'href' => '#'),
+        array('title' => '요금제 관리', 'href' => '#'),
+        array('title' => '구독 관리', 'href' => '#'),
+        array('title' => '결제 관리', 'href' => '#'),
+        array('title' => '사용량 관리', 'href' => '#'),
+        array('title' => '도메인 관리', 'href' => '#'),
+        array('title' => '파트너 관리', 'href' => '#'),
+        array('title' => 'API 관리', 'href' => '#'),
+        array('title' => 'Webhook 관리', 'href' => '#'),
+        array('title' => '시스템 로그', 'href' => '#'),
+    ),
+    '공통 관리' => array(
+        array('title' => '통합 고객 관리', 'href' => G5_ADMIN_URL.'/member_list.php'),
+        array('title' => '통합 상담 관리', 'href' => '#'),
+        array('title' => '관리자 계정', 'href' => G5_ADMIN_URL.'/auth_list.php'),
+        array('title' => '역할·권한 관리', 'href' => G5_ADMIN_URL.'/auth_list.php'),
+        array('title' => '파일 관리', 'href' => '#'),
+        array('title' => '알림 관리', 'href' => '#'),
+        array('title' => '공통 설정', 'href' => G5_ADMIN_URL.'/config_form.php'),
+    )
+);
+?>
+<header class="sf-admin-header">
+    <div class="sf-header-left">
+        <button type="button" class="sf-btn-gnb" id="sf-btn-gnb" aria-expanded="false" aria-controls="sf-admin-sidebar" aria-label="메뉴 열기">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="sf-header-logo">
+            <a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img/logo.png" alt="관리자"></a>
         </div>
     </div>
-    <nav id="gnb" class="gnb_large <?php echo $adm_menu_cookie['gnb']; ?>">
-        <h2>관리자 주메뉴</h2>
-        <ul class="gnb_ul">
-            <?php
-            $jj = 1;
-            foreach ($amenu as $key => $value) {
-                $href1 = $href2 = '';
+    <div class="sf-header-right">
+        <a href="<?php echo G5_URL ?>/" target="_blank" title="홈페이지" aria-label="홈페이지"><i class="fa-solid fa-house" aria-hidden="true"></i></a>
+        <a href="<?php echo G5_BBS_URL ?>/logout.php" title="로그아웃" aria-label="로그아웃"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></a>
+    </div>
+</header>
 
-                if (isset($menu['menu' . $key][0][2]) && $menu['menu' . $key][0][2]) {
-                    $href1 = '<a href="' . $menu['menu' . $key][0][2] . '" class="gnb_1da">';
-                    $href2 = '</a>';
-                } else {
+<div class="sf-sidebar-overlay" id="sf-sidebar-overlay" aria-hidden="true"></div>
+<nav class="sf-admin-sidebar" id="sf-admin-sidebar" aria-label="관리자 주메뉴">
+    <div class="sf-sidebar-header">
+        <h2>관리자 메뉴</h2>
+        <button type="button" class="sf-btn-close" id="sf-btn-close" aria-label="메뉴 닫기">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+    <ul class="sf-menu-list">
+        <?php 
+        $sf_group_id = 0;
+        foreach($sf_menus as $group_title => $sub_menus): 
+            $filtered_subs = array();
+            foreach($sub_menus as $sub) {
+                if ($sub['href'] === '#') {
+                    if ($is_admin === 'super') $filtered_subs[] = $sub;
                     continue;
                 }
-
-                $current_class = "";
-                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu' . $key][0][0], 0, 3))) {
-                    $current_class = " on";
+                $auth_key = get_sf_auth_key_by_url($sub['href']);
+                if ($is_admin === 'super' || ($auth_key && isset($auth[$auth_key]) && strpos($auth[$auth_key], 'r') !== false)) {
+                    $filtered_subs[] = $sub;
                 }
+            }
+            if (count($filtered_subs) === 0) continue;
+            $sf_group_id++;
+            $group_html_id = 'sf-menu-group-' . $sf_group_id;
+        ?>
+        <li class="sf-menu-group">
+            <button type="button" class="sf-menu-btn" aria-expanded="false" aria-controls="<?php echo $group_html_id; ?>">
+                <span><?php echo $group_title; ?></span>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="sf-menu-sub" id="<?php echo $group_html_id; ?>">
+                <?php foreach($filtered_subs as $sub): ?>
+                <li><a href="<?php echo $sub['href']; ?>" class="sf-menu-link"><?php echo $sub['title']; ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </li>
+        <?php endforeach; ?>
+    </ul>
+</nav>
 
-                $button_title = $menu['menu' . $key][0][1];
-            ?>
-                <li class="gnb_li<?php echo $current_class; ?>">
-                    <button type="button" class="btn_op menu-<?php echo $key; ?> menu-order-<?php echo $jj; ?>" title="<?php echo $button_title; ?>"><?php echo $button_title; ?></button>
-                    <div class="gnb_oparea_wr">
-                        <div class="gnb_oparea">
-                            <h3><?php echo $menu['menu' . $key][0][1]; ?></h3>
-                            <?php echo print_menu1('menu' . $key, 1); ?>
-                        </div>
-                    </div>
-                </li>
-            <?php
-                $jj++;
-            }     //end foreach
-            ?>
-        </ul>
-    </nav>
-
-</header>
 <script>
-    jQuery(function($) {
+jQuery(function($) {
+    var $btnGnb = $('#sf-btn-gnb');
+    var $sidebar = $('#sf-admin-sidebar');
+    var $overlay = $('#sf-sidebar-overlay');
+    var $body = $('body');
 
-        var menu_cookie_key = 'g5_admin_btn_gnb';
+    function closeSidebar() {
+        $sidebar.removeClass('active');
+        $overlay.removeClass('active');
+        $body.css('overflow', '');
+        $btnGnb.attr('aria-expanded', 'false');
+        $btnGnb.focus();
+    }
 
-        $(".tnb_mb_btn").click(function() {
-            $(".tnb_mb_area").toggle();
-        });
+    function openSidebar() {
+        $sidebar.addClass('active');
+        $overlay.addClass('active');
+        $body.css('overflow', 'hidden');
+        $btnGnb.attr('aria-expanded', 'true');
+    }
 
-        $("#btn_gnb").click(function() {
-
-            var $this = $(this);
-
-            try {
-                if (!$this.hasClass("btn_gnb_open")) {
-                    set_cookie(menu_cookie_key, 1, 60 * 60 * 24 * 365);
-                } else {
-                    delete_cookie(menu_cookie_key);
-                }
-            } catch (err) {}
-
-            $("#container").toggleClass("container-small");
-            $("#gnb").toggleClass("gnb_small");
-            $this.toggleClass("btn_gnb_open");
-
-        });
-
-        $(".gnb_ul li .btn_op").click(function() {
-            $(this).parent().addClass("on").siblings().removeClass("on");
-        });
-
+    $btnGnb.on('click', function() {
+        if ($sidebar.hasClass('active')) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
     });
+
+    $('#sf-btn-close, #sf-sidebar-overlay').on('click', function() {
+        closeSidebar();
+    });
+
+    $(document).keyup(function(e) {
+        if (e.key === "Escape" && $sidebar.hasClass('active')) {
+            closeSidebar();
+        }
+    });
+
+    // Accordion Menu
+    $('.sf-menu-btn').on('click', function() {
+        var $btn = $(this);
+        var $group = $btn.parent('.sf-menu-group');
+        var $sub = $group.find('.sf-menu-sub');
+        var isExpanded = $btn.attr('aria-expanded') === 'true';
+
+        $group.toggleClass('active');
+        $btn.attr('aria-expanded', !isExpanded);
+        $sub.slideToggle(300);
+    });
+
+    // Active Menu Highlighting
+    var currentPath = window.location.pathname;
+    var isForm = currentPath.indexOf('_form.php') !== -1;
+    var listPath = currentPath.replace('_form.php', '_list.php');
+
+    $('.sf-menu-link').each(function() {
+        var href = $(this).attr('href');
+        if (!href || href === '#') return;
+        
+        var hrefPath = href.split('?')[0];
+
+        if (hrefPath === currentPath || (isForm && hrefPath === listPath)) {
+            $(this).addClass('active').attr('aria-current', 'page');
+            var $group = $(this).closest('.sf-menu-group');
+            $group.addClass('active');
+            $group.find('.sf-menu-btn').attr('aria-expanded', 'true');
+            $group.find('.sf-menu-sub').show();
+        }
+    });
+
+    // On mobile, if active is found, scroll to it
+    if ($('.sf-menu-link.active').length) {
+        var top = $('.sf-menu-link.active').offset().top;
+        if(top > $(window).height()) {
+            $sidebar.animate({ scrollTop: top - 100 }, 300);
+        }
+    }
+});
 </script>
 
 

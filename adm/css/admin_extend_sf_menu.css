@@ -1,0 +1,244 @@
+@charset "UTF-8";
+
+/* ========================================================
+   ShowForm Admin Menu - Mobile First Design
+======================================================== */
+
+/* 1. Header (Mobile First) */
+.sf-admin-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 56px;
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.sf-header-left {
+    display: flex;
+    align-items: center;
+}
+
+.sf-btn-gnb {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #333;
+    cursor: pointer;
+    margin-right: 12px;
+    min-width: 48px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sf-header-logo img {
+    height: 28px;
+    vertical-align: middle;
+}
+
+.sf-header-right a {
+    color: #666;
+    font-size: 20px;
+    text-decoration: none;
+    margin-left: 12px;
+    min-width: 48px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Body adjustment for fixed header */
+body {
+    padding-top: 56px;
+}
+
+/* 2. Sidebar Overlay (Mobile) */
+.sf-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1001;
+}
+
+.sf-sidebar-overlay.active {
+    display: block;
+}
+
+/* 3. Sidebar (Mobile First) */
+.sf-admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: -340px; /* Hidden by default */
+    width: 86%;
+    max-width: 340px;
+    height: 100%;
+    background: #fff;
+    z-index: 1002;
+    overflow-y: auto;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+
+.sf-admin-sidebar.active {
+    left: 0;
+}
+
+.sf-sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sf-sidebar-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.sf-btn-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    min-width: 48px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 4. Menu List */
+.sf-menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sf-menu-group {
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.sf-menu-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 16px;
+    min-height: 48px;
+    background: #fff;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.sf-menu-btn:hover {
+    background: #f9f9f9;
+}
+
+.sf-menu-btn i.fa-chevron-down {
+    transition: transform 0.3s;
+    color: #ccc;
+    font-size: 14px;
+}
+
+.sf-menu-group.active .sf-menu-btn i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.sf-menu-sub {
+    display: none;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #fcfcfc;
+}
+
+.sf-menu-group.active .sf-menu-sub {
+    display: block;
+}
+
+.sf-menu-sub li {
+    margin: 0;
+}
+
+.sf-menu-link {
+    display: flex;
+    align-items: center;
+    padding: 0 16px 0 32px;
+    min-height: 48px;
+    color: #555;
+    text-decoration: none;
+    font-size: 15px;
+    border-left: 4px solid transparent;
+    box-sizing: border-box;
+}
+
+.sf-menu-link:hover {
+    background: #f5f5f5;
+    color: #111;
+}
+
+.sf-menu-link.active {
+    background: #eef2fa;
+    color: #0046cc;
+    border-left-color: #0046cc;
+    font-weight: 600;
+}
+
+/* 5. PC Extension (769px and above) */
+@media (min-width: 769px) {
+    .sf-admin-header {
+        left: 260px;
+        width: calc(100% - 260px);
+    }
+
+    .sf-btn-gnb {
+        display: none; /* Hide hamburger on PC */
+    }
+
+    .sf-sidebar-overlay {
+        display: none !important; /* Never show overlay on PC */
+    }
+
+    .sf-admin-sidebar {
+        left: 0;
+        width: 260px;
+        border-right: 1px solid #e5e5e5;
+        box-shadow: none;
+    }
+
+    .sf-sidebar-header {
+        height: 56px;
+        box-sizing: border-box;
+    }
+
+    .sf-btn-close {
+        display: none; /* Hide close button on PC */
+    }
+
+    body {
+        padding-left: 260px;
+    }
+}
+
