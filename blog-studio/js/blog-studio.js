@@ -186,10 +186,85 @@ function previewPost() {
     alert("미리보기 화면 (개발 예정)");
 }
 
-// AI Actions Mock
-function openAIAgentSettings() { alert("AI 설정 모달 창이 열립니다."); }
-function generateAll() { alert("전체 자동 생성을 시작합니다."); }
-function generateTitle() { alert("AI가 제목을 생성합니다."); }
-function generateFocusBody() { alert("현재 활성화된 단락의 본문을 AI가 작성합니다."); }
+// AI Actions
+function openAIAgentSettings() { 
+    window.location.href = window.G5_URL + '/adm/blog/ai_provider_list.php'; 
+}
+
+async function generateAll() { 
+    if(!confirm("제목과 모든 본문을 AI가 자동으로 작성합니다. 계속하시겠습니까?")) return;
+    
+    // 1. Generate Title
+    await generateTitle();
+    
+    // 2. Generate each body block
+    for (let block of window.StudioState.body) {
+        await generateFocusBody(block.id);
+    }
+    
+    alert("전체 자동 생성이 완료되었습니다!");
+}
+
+async function generateTitle() { 
+    if(!window.StudioState.title.main_keyword) {
+        alert("메인 키워드를 먼저 입력해주세요.");
+        return;
+    }
+    
+    document.getElementById('top_title_display').innerText = "제목 생성 중...";
+    try {
+        const res = await fetch(window.G5_URL + '/blog-studio/ajax/generate_ai.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'title', state: window.StudioState })
+        });
+        const data = await res.json();
+        if(data.success) {
+            updateState('title', 'title_text', data.data);
+            renderStudio();
+        } else {
+            alert("생성 실패: " + data.message);
+        }
+    } catch(e) {
+        alert("네트워크 오류");
+    }
+    document.getElementById('top_title_display').innerText = window.StudioState.title.title_text;
+}
+
+async function generateFocusBody(specificBlockId = null) { 
+    // Find active block or use specific
+    let blockId = specificBlockId;
+    if(!blockId) {
+        // Default to the first empty block for demo purposes if not specified
+        const emptyBlock = window.StudioState.body.find(b => !b.content);
+        if(emptyBlock) blockId = emptyBlock.id;
+        else blockId = window.StudioState.body[0].id;
+    }
+
+    if(!window.StudioState.title.title_text) {
+        alert("먼저 제목을 생성하거나 입력해주세요.");
+        return;
+    }
+
+    document.getElementById('top_save_time').innerText = "AI 본문 작성 중...";
+    try {
+        const res = await fetch(window.G5_URL + '/blog-studio/ajax/generate_ai.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'body', block_id: blockId, state: window.StudioState })
+        });
+        const data = await res.json();
+        if(data.success) {
+            updateBodyState(blockId, 'content', data.data);
+            renderStudio();
+        } else {
+            alert("생성 실패: " + data.message);
+        }
+    } catch(e) {
+        alert("네트워크 오류");
+    }
+    document.getElementById('top_save_time').innerText = "작성 완료";
+}
+
 function generateImage() { alert("현재 단락에 어울리는 이미지를 AI가 생성합니다."); }
 function generateKeywords() { alert("키워드와 해시태그를 추천합니다."); }
