@@ -171,12 +171,73 @@ const Builder = {
         container.insertAdjacentHTML('beforeend', html);
     },
     
-    /* ----------------- AI 및 보조 버튼 더미 함수 ----------------- */
-    generateDirection: function() { alert('AI 기획안 추천 (API 연결 예정)'); },
-    recommendKeywords: function() { alert('키워드 추천 (API 연결 예정)'); },
-    generateTitles: function() { alert('AI 제목 생성 (API 연결 예정)'); },
-    generateIntro: function() { alert('AI 도입부 생성 (API 연결 예정)'); },
-    generateBlockAI: function(id) { alert('블록 ' + id + ' AI 작성 (API 연결 예정)'); },
+    callAi: function(type, blockTitle, targetElementId) {
+        if (this.projectId === 0) {
+            alert('기본정보(1단계)를 먼저 저장해 주세요.');
+            return;
+        }
+        const stateData = this.gatherData();
+        const payload = new URLSearchParams();
+        payload.append('action', 'ai_generate');
+        payload.append('type', type);
+        payload.append('block_title', blockTitle);
+        payload.append('builder_state', JSON.stringify(stateData));
+        
+        document.getElementById(targetElementId).value = "AI 생성 중...";
+        
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.ok) {
+                document.getElementById(targetElementId).value = res.generated_text;
+            } else {
+                alert('AI 생성 실패: ' + res.error);
+                document.getElementById(targetElementId).value = "";
+            }
+        });
+    },
+
+    generateDirection: function() { this.callAi('direction', '', 'pb_target_audience'); },
+    recommendKeywords: function() { this.callAi('titles', '', 'pb_post_title'); }, // 타이틀 생성으로 임시 매핑
+    generateTitles: function() { this.callAi('titles', '', 'pb_post_title'); },
+    generateIntro: function() { this.callAi('intro', '', 'pb_intro_text'); },
+    generateBlockAI: function(id) {
+        const block = document.getElementById('block-' + id);
+        const inputs = block.querySelectorAll('.frm_input');
+        if (inputs.length < 2) return;
+        const blockTitle = inputs[0].value;
+        if (!blockTitle) {
+            alert('소제목을 먼저 입력해 주세요.');
+            return;
+        }
+        
+        inputs[1].value = "AI 생성 중...";
+        
+        const stateData = this.gatherData();
+        const payload = new URLSearchParams();
+        payload.append('action', 'ai_generate');
+        payload.append('type', 'block');
+        payload.append('block_title', blockTitle);
+        payload.append('builder_state', JSON.stringify(stateData));
+        
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.ok) {
+                inputs[1].value = res.generated_text;
+            } else {
+                alert('AI 생성 실패: ' + res.error);
+                inputs[1].value = "";
+            }
+        });
+    },
+    
     uploadImages: function() {
         const fileInput = document.getElementById('pb_image_upload');
         if (fileInput.files.length === 0) {
@@ -201,26 +262,49 @@ const Builder = {
         })
         .then(res => res.json())
         .then(res => {
-            if (res.ok) {
+            if (res.ok !== false) { // res.ok가 명시적으로 false가 아니면 성공 처리
                 alert(res.message);
                 const grid = document.getElementById('pb_image_list');
-                res.images.forEach(img => {
-                    grid.innerHTML += `
-                        <div class="pb-img-item" style="display:inline-block; margin:5px; text-align:center;">
-                            <img src="${img.url}" style="width:100px; height:100px; object-fit:cover; border:1px solid #ddd; border-radius:4px;"><br>
-                            <small>${img.name}</small>
-                        </div>
-                    `;
-                });
+                if(res.images) {
+                    res.images.forEach(img => {
+                        grid.innerHTML += `
+                            <div class="pb-img-item" style="display:inline-block; margin:5px; text-align:center;">
+                                <img src="${img.url}" style="width:100px; height:100px; object-fit:cover; border:1px solid #ddd; border-radius:4px;"><br>
+                                <small>${img.name}</small>
+                            </div>
+                        `;
+                    });
+                }
                 fileInput.value = '';
             } else {
                 alert('업로드 실패: ' + res.error);
             }
         });
     },
-    loadCompanyInfo: function() { alert('광고주/사이트 정보 불러오기 완료'); },
+    
     runSeoCheck: function() { 
-        document.getElementById('pb_seo_results').innerHTML = '<span style="color:green;font-weight:bold;">양호</span> (검색어 포함, 분량 적절)';
+        if (this.projectId === 0) {
+            alert('기본정보(1단계)를 먼저 저장해 주세요.');
+            return;
+        }
+        
+        document.getElementById('pb_seo_results').innerHTML = "검사 중...";
+        const payload = new URLSearchParams();
+        payload.append('action', 'seo_check');
+        payload.append('builder_state', JSON.stringify(this.gatherData()));
+        
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.ok !== false) {
+                document.getElementById('pb_seo_results').innerHTML = res.html;
+            } else {
+                alert('SEO 점검 실패: ' + res.error);
+            }
+        });
     },
     renderPreview: function() {
         document.getElementById('pb_preview_area').innerHTML = '<p>미리보기 렌더링 결과입니다...</p>';

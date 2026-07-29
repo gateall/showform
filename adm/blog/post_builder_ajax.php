@@ -1,6 +1,7 @@
 <?php
 // 통합 포스팅 제작 폼 AJAX 허브
 include_once('./_common.php');
+include_once(G5_ADMIN_PATH . '/blog/lib/blog_ai_service.lib.php');
 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 $project_id = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
@@ -245,6 +246,91 @@ switch($action) {
         sql_query(" update {$project_table} set status = 'publish_pending' where id = '{$project_id}' ");
         
         $response['message'] = "발행 대기열(Queue)에 등록되었습니다. 스케줄러가 곧 처리합니다.";
+        break;
+
+    case 'ai_generate':
+        // 통합 AI 호출 처리
+        $type = isset($_POST['type']) ? $_POST['type'] : '';
+        $builder_state = isset($_POST['builder_state']) ? json_decode($_POST['builder_state'], true) : [];
+        
+        // bp_ai_service.lib.php 가 include 되어있다고 가정 (_common.php 에서)
+        if (!function_exists('bp_ai_chat_request')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        
+        $prompt = '';
+        $sys_prompt = "당신은 전문 블로그 마케터이자 숙련된 카피라이터입니다.";
+        
+        if ($type === 'direction') {
+            $prompt = "다음 조건으로 블로그 포스팅 기획안(독자 타겟과 글의 방향)을 200자 이내로 1문단으로 작성해 주세요.\n";
+            $prompt .= "- 광고주/서비스: " . ($builder_state['company_name'] ?? '알 수 없음') . "\n";
+            $prompt .= "- 말투: " . ($builder_state['tone'] ?? '전문적') . "\n";
+        } else if ($type === 'titles') {
+            $prompt = "다음 키워드를 포함하여 매력적인 블로그 포스팅 제목 후보 5개를 번호 매겨 작성해 주세요.\n";
+            $prompt .= "- 핵심 키워드: " . ($builder_state['main_keyword'] ?? '') . "\n";
+            $prompt .= "- 보조 키워드: " . ($builder_state['sub_keywords'] ?? '') . "\n";
+            $prompt .= "- 타겟 독자: " . ($builder_state['target_audience'] ?? '') . "\n";
+        } else if ($type === 'intro') {
+            $prompt = "다음 제목과 키워드를 바탕으로 독자의 공감을 이끌어내는 블로그 도입부(첫 1~2문단)를 작성해 주세요.\n";
+            $prompt .= "- 제목: " . ($builder_state['post_title'] ?? '') . "\n";
+            $prompt .= "- 핵심 키워드: " . ($builder_state['main_keyword'] ?? '') . "\n";
+        } else if ($type === 'block') {
+            $block_title = isset($_POST['block_title']) ? $_POST['block_title'] : '';
+            $prompt = "전체 포스팅 중 다음 소제목에 해당하는 본문 구간(1~2문단)을 상세하고 자연스럽게 작성해 주세요.\n";
+            $prompt .= "- 소제목: {$block_title}\n";
+            $prompt .= "- 핵심 키워드: " . ($builder_state['main_keyword'] ?? '') . "\n";
+            $prompt .= "- 말투: " . ($builder_state['tone'] ?? '전문적') . "\n";
+        }
+        
+        // 공통 AI 요청 실행 (bp_ai_chat_request 사용)
+        $ai_result = bp_ai_chat_request($prompt, $sys_prompt);
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => 'AI 생성 실패: ' . $ai_result['error']]));
+        }
+        
+        $response['generated_text'] = trim($ai_result['message']);
+        break;
+
+    case 'seo_check':
+        $builder_state = isset($_POST['builder_state']) ? json_decode($_POST['builder_state'], true) : [];
+        $main_kw = $builder_state['main_keyword'] ?? '';
+        $title = $builder_state['post_title'] ?? '';
+        
+        $score = 100;
+        $messages = [];
+        
+        if (empty($main_kw)) {
+            $score -= 30;
+            $messages[] = "대표 키워드가 설정되지 않았습니다.";
+        } else if (mb_strpos($title, $main_kw) === false) {
+            $score -= 20;
+            $messages[] = "제목에 대표 키워드('{$main_kw}')가 포함되지 않았습니다.";
+        } else {
+            $messages[] = "제목 최적화 양호 (대표 키워드 포함됨).";
+        }
+        
+        $body_len = 0;
+        if (!empty($builder_state['body_blocks'])) {
+            foreach ($builder_state['body_blocks'] as $b) {
+                $body_len += mb_strlen($b['content']);
+            }
+        }
+        if ($body_len < 500) {
+            $score -= 20;
+            $messages[] = "본문 길이가 너무 짧습니다 (현재 {$body_len}자, 권장 500자 이상).";
+        } else {
+            $messages[] = "본문 분량 양호 ({$body_len}자).";
+        }
+        
+        $color = $score >= 80 ? 'green' : ($score >= 50 ? 'orange' : 'red');
+        $html = "<div style='color:{$color}; font-weight:bold; font-size:1.2rem; margin-bottom:10px;'>SEO 점수: {$score}점</div>";
+        $html .= "<ul>";
+        foreach ($messages as $msg) {
+            $html .= "<li>{$msg}</li>";
+        }
+        $html .= "</ul>";
+        
+        $response['html'] = $html;
         break;
 
     default:
