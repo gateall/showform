@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '360100';
+$sub_menu = '360200';
 auth_check_menu($auth, $sub_menu, 'r');
 
 $g5['title'] = '광고주 관리';

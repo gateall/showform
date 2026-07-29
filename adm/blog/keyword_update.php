@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '360400';
+$sub_menu = '360600';
 $mode = isset($_REQUEST['mode']) ? trim($_REQUEST['mode']) : '';
 auth_check_menu($auth, $sub_menu, $mode === 'delete' ? 'd' : 'w');
 check_admin_token();

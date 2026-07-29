@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '360400';
+$sub_menu = '360500';
 auth_check_menu($auth, $sub_menu, 'r');
 
 $g5['title'] = '콘텐츠 프로젝트';

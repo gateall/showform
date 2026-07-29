@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '360300';
+$sub_menu = '360400';
 auth_check_menu($auth, $sub_menu, 'w');
 
 if ($is_admin != 'super') {
