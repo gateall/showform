@@ -3,6 +3,8 @@ $sub_menu = '360900';
 include_once('./_common.php');
 require_once __DIR__ . '/lib/blog_install.lib.php';
 
+$admin_token = get_admin_token();
+
 if ($is_admin != 'super') {
     alert('최고관리자만 접근 가능합니다.');
 }
@@ -102,7 +104,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     <td><?php echo $info['installed'] ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></td>
                     <td>
                         <form method="post" action="./install.php" style="display:inline;">
-                            <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+                            <input type="hidden" name="token" value="<?php echo htmlspecialchars($admin_token, ENT_QUOTES); ?>">
                             <input type="hidden" name="mode" value="run_version">
                             <input type="hidden" name="version" value="<?php echo (int) $v; ?>">
                             <button type="submit" class="btn btn_02" onclick="return confirm('V<?php echo (int) $v; ?> 업데이트를 실행하시겠습니까?');">V<?php echo (int) $v; ?> 업데이트 실행</button>
@@ -127,7 +129,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 <?php } ?>
 
 <form method="post" action="./install.php">
-    <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+    <input type="hidden" name="token" value="<?php echo htmlspecialchars($admin_token, ENT_QUOTES); ?>">
     <input type="hidden" name="mode" value="run_all">
     <div class="btn_confirm01 btn_confirm">
         <input type="submit" value="전체 설치(누락분 포함 V1~V<?php echo count($versions); ?> 전체 재실행)" class="btn_submit btn" onclick="return confirm('블로그 자동화 테이블 전체(V1~V<?php echo count($versions); ?>)를 설치하시겠습니까?');">
