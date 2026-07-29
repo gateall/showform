@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 auth_check_menu($auth, '900100', 'r');
-$g5['title'] = '?? ??';
+$g5['title'] = '랜딩 관리';
 $table = G5_TABLE_PREFIX . 'landing_pages';
 $inq_table = G5_TABLE_PREFIX . 'landing_inquiries';
 $stx = isset($_GET['stx']) ? trim($_GET['stx']) : '';
