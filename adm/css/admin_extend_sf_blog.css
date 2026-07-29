@@ -220,3 +220,54 @@
     #mobile_card_view, .mobile-card-wrap { display: none !important; }
 }
 
+/* Report summary cards (Stage 8) */
+.bp-report-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.bp-report-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.bp-report-card-label {
+    font-size: 12px;
+    color: #888;
+}
+
+.bp-report-card-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+}
+
+.bp-num-good { color: #1a7a34; }
+.bp-num-bad { color: #c00; }
+
+.bp-report-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 15px 0;
+}
+
+.bp-report-nav .btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+@media (min-width: 769px) {
+    .bp-report-cards {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+

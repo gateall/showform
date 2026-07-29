@@ -8,4 +8,5 @@ $menu['menu360'] = array(
     array('360700', '예약 발행 관리', G5_ADMIN_URL . '/blog/publish_job_list.php', 'blog_publish_job'),
     array('360800', '이미지 라이브러리', G5_ADMIN_URL . '/blog/image_list.php', 'blog_image'),
     array('360900', '테이블 설치', G5_ADMIN_URL . '/blog/install.php', 'blog_install'),
+    array('361000', '보고서', G5_ADMIN_URL . '/blog/report_dashboard.php', 'blog_report'),
 );
