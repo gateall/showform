@@ -9,14 +9,14 @@ require_once G5_LIB_PATH . '/showform_ai.lib.php';
 // Phase 1의 기본/유일 동작 경로이며, 실 API 연동은 Phase 2에서 bp_ai_call_openai() 내부만 채우면 된다.
 interface BlogAiProvider
 {
-    public function generateTitles($params, $count);
-    public function generateBody($params);
+    public function generateTitles(array $params, int $count): array;
+    public function generateBody(array $params): string;
 }
 
 // 템플릿 기반 폴백 공급자 — 키 없이 항상 동작, lib/showform_ai.lib.php 의 업종 분기 로직을 재사용한다.
 class BlogAiTemplateProvider implements BlogAiProvider
 {
-    public function generateTitles($params, $count)
+    public function generateTitles(array $params, int $count): array
     {
         $topic = isset($params['topic']) ? trim($params['topic']) : '서비스';
         $keyword = isset($params['primary_keyword']) ? trim($params['primary_keyword']) : $topic;
@@ -41,7 +41,7 @@ class BlogAiTemplateProvider implements BlogAiProvider
         return $titles;
     }
 
-    public function generateBody($params)
+    public function generateBody(array $params): string
     {
         $industry = isset($params['content_type']) ? $params['content_type'] : '';
         $company_name = isset($params['company_name']) ? $params['company_name'] : '{{business_name}}';
@@ -61,13 +61,13 @@ class BlogAiTemplateProvider implements BlogAiProvider
 }
 
 // 실제 외부 호출 지점 (Phase 2 예약 — 이번 단계에서는 절대 호출하지 않는다)
-function bp_ai_call_openai_stub($api_key_plain, $prompt)
+function bp_ai_call_openai_stub(string $api_key_plain, string $prompt): array
 {
     // Phase 1에서는 의도적으로 미구현 상태로 남긴다. 절대 로그에 $api_key_plain을 기록하지 말 것.
     return array('ok' => false, 'error' => 'Phase 2에서 구현 예정 — Phase 1은 템플릿 폴백만 사용합니다.');
 }
 
-function bp_ai_get_active_provider()
+function bp_ai_get_active_provider(): ?array
 {
     $table = bp_table('ai_providers');
     $row = sql_fetch(" select * from {$table} where is_active = 'Y' limit 1 ");
@@ -76,18 +76,18 @@ function bp_ai_get_active_provider()
 
 // 현재 이 함수는 항상 템플릿 공급자를 반환한다 — 활성 공급자가 있어도 Phase 1은 실제 호출을 하지 않기로
 // 작업지시서에서 명시했으므로, 실 API 분기는 Phase 2에서 추가한다.
-function bp_ai_get_provider()
+function bp_ai_get_provider(): BlogAiProvider
 {
     return new BlogAiTemplateProvider();
 }
 
-function bp_ai_generate_titles($params, $count = 5)
+function bp_ai_generate_titles(array $params, int $count = 5): array
 {
     $provider = bp_ai_get_provider();
     return $provider->generateTitles($params, $count);
 }
 
-function bp_ai_generate_body($params)
+function bp_ai_generate_body(array $params): string
 {
     $provider = bp_ai_get_provider();
     return $provider->generateBody($params);

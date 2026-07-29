@@ -51,7 +51,7 @@ if ($wp_username !== '' || $wp_app_password !== '') {
     $actor = bp_current_admin_id();
 
     if ($wp_app_password !== '') {
-        $enc = ai_encrypt($wp_app_password);
+        $enc = bp_encrypt_secret($wp_app_password);
         $hint = bp_mask_secret($wp_app_password);
     } else {
         $enc = null;

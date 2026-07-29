@@ -20,7 +20,7 @@ $api_key = isset($_POST['api_key']) ? trim($_POST['api_key']) : '';
 
 $key_sql = '';
 if ($api_key !== '') {
-    $enc = ai_encrypt($api_key);
+    $enc = bp_encrypt_secret($api_key);
     $hint = bp_mask_secret($api_key);
     $key_sql = ", api_key_enc = '" . sql_real_escape_string($enc) . "', masked_hint = '" . sql_real_escape_string($hint) . "'";
 }

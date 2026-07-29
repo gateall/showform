@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}sites` (
   PRIMARY KEY (`id`),
   KEY `idx_advertiser_id` (`advertiser_id`),
   KEY `idx_platform` (`platform`),
-  CONSTRAINT `fk_sites_advertiser` FOREIGN KEY (`advertiser_id`) REFERENCES `{prefix}advertisers` (`id`)
+  CONSTRAINT `fk_sites_advertiser` FOREIGN KEY (`advertiser_id`) REFERENCES `{prefix}advertisers` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. 사이트별 발행 채널 인증 정보 (WordPress Application Password 등) — 값은 암호화 저장, 화면엔 masked_hint만 노출
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}site_credentials` (
   `updated_at` DATETIME NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_site_credtype` (`site_id`, `cred_type`),
-  CONSTRAINT `fk_credentials_site` FOREIGN KEY (`site_id`) REFERENCES `{prefix}sites` (`id`)
+  CONSTRAINT `fk_credentials_site` FOREIGN KEY (`site_id`) REFERENCES `{prefix}sites` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. AI 공급자 설정 (최소 — API 키는 암호화 저장, masked_hint만 화면 노출)
@@ -102,8 +102,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}content_projects` (
   UNIQUE KEY `uq_project_uuid` (`project_uuid`),
   KEY `idx_advertiser_id` (`advertiser_id`),
   KEY `idx_status` (`status`),
-  CONSTRAINT `fk_projects_advertiser` FOREIGN KEY (`advertiser_id`) REFERENCES `{prefix}advertisers` (`id`),
-  CONSTRAINT `fk_projects_site` FOREIGN KEY (`primary_site_id`) REFERENCES `{prefix}sites` (`id`)
+  CONSTRAINT `fk_projects_advertiser` FOREIGN KEY (`advertiser_id`) REFERENCES `{prefix}advertisers` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_projects_site` FOREIGN KEY (`primary_site_id`) REFERENCES `{prefix}sites` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. 프로젝트별 키워드 (그룹 분류 + 잠금)
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}content_keywords` (
   PRIMARY KEY (`id`),
   KEY `idx_project_id` (`project_id`),
   KEY `idx_keyword_group` (`keyword_group`),
-  CONSTRAINT `fk_keywords_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`)
+  CONSTRAINT `fk_keywords_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. 포스팅 원본 (BLOG_AUTOMATION_DATA_MODEL.md 2절 — post_targets와 반드시 분리)
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}posts` (
   `updated_at` DATETIME NULL,
   PRIMARY KEY (`id`),
   KEY `idx_project_id` (`project_id`),
-  CONSTRAINT `fk_posts_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`)
+  CONSTRAINT `fk_posts_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. 사이트별 발행 인스턴스 (1개 포스팅 : N개 사이트) — 제목/본문/이미지/예약/상태/재시도를 사이트마다 별도 저장
@@ -155,8 +155,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}post_targets` (
   KEY `idx_post_id` (`post_id`),
   KEY `idx_site_id` (`site_id`),
   KEY `idx_publish_status` (`publish_status`),
-  CONSTRAINT `fk_targets_post` FOREIGN KEY (`post_id`) REFERENCES `{prefix}posts` (`id`),
-  CONSTRAINT `fk_targets_site` FOREIGN KEY (`site_id`) REFERENCES `{prefix}sites` (`id`)
+  CONSTRAINT `fk_targets_post` FOREIGN KEY (`post_id`) REFERENCES `{prefix}posts` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_targets_site` FOREIGN KEY (`site_id`) REFERENCES `{prefix}sites` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. 발행 작업 잠금 큐 (BLOG_AUTOMATION_DATA_MODEL.md 4절 — pending -> claimed -> processing -> published)
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}publish_jobs` (
   UNIQUE KEY `uq_active_lock` (`active_lock_key`),
   KEY `idx_post_target_id` (`post_target_id`),
   KEY `idx_status` (`status`),
-  CONSTRAINT `fk_jobs_target` FOREIGN KEY (`post_target_id`) REFERENCES `{prefix}post_targets` (`id`)
+  CONSTRAINT `fk_jobs_target` FOREIGN KEY (`post_target_id`) REFERENCES `{prefix}post_targets` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. 발행 시도 이력 (성공/실패 각 시도 기록 — response_message에 절대 비밀정보 기록 금지)
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}publish_attempts` (
   `created_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_publish_job_id` (`publish_job_id`),
-  CONSTRAINT `fk_attempts_job` FOREIGN KEY (`publish_job_id`) REFERENCES `{prefix}publish_jobs` (`id`)
+  CONSTRAINT `fk_attempts_job` FOREIGN KEY (`publish_job_id`) REFERENCES `{prefix}publish_jobs` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. 상태 변경 활동 로그 (승인 상태머신 감사 추적용)
@@ -203,5 +203,5 @@ CREATE TABLE IF NOT EXISTS `{prefix}content_activity_logs` (
   `created_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_project_id` (`project_id`),
-  CONSTRAINT `fk_logs_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`)
+  CONSTRAINT `fk_logs_project` FOREIGN KEY (`project_id`) REFERENCES `{prefix}content_projects` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

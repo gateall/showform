@@ -6,14 +6,15 @@ if (!defined('_GNUBOARD_')) exit;
 interface BlogPublisherInterface
 {
     // 반환: array('ok'=>bool, 'external_post_id'=>string, 'published_url'=>string, 'error'=>string)
-    public function publish($post_target_row, $credentials_row);
+    // $credentials_row는 아직 인증정보가 없는 사이트일 수 있어 null을 허용한다.
+    public function publish(array $post_target_row, ?array $credentials_row): array;
 }
 
 // 테스트 가능한 목 발행기 — 실제 네트워크 호출 없이 발행 성공/실패를 재현한다.
 // 제목에 리터럴 문자열 '[FAIL_TEST]'가 포함되면 의도적으로 실패를 반환한다(재시도·중복방지 테스트용 트리거).
 class BlogMockPublisher implements BlogPublisherInterface
 {
-    public function publish($post_target_row, $credentials_row)
+    public function publish(array $post_target_row, ?array $credentials_row): array
     {
         $title = isset($post_target_row['title']) ? $post_target_row['title'] : '';
         if (strpos($title, '[FAIL_TEST]') !== false) {
@@ -39,7 +40,7 @@ class BlogMockPublisher implements BlogPublisherInterface
 // Phase 1에서는 절대 호출되지 않으며, 호출되더라도 즉시 미구현 오류를 반환한다.
 class BlogWordPressPublisher implements BlogPublisherInterface
 {
-    public function publish($post_target_row, $credentials_row)
+    public function publish(array $post_target_row, ?array $credentials_row): array
     {
         return array(
             'ok' => false,
@@ -51,17 +52,16 @@ class BlogWordPressPublisher implements BlogPublisherInterface
 }
 
 // Phase 1은 플랫폼과 무관하게 항상 Mock을 반환한다 — 팩토리 구조만 실 연동 대비로 마련해 둔다.
-function bp_get_publisher($platform)
+function bp_get_publisher(string $platform): BlogPublisherInterface
 {
     return new BlogMockPublisher();
 }
 
 // 대상(post_target)에 활성 발행 작업이 있으면 재사용하고, 없으면 새로 만든다.
 // active_lock_key 유니크 제약이 최종 방어선이며, 이 함수는 그 전에 애플리케이션 레벨에서 먼저 확인한다.
-function bp_get_or_create_publish_job($post_target_id)
+function bp_get_or_create_publish_job(int $post_target_id): ?array
 {
     $jobs_table = bp_table('publish_jobs');
-    $post_target_id = (int) $post_target_id;
 
     $active = sql_fetch(" select * from {$jobs_table}
                             where post_target_id = '{$post_target_id}'
@@ -85,7 +85,7 @@ function bp_get_or_create_publish_job($post_target_id)
 
 // 승인 게이트 + 잠금 + 발행 + 이력 기록을 한 번에 처리하는 오케스트레이션 함수.
 // project.status가 approved 계열이 아니면 어떤 경우에도 여기서 막힌다(발행 전 승인 차단 게이트).
-function bp_dispatch_publish_job($post_target_id, $actor)
+function bp_dispatch_publish_job(int $post_target_id, string $actor): array
 {
     $targets_table = bp_table('post_targets');
     $posts_table = bp_table('posts');
@@ -95,7 +95,6 @@ function bp_dispatch_publish_job($post_target_id, $actor)
     $sites_table = bp_table('sites');
     $creds_table = bp_table('site_credentials');
 
-    $post_target_id = (int) $post_target_id;
     $target = sql_fetch(" select * from {$targets_table} where id = '{$post_target_id}' ");
     if (!$target) {
         return array('ok' => false, 'error' => '발행 대상을 찾을 수 없습니다.');

@@ -11,39 +11,142 @@ if (!is_file($sql_file)) {
     alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file);
 }
 
-$sql_content = file_get_contents($sql_file);
-$sql_content = str_replace('{prefix}', G5_TABLE_PREFIX, $sql_content);
+global $g5;
 
-// 주석 라인 제거 후 세미콜론 기준으로 문장 분리
-$lines = explode("\n", $sql_content);
-$lines = array_filter($lines, function ($line) {
-    return strpos(trim($line), '--') !== 0;
-});
-$clean_sql = implode("\n", $lines);
-$statements = array_filter(array_map('trim', explode(';', $clean_sql)));
+function bp_install_check_extensions(): array
+{
+    $required = array('mysqli', 'openssl', 'json', 'mbstring');
+    $status = array();
+    foreach ($required as $ext) {
+        $status[$ext] = extension_loaded($ext);
+    }
+    return $status;
+}
 
+// 첫 번째 테이블(advertisers) 존재 여부로 설치 상태를 판단한다 — 비밀정보 노출 없이
+// information_schema 대신 SHOW TABLES LIKE 를 사용해 최소 권한으로도 동작하게 한다.
+function bp_install_already_installed(string $prefix): bool
+{
+    $like = sql_real_escape_string($prefix . 'advertisers');
+    $result = sql_query(" show tables like '{$like}' ", false);
+    return $result && sql_num_rows($result) > 0;
+}
+
+function bp_install_diagnostics(): array
+{
+    global $g5;
+    $link = isset($g5['connect_db']) ? $g5['connect_db'] : null;
+
+    $db_version = '';
+    $db_charset = '';
+    $db_collation = '';
+    if ($link) {
+        $row = sql_fetch(" select VERSION() as v, @@character_set_database as cs, @@collation_database as co ");
+        if ($row) {
+            $db_version = $row['v'];
+            $db_charset = $row['cs'];
+            $db_collation = $row['co'];
+        }
+    }
+
+    return array(
+        'php_version' => PHP_VERSION,
+        'db_version' => $db_version,
+        'db_charset_default' => $db_charset,
+        'db_collation_default' => $db_collation,
+        'connection_charset' => $link ? mysqli_character_set_name($link) : '',
+        'mysqli_client_version' => function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : '',
+        'extensions' => bp_install_check_extensions(),
+    );
+}
+
+$table_prefix = G5_TABLE_PREFIX;
+$already_installed = bp_install_already_installed($table_prefix);
+$diagnostics = bp_install_diagnostics();
+
+$did_install = false;
 $created = array();
-foreach ($statements as $stmt) {
-    if ($stmt === '') {
-        continue;
+
+if (!$already_installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_admin_token();
+
+    $sql_content = file_get_contents($sql_file);
+    $sql_content = str_replace('{prefix}', $table_prefix, $sql_content);
+
+    // 주석 라인 제거 후 세미콜론 기준으로 문장 분리
+    $lines = explode("\n", $sql_content);
+    $lines = array_filter($lines, function ($line) {
+        return strpos(trim($line), '--') !== 0;
+    });
+    $clean_sql = implode("\n", $lines);
+    $statements = array_filter(array_map('trim', explode(';', $clean_sql)));
+
+    foreach ($statements as $stmt) {
+        if ($stmt === '') {
+            continue;
+        }
+        sql_query($stmt, false);
+        if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
+            $created[] = $m[1];
+        }
     }
-    sql_query($stmt, false);
-    if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
-        $created[] = $m[1];
-    }
+
+    $did_install = true;
+    $already_installed = bp_install_already_installed($table_prefix);
 }
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
-    <h2>블로그 자동화 MVP Phase 1 — 테이블 설치 결과</h2>
-    <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code></p>
-    <ul>
-        <?php foreach ($created as $t) { ?>
-            <li><?php echo get_text($t); ?></li>
-        <?php } ?>
-    </ul>
-    <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
+    <h2>블로그 자동화 MVP Phase 1 — 테이블 설치</h2>
 </div>
+
+<div class="tbl_frm01 tbl_wrap">
+    <table>
+        <caption>환경 진단</caption>
+        <tbody>
+            <tr><th scope="row">PHP 버전</th><td><?php echo get_text($diagnostics['php_version']); ?></td></tr>
+            <tr><th scope="row">DB 서버 버전</th><td><?php echo get_text($diagnostics['db_version']); ?></td></tr>
+            <tr><th scope="row">DB 기본 문자셋 / Collation</th><td><?php echo get_text($diagnostics['db_charset_default']); ?> / <?php echo get_text($diagnostics['db_collation_default']); ?></td></tr>
+            <tr><th scope="row">이번 연결의 문자셋</th><td><?php echo get_text($diagnostics['connection_charset']); ?><?php echo $diagnostics['connection_charset'] === 'utf8mb4' ? ' (정상)' : ' <span style="color:#c00;">— utf8mb4가 아닙니다</span>'; ?></td></tr>
+            <tr><th scope="row">mysqli 클라이언트</th><td><?php echo get_text($diagnostics['mysqli_client_version']); ?></td></tr>
+            <tr><th scope="row">필수 확장</th>
+                <td>
+                    <?php foreach ($diagnostics['extensions'] as $ext => $loaded) { ?>
+                        <?php echo get_text($ext) . ': ' . ($loaded ? '있음' : '<span style="color:#c00;">없음</span>') . '&nbsp;&nbsp;'; ?>
+                    <?php } ?>
+                </td></tr>
+        </tbody>
+    </table>
+</div>
+
+<?php if ($already_installed && !$did_install) { ?>
+    <div class="local_desc01 local_desc" style="margin-top:15px;">
+        <p>이미 설치되어 있습니다(<code><?php echo get_text($table_prefix . 'advertisers'); ?></code> 테이블 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
+        <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
+    </div>
+<?php } elseif ($did_install) { ?>
+    <div class="local_desc01 local_desc" style="margin-top:15px;">
+        <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code></p>
+        <ul>
+            <?php foreach ($created as $t) { ?>
+                <li><?php echo get_text($t); ?></li>
+            <?php } ?>
+        </ul>
+        <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
+    </div>
+<?php } else { ?>
+    <div class="local_desc01 local_desc" style="margin-top:15px;">
+        <p>아직 설치되어 있지 않습니다. 아래 확인 후 설치를 진행하세요. 설치는 <code>CREATE TABLE IF NOT EXISTS</code>만 실행하며 기존 데이터를 삭제하지 않습니다.
+        운영 DB에 적용하기 전에는 반드시 백업을 먼저 받아 두세요.</p>
+    </div>
+    <form method="post" action="./install.php">
+        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+        <div class="btn_confirm01 btn_confirm">
+            <input type="submit" value="테이블 11개 설치 진행" class="btn_submit btn" onclick="return confirm('블로그 자동화 테이블을 설치하시겠습니까?');">
+        </div>
+    </form>
+<?php } ?>
+
 <?php
 include_once(G5_ADMIN_PATH . '/admin.tail.php');
