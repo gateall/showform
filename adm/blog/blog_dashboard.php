@@ -7,12 +7,11 @@ include_once(G5_ADMIN_PATH.'/admin.head.php');
 
 // 탭 구성
 $tabs = [
+    ['id' => 'tab-proj', 'title' => '포스팅 프로젝트 관리', 'url' => './project_list.php'],
     ['id' => 'tab-adv', 'title' => '광고주 관리', 'url' => './advertiser_list.php'],
     ['id' => 'tab-acc', 'title' => '광고주 계정', 'url' => './advertiser_account_list.php'],
     ['id' => 'tab-site', 'title' => '사이트 관리', 'url' => './site_list.php'],
     ['id' => 'tab-ai', 'title' => 'AI 세팅', 'url' => './ai_provider_list.php'],
-    ['id' => 'tab-proj', 'title' => '포스팅 관리', 'url' => './project_list.php'],
-    ['id' => 'tab-post', 'title' => '통합 포스팅 제작', 'url' => './post_builder.php'],
     ['id' => 'tab-pub', 'title' => '예약 발행 관리', 'url' => './publish_job_list.php'],
     ['id' => 'tab-img', 'title' => '이미지 라이브러리', 'url' => './image_list.php'],
     ['id' => 'tab-report', 'title' => '통계 보고서', 'url' => './report_dashboard.php']
@@ -76,6 +75,25 @@ $tabs = [
 
 <div class="ud-wrap">
     <div class="ud-sidebar">
+        <div style="padding: 20px;">
+            <button type="button" class="btn_submit btn" style="width: 100%; font-size: 15px; padding: 12px; background: #3182ce;" onclick="createNewPost()">+ 새 포스팅 작성</button>
+            <script>
+            function createNewPost() {
+                if(confirm('새 포스팅 작성을 시작하시겠습니까? (초안이 생성되고 넓은 작성 화면으로 이동합니다)')) {
+                    // Create draft via AJAX
+                    fetch('<?php echo G5_URL; ?>/blog-studio/ajax/create_draft.php', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = '<?php echo G5_URL; ?>/blog-studio/write.php?post_id=' + data.post_id;
+                        } else {
+                            alert('초안 생성 실패: ' + data.message);
+                        }
+                    });
+                }
+            }
+            </script>
+        </div>
         <?php foreach ($tabs as $i => $tab) { ?>
             <a class="ud-tab <?php echo $i === 0 ? 'active' : ''; ?>" data-url="<?php echo $tab['url']; ?>" onclick="changeTab(this)">
                 <?php echo $tab['title']; ?>
