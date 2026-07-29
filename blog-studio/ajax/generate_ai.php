@@ -1,5 +1,5 @@
 <?php
-include_once('../_common.php');
+include_once('./_common.php');
 include_once(G5_ADMIN_PATH.'/blog/lib/blog_crypto.lib.php');
 include_once(G5_ADMIN_PATH.'/blog/lib/blog_ai_service.lib.php');
 
