@@ -69,11 +69,51 @@ if ($wp_username !== '' || $wp_app_password !== '') {
                             updated_at = '" . G5_TIME_YMDHIS . "'
                             {$extra}
                         where id = '" . (int)$existing['id'] . "' ");
-    } elseif ($enc !== null) {
+} elseif ($enc !== null) {
         sql_query(" insert into {$cred_table}
                         set site_id = '{$site_id}',
                             cred_type = 'wp_app_password',
                             cred_username = '" . sql_real_escape_string($wp_username) . "',
+                            cred_value_enc = '" . sql_real_escape_string($enc) . "',
+                            masked_hint = '" . sql_real_escape_string($hint) . "',
+                            updated_by = '" . sql_real_escape_string($actor) . "',
+                            created_at = '" . G5_TIME_YMDHIS . "',
+                            updated_at = '" . G5_TIME_YMDHIS . "' ");
+    }
+}
+
+// 자체 PHP API 설정 저장
+$php_api_key = isset($_POST['php_api_key']) ? trim($_POST['php_api_key']) : '';
+$php_api_secret = isset($_POST['php_api_secret']) ? trim($_POST['php_api_secret']) : '';
+
+if ($php_api_key !== '' || $php_api_secret !== '') {
+    $existing = sql_fetch(" select id from {$cred_table} where site_id = '{$site_id}' and cred_type = 'php_api_key' ");
+    $actor = bp_current_admin_id();
+
+    if ($php_api_secret !== '') {
+        $enc = bp_encrypt_secret($php_api_secret);
+        $hint = bp_mask_secret($php_api_secret);
+    } else {
+        $enc = null;
+        $hint = null;
+    }
+
+    if ($existing) {
+        $extra = '';
+        if ($enc !== null) {
+            $extra = ", cred_value_enc = '" . sql_real_escape_string($enc) . "', masked_hint = '" . sql_real_escape_string($hint) . "'";
+        }
+        sql_query(" update {$cred_table}
+                        set cred_username = '" . sql_real_escape_string($php_api_key) . "',
+                            updated_by = '" . sql_real_escape_string($actor) . "',
+                            updated_at = '" . G5_TIME_YMDHIS . "'
+                            {$extra}
+                        where id = '" . (int)$existing['id'] . "' ");
+    } elseif ($enc !== null) {
+        sql_query(" insert into {$cred_table}
+                        set site_id = '{$site_id}',
+                            cred_type = 'php_api_key',
+                            cred_username = '" . sql_real_escape_string($php_api_key) . "',
                             cred_value_enc = '" . sql_real_escape_string($enc) . "',
                             masked_hint = '" . sql_real_escape_string($hint) . "',
                             updated_by = '" . sql_real_escape_string($actor) . "',

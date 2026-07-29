@@ -11,7 +11,8 @@ $adv_table = bp_table('advertisers');
 $cred_table = bp_table('site_credentials');
 
 $result = sql_query(" select s.*, a.name as advertiser_name,
-                        (select masked_hint from {$cred_table} c where c.site_id = s.id and c.cred_type = 'wp_app_password' limit 1) as wp_masked_hint
+                        (select masked_hint from {$cred_table} c where c.site_id = s.id and c.cred_type = 'wp_app_password' limit 1) as wp_masked_hint,
+                        (select masked_hint from {$cred_table} c where c.site_id = s.id and c.cred_type = 'php_api_key' limit 1) as php_masked_hint
                       from {$table} s
                       left join {$adv_table} a on a.id = s.advertiser_id
                       order by s.id desc ");
@@ -50,9 +51,11 @@ if ($result && sql_num_rows($result) > 0) {
                 <span>번호: <?php echo (int) $row['id']; ?></span>
                 <span>광고주: <?php echo get_text($row['advertiser_name']); ?></span>
                 <span>플랫폼: <?php echo get_text($row['platform']); ?></span>
-                <span>WP 인증정보: <?php echo $row['wp_masked_hint'] ? get_text($row['wp_masked_hint']) : '미설정'; ?></span>
+                <span>WP 인증: <?php echo $row['wp_masked_hint'] ? get_text($row['wp_masked_hint']) : '미설정'; ?></span>
+                <span>PHP API: <?php echo $row['php_masked_hint'] ? get_text($row['php_masked_hint']) : '미설정'; ?></span>
             </div>
             <div class="bp-project-actions">
+                <a href="./site_category_mapping.php?site_id=<?php echo (int) $row['id']; ?>" class="btn btn_03">카테고리 매핑</a>
                 <a href="./site_form.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">수정</a>
                 <a href="./site_delete.php?id=<?php echo (int) $row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
             </div>
@@ -86,9 +89,12 @@ if ($result && sql_num_rows($result) > 0) {
                         <td><?php echo get_text($row['advertiser_name']); ?></td>
                         <td style="text-align:left;"><a href="./site_form.php?id=<?php echo (int)$row['id']; ?>"><strong><?php echo get_text($row['name']); ?></strong></a></td>
                         <td><?php echo get_text($row['platform']); ?></td>
-                        <td><?php echo $row['wp_masked_hint'] ? get_text($row['wp_masked_hint']) : '<span style="color:#999;">미설정</span>'; ?></td>
+                        <td><?php echo $row['wp_masked_hint'] ? get_text($row['wp_masked_hint']) : '<span style="color:#999;">미설정</span>'; ?><br>
+                            <span style="font-size:0.9em; color:#666;">PHP: <?php echo $row['php_masked_hint'] ? get_text($row['php_masked_hint']) : '미설정'; ?></span>
+                        </td>
                         <td><?php echo $row['status'] === 'Y' ? '사용' : '중지'; ?></td>
                         <td>
+                            <a href="./site_category_mapping.php?site_id=<?php echo (int)$row['id']; ?>" class="btn btn_03">카테고리 매핑</a>
                             <a href="./site_form.php?id=<?php echo (int)$row['id']; ?>" class="btn btn_02">수정</a>
                             <a href="./site_delete.php?id=<?php echo (int)$row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
                         </td>

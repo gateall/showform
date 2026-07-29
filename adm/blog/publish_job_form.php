@@ -38,14 +38,14 @@ if ($w == 'u') {
     }
 }
 
-// 등록 시 승인된 포스트 목록 가져오기
+// 등록 시 승인된 포스트 목록만 가져온다 — 승인되지 않은 글은 예약 자체를 만들 수 없어야 한다
+// (publish_job_update.php의 서버측 검증이 최종 방어선이며, 이 목록은 그 정책과 일치시키기 위한 UI 필터).
 $approved_posts = array();
 if ($w == '') {
-    // 실제 운영에서는 status='approved' 조건이 필요할 수 있으나, 현재는 임시로 최근 포스트들 출력 (프로젝트 status 연동 여부에 따라 다름)
-    // 여기서는 안전하게 최근 포스트 목록을 보여주되, ajax를 이용해 대상 사이트를 불러오는 방식을 사용한다.
-    $sql_posts = " select p.id, p.title, prj.topic 
-                   from {$tbl_posts} p 
-                   join " . bp_table('content_projects') . " prj on p.project_id = prj.id 
+    $sql_posts = " select p.id, p.title, prj.topic
+                   from {$tbl_posts} p
+                   join " . bp_table('content_projects') . " prj on p.project_id = prj.id
+                   where prj.status = 'approved' and prj.deleted_at is null
                    order by p.id desc limit 100 ";
     $res_posts = sql_query($sql_posts);
     while($row = sql_fetch_array($res_posts)){

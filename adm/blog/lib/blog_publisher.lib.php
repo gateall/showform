@@ -143,6 +143,149 @@ class BlogWordPressPublisher implements BlogPublisherInterface
     }
 }
 
+// 자체 PHP 블로그 연동 (Stage 4)
+class BlogPhpPublisher implements BlogPublisherInterface
+{
+    private $transport;
+
+    public function __construct(?callable $transport = null)
+    {
+        $this->transport = $transport !== null ? $transport : array($this, 'curlTransport');
+    }
+
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array
+    {
+        $base_url = isset($site_row['base_url']) ? rtrim($site_row['base_url'], '/') : '';
+        if (!$base_url) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '사이트 URL이 없습니다.');
+        }
+
+        if (!$credentials_row || empty($credentials_row['cred_username']) || empty($credentials_row['cred_value_enc'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API Key/Secret이 설정되지 않았습니다.');
+        }
+
+        $api_key = $credentials_row['cred_username'];
+        $api_secret = bp_decrypt_secret($credentials_row['cred_value_enc']);
+        if ($api_secret === '') {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.');
+        }
+
+        // 카테고리 매핑 조회
+        global $g5;
+        $category = array('id' => '', 'name' => '미분류');
+        
+        // 매핑 테이블에서 사이트 카테고리 정보 획득 시도
+        if (isset($g5['connect_db'])) {
+            $cat_table = bp_table('category_mappings');
+            // 본래라면 포스트 내부 카테고리명을 조건으로 찾겠지만, MVP에서는 첫번째 매핑을 가져오거나 빈 값
+            $cat_sql = " SELECT remote_category_id, remote_category_name 
+                           FROM {$cat_table} 
+                          WHERE site_id = '" . (int)$site_row['id'] . "' LIMIT 1 ";
+            $cat_row = sql_fetch($cat_sql);
+            if ($cat_row) {
+                $category['id'] = $cat_row['remote_category_id'];
+                $category['name'] = $cat_row['remote_category_name'];
+            }
+        }
+
+        $api_url = $base_url . '/api/blog-publish.php';
+        $request_id = uniqid('req_', true);
+        
+        $payload = array(
+            'request_id' => $request_id,
+            'site_id' => $site_row['id'],
+            'project_id' => $post_target_row['project_id'] ?? 0,
+            'post_id' => $post_target_row['post_id'] ?? 0,
+            'title' => $post_target_row['title'] ?? '',
+            'slug' => $post_target_row['slug'] ?? '',
+            'content_html' => $post_target_row['body'] ?? '',
+            'excerpt' => mb_substr(strip_tags($post_target_row['body'] ?? ''), 0, 150),
+            'category' => $category,
+            'tags' => array(),
+            'featured_image' => null,
+            'content_images' => array(),
+            'publish_status' => 'publish',
+            'scheduled_at' => $post_target_row['scheduled_at'] ?? null,
+            'canonical_url' => '',
+            'meta_title' => $post_target_row['title'] ?? '',
+            'meta_description' => ''
+        );
+
+        $json_payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $timestamp = time();
+        $nonce = uniqid('nonce_', true);
+        
+        $path = parse_url($api_url, PHP_URL_PATH) ?: '/';
+        $body_hash = hash('sha256', $json_payload);
+        $signature_raw = "POST\n{$path}\n{$timestamp}\n{$nonce}\n{$request_id}\n{$body_hash}";
+        $signature = hash_hmac('sha256', $signature_raw, $api_secret);
+
+        $headers = array(
+            'Content-Type: application/json; charset=utf-8',
+            'X-Blog-Site-ID: ' . $site_row['id'],
+            'X-Blog-API-Key: ' . $api_key,
+            'X-Blog-Timestamp: ' . $timestamp,
+            'X-Blog-Nonce: ' . $nonce,
+            'X-Blog-Request-ID: ' . $request_id,
+            'X-Blog-Signature: ' . $signature
+        );
+
+        $transport = $this->transport;
+        $res = $transport('POST', $api_url, $headers, $json_payload);
+
+        if (!empty($res['error'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('연결 오류: ' . $res['error']));
+        }
+
+        $http_code = (int) $res['http_code'];
+        $parsed = @json_decode((string) $res['body'], true);
+
+        if ($http_code === 401 || $http_code === 403) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'API 인증 실패 (HTTP ' . $http_code . ')');
+        }
+
+        if ($http_code === 200 && $parsed && !empty($parsed['success'])) {
+            return array(
+                'ok' => true,
+                'external_post_id' => (string) ($parsed['remote_post_id'] ?? ''),
+                'published_url' => (string) ($parsed['published_url'] ?? ''),
+                'error' => '',
+            );
+        }
+
+        $msg = isset($parsed['message']) ? $parsed['message'] : ('HTTP ' . $http_code);
+        return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('발행 오류: ' . $msg));
+    }
+
+    private function curlTransport(string $method, string $url, array $headers, ?string $body): array
+    {
+        if (!function_exists('curl_init')) {
+            return array('http_code' => 0, 'body' => '', 'error' => 'curl 확장이 없습니다.');
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        // 테스트 등을 위해 임시로 SSL 무시 옵션 (실 운영시 true 전환 권장)
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        return array('http_code' => (int) $http_code, 'body' => (string) $response, 'error' => $err);
+    }
+}
+
 // 워드프레스 사이트 연결 테스트 — 실제 성공/실패를 있는 그대로 반환한다.
 // BLOG_AUTOMATION_SECURITY.md가 명시한 전례(PlusTok AI 연결 테스트가 실패해도 항상 "성공"을
 // 반환한 버그)를 반복하지 않기 위해, HTTP 상태와 응답을 그대로 판정에 사용하고 절대 낙관적으로
@@ -192,11 +335,12 @@ function bp_wp_test_connection(string $base_url, string $username, string $app_p
     return array('ok' => true, 'error' => '');
 }
 
-// 워드프레스는 실제 REST 연동을, 그 외(php/naver 등 아직 미구현) 플랫폼은 안전한 Mock을 사용한다.
 function bp_get_publisher(string $platform): BlogPublisherInterface
 {
     if ($platform === 'wordpress') {
         return new BlogWordPressPublisher();
+    } elseif ($platform === 'php') {
+        return new BlogPhpPublisher();
     }
     return new BlogMockPublisher();
 }
@@ -215,7 +359,7 @@ function bp_has_active_publish_job(int $projectId): bool
                         inner join {$targets_table} t on t.id = j.post_target_id
                         inner join {$posts_table} p on p.id = t.post_id
                         where p.project_id = '{$projectId}'
-                          and j.status in ('pending','claimed','processing') ");
+                          and j.status in ('pending','claimed','processing','scheduled') ");
     return $row && (int) $row['cnt'] > 0;
 }
 

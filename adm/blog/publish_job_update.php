@@ -36,6 +36,8 @@ check_admin_token();
 
 $tbl_jobs = bp_table('publish_jobs');
 $tbl_targets = bp_table('post_targets');
+$tbl_posts = bp_table('posts');
+$tbl_projects = bp_table('content_projects');
 
 function log_publish_activity($job_id, $target_id, $action, $detail) {
     global $member;
@@ -88,13 +90,23 @@ if ($w == '') {
     
     foreach ($post_target_ids as $tid) {
         $tid = (int)$tid;
-        // 타겟 검증
-        $trow = sql_fetch(" select * from {$tbl_targets} where id = '{$tid}' ");
+        // 타겟 검증 — 승인(approved) 상태의 프로젝트에 속한 대상만 예약을 만들 수 있다.
+        // (폼의 포스트 선택 목록도 승인된 것만 보여주지만, 이 검증이 최종 방어선이다 —
+        // 클라이언트가 임의의 post_target_ids[]를 조작해 보내는 경우까지 막아야 한다.)
+        $trow = sql_fetch(" select t.*, prj.status as project_status
+                             from {$tbl_targets} t
+                             join {$tbl_posts} p on p.id = t.post_id
+                             join {$tbl_projects} prj on prj.id = p.project_id
+                             where t.id = '{$tid}' ");
         if (!$trow) {
             sql_query("ROLLBACK");
             alert('존재하지 않는 발행 대상이 포함되어 있습니다.');
         }
-        
+        if ($trow['project_status'] !== 'approved') {
+            sql_query("ROLLBACK");
+            alert("승인되지 않은 콘텐츠는 예약할 수 없습니다. (Target ID: {$tid}, 현재 상태: {$trow['project_status']})");
+        }
+
         // 중복 활성 작업 검사
         $active = sql_fetch(" select count(*) as cnt from {$tbl_jobs} where post_target_id = '{$tid}' and status in ('scheduled', 'pending', 'processing') ");
         if ($active['cnt'] > 0) {

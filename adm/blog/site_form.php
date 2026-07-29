@@ -10,17 +10,19 @@ $cred_table = bp_table('site_credentials');
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $row = array('id' => 0, 'advertiser_id' => 0, 'name' => '', 'platform' => 'wordpress', 'base_url' => '', 'status' => 'Y');
-$cred = array('cred_username' => '', 'masked_hint' => '');
+$cred_wp = array('cred_username' => '', 'masked_hint' => '');
+$cred_php = array('cred_username' => '', 'masked_hint' => '');
 
 if ($id > 0) {
     $row = sql_fetch(" select * from {$table} where id = '{$id}' ");
     if (!$row) {
         alert('사이트 정보를 찾을 수 없습니다.', G5_ADMIN_URL . '/blog/site_list.php');
     }
-    $found_cred = sql_fetch(" select * from {$cred_table} where site_id = '{$id}' and cred_type = 'wp_app_password' ");
-    if ($found_cred) {
-        $cred = $found_cred;
-    }
+    $found_wp = sql_fetch(" select * from {$cred_table} where site_id = '{$id}' and cred_type = 'wp_app_password' ");
+    if ($found_wp) $cred_wp = $found_wp;
+    
+    $found_php = sql_fetch(" select * from {$cred_table} where site_id = '{$id}' and cred_type = 'php_api_key' ");
+    if ($found_php) $cred_php = $found_php;
     $g5['title'] = '발행 사이트 수정';
 } else {
     $g5['title'] = '발행 사이트 등록';
@@ -77,16 +79,31 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             <caption>워드프레스 채널 인증 (Application Password)</caption>
             <tbody>
                 <tr><th scope="row"><label for="wp_username">WP 사용자명</label></th>
-                    <td><input type="text" name="wp_username" id="wp_username" value="<?php echo get_text($cred['cred_username']); ?>" class="frm_input" maxlength="255"></td></tr>
+                    <td><input type="text" name="wp_username" id="wp_username" value="<?php echo get_text($cred_wp['cred_username']); ?>" class="frm_input" maxlength="255"></td></tr>
                 <tr><th scope="row"><label for="wp_app_password">Application Password</label></th>
                     <td>
                         <input type="password" name="wp_app_password" id="wp_app_password" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다">
-                        <span class="help_txt"><?php echo $cred['masked_hint'] ? '현재 저장된 값: ' . get_text($cred['masked_hint']) : '저장된 값 없음'; ?></span>
+                        <span class="help_txt"><?php echo $cred_wp['masked_hint'] ? '현재 저장된 값: ' . get_text($cred_wp['masked_hint']) : '저장된 값 없음'; ?></span>
                     </td></tr>
                 <tr><th scope="row">연결 확인</th>
                     <td>
                         <button type="button" id="btn_wp_test" class="btn btn_02">연결 테스트</button>
                         <span id="wp_test_result" class="help_txt"></span>
+                    </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tbl_frm01 tbl_wrap" style="margin-top:15px;">
+        <table>
+            <caption>자체 PHP API 인증 (Stage 4)</caption>
+            <tbody>
+                <tr><th scope="row"><label for="php_api_key">API Key</label></th>
+                    <td><input type="text" name="php_api_key" id="php_api_key" value="<?php echo get_text($cred_php['cred_username']); ?>" class="frm_input" maxlength="255"></td></tr>
+                <tr><th scope="row"><label for="php_api_secret">API Secret</label></th>
+                    <td>
+                        <input type="password" name="php_api_secret" id="php_api_secret" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다">
+                        <span class="help_txt"><?php echo $cred_php['masked_hint'] ? '현재 저장된 값: ' . get_text($cred_php['masked_hint']) : '저장된 값 없음'; ?></span>
                     </td></tr>
             </tbody>
         </table>

@@ -46,6 +46,13 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin_extend_s
             </td>
         </tr>
         <tr>
+            <th scope="row"><label for="convert_to_webp">WebP 변환</label></th>
+            <td>
+                <input type="checkbox" name="convert_to_webp" id="convert_to_webp" value="1">
+                <label for="convert_to_webp">업로드 시 WebP 형식으로 변환해 저장합니다(용량 최적화). 이미 WebP 파일이거나 서버가 변환을 지원하지 않으면 원본 형식이 그대로 저장됩니다.</label>
+            </td>
+        </tr>
+        <tr>
             <th scope="row"><label for="is_ai_generated">AI 생성 여부</label></th>
             <td>
                 <input type="checkbox" name="is_ai_generated" id="is_ai_generated" value="1">
