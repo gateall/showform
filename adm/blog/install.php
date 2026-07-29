@@ -14,11 +14,12 @@ $sql_file_v5 = __DIR__ . '/sql/blog_automation_v5.sql';
 $sql_file_v6 = __DIR__ . '/sql/blog_automation_v6.sql';
 $sql_file_v7 = __DIR__ . '/sql/blog_automation_v7.sql';
 $sql_file_v8 = __DIR__ . '/sql/blog_automation_v8.sql';
+$sql_file_v9 = __DIR__ . '/sql/blog_automation_v9.sql';
 
 if (
     !is_file($sql_file_v1) || !is_file($sql_file_v2) || !is_file($sql_file_v3) ||
     !is_file($sql_file_v4) || !is_file($sql_file_v5) || !is_file($sql_file_v6) ||
-    !is_file($sql_file_v7) || !is_file($sql_file_v8)
+    !is_file($sql_file_v7) || !is_file($sql_file_v8) || !is_file($sql_file_v9)
 ) {
     alert('SQL 파일을 찾을 수 없습니다.');
 }
@@ -114,24 +115,42 @@ $v5_installed = bp_install_column_exists($table_prefix, 'posts', 'deleted_at');
 $v6_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'schedule_type');
 $v7_installed = bp_install_table_exists($table_prefix, 'images');
 $v8_installed = bp_install_table_exists($table_prefix, 'category_mappings');
+$v9_installed = bp_install_table_exists($table_prefix, 'naver_packages');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
 $created = array();
 
-if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v5_installed || !$v6_installed || !$v7_installed || !$v8_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_admin_token();
 
-    if (!$v1_installed) {
+    if (isset($_POST['run_all']) || !$v1_installed) {
         $created = array_merge($created, bp_install_run_sql_file($sql_file_v1, $table_prefix));
     }
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v2, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v3, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v4, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v5, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v6, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v7, $table_prefix));
-    $created = array_merge($created, bp_install_run_sql_file($sql_file_v8, $table_prefix));
+    if (isset($_POST['run_all']) || !$v2_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v2, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || !$v3_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v3, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || !$v4_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v4, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || !$v5_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v5, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || !$v6_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v6, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || !$v7_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v7, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || $_POST['run_v8'] || !$v8_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v8, $table_prefix));
+    }
+    if (isset($_POST['run_all']) || $_POST['run_v9'] || !$v9_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v9, $table_prefix));
+    }
 
     $did_install = true;
     
@@ -141,7 +160,7 @@ if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v
         @chmod($blog_img_dir, G5_DIR_PERMISSION);
     }
 }
-$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed;
+$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed && $v9_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -154,26 +173,44 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     &nbsp;&nbsp;포스트: <?php echo $v5_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;예약 발행: <?php echo $v6_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;이미지: <?php echo $v7_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
-    &nbsp;&nbsp;카테고리: <?php echo $v8_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
+    &nbsp;&nbsp;카테고리: <?php echo $v8_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;Naver Pack: <?php echo $v9_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
-    <table>
-        <caption>환경 진단</caption>
-        <tbody>
-            <tr><th scope="row">PHP 버전</th><td><?php echo get_text($diagnostics['php_version']); ?></td></tr>
-            <tr><th scope="row">DB 서버 버전</th><td><?php echo get_text($diagnostics['db_version']); ?></td></tr>
-            <tr><th scope="row">DB 기본 문자셋</th><td><?php echo get_text($diagnostics['db_charset_default']); ?> / <?php echo get_text($diagnostics['db_collation_default']); ?></td></tr>
-            <tr><th scope="row">연결 문자셋</th><td><?php echo get_text($diagnostics['connection_charset']); ?><?php echo $diagnostics['connection_charset'] === 'utf8mb4' ? ' (정상)' : ' <span style="color:#c00;">— utf8mb4가 아닙니다</span>'; ?></td></tr>
-            <tr><th scope="row">mysqli 클라이언트</th><td><?php echo get_text($diagnostics['mysqli_client_version']); ?></td></tr>
-            <tr><th scope="row">필수 확장</th>
-                <td>
-                    <?php foreach ($diagnostics['extensions'] as $ext => $loaded) { ?>
-                        <?php echo get_text($ext) . ': ' . ($loaded ? '있음' : '<span style="color:#c00;">없음</span>') . '&nbsp;&nbsp;'; ?>
-                    <?php } ?>
-                </td></tr>
-        </tbody>
-    </table>
+    <form method="post" action="./install.php">
+        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+        <table>
+            <caption>환경 진단</caption>
+            <tbody>
+                <tr><th scope="row">PHP 버전</th><td><?php echo get_text($diagnostics['php_version']); ?></td></tr>
+                <tr><th scope="row">DB 서버 버전</th><td><?php echo get_text($diagnostics['db_version']); ?></td></tr>
+                <tr><th scope="row">DB 기본 문자셋</th><td><?php echo get_text($diagnostics['db_charset_default']); ?> / <?php echo get_text($diagnostics['db_collation_default']); ?></td></tr>
+                <tr><th scope="row">연결 문자셋</th><td><?php echo get_text($diagnostics['connection_charset']); ?><?php echo $diagnostics['connection_charset'] === 'utf8mb4' ? ' (정상)' : ' <span style="color:#c00;">— utf8mb4가 아닙니다</span>'; ?></td></tr>
+                <tr><th scope="row">mysqli 클라이언트</th><td><?php echo get_text($diagnostics['mysqli_client_version']); ?></td></tr>
+                <tr>
+                    <th scope="row">V8 (Category Mappings) DB 업데이트</th>
+                    <td>
+                        <button type="submit" name="run_v8" value="1" class="btn btn_02">V8 업데이트 실행</button>
+                        <span class="help_txt">category_mappings 테이블</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">V9 (Naver Packages) DB 업데이트</th>
+                    <td>
+                        <button type="submit" name="run_v9" value="1" class="btn btn_02">V9 업데이트 실행</button>
+                        <span class="help_txt">naver_packages 테이블</span>
+                    </td>
+                </tr>
+                <tr><th scope="row">필수 확장</th>
+                    <td>
+                        <?php foreach ($diagnostics['extensions'] as $ext => $loaded) { ?>
+                            <?php echo get_text($ext) . ': ' . ($loaded ? '있음' : '<span style="color:#c00;">없음</span>') . '&nbsp;&nbsp;'; ?>
+                        <?php } ?>
+                    </td></tr>
+            </tbody>
+        </table>
+    </form>
 </div>
 
 <?php if ($already_installed && !$did_install) { ?>

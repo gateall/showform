@@ -286,6 +286,88 @@ class BlogPhpPublisher implements BlogPublisherInterface
     }
 }
 
+// 네이버 블로그 수동 발행 패키지 (Stage 5)
+class BlogNaverPackager implements BlogPublisherInterface
+{
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array
+    {
+        global $g5;
+        $job_id = (int)($post_target_row['job_id'] ?? 0); // dispatch에서 넘겨줘야 함
+        
+        $package_dir = G5_DATA_PATH . '/blog_packages';
+        if (!is_dir($package_dir)) {
+            @mkdir($package_dir, G5_DIR_PERMISSION, true);
+        }
+
+        $filename = 'naver_pkg_' . $site_row['id'] . '_' . $post_target_row['post_id'] . '_' . time() . '.zip';
+        $filepath = $package_dir . '/' . $filename;
+
+        // zip 생성
+        if (!class_exists('ZipArchive')) {
+            return array('ok' => false, 'error' => 'ZipArchive 클래스가 지원되지 않습니다 (PHP 모듈 누락).');
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($filepath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return array('ok' => false, 'error' => 'ZIP 파일을 생성할 수 없습니다.');
+        }
+
+        // 1. content.html
+        $content = $post_target_row['body'] ?? '';
+        $zip->addFromString('content.html', $content);
+
+        // 2. meta.txt
+        $title = $post_target_row['title'] ?? '제목 없음';
+        $excerpt = mb_substr(strip_tags($content), 0, 150);
+        $meta = "제목: {$title}\n카테고리: 미분류\n태그: \n권장 설명: {$excerpt}\n";
+        $zip->addFromString('meta.txt', $meta);
+
+        // 3. 이미지 추출 및 포함
+        $zip->addEmptyDir('images');
+        preg_match_all('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $content, $matches);
+        if (!empty($matches[1])) {
+            $img_idx = 1;
+            foreach ($matches[1] as $img_src) {
+                // 로컬 이미지인지 확인
+                $local_path = '';
+                if (strpos($img_src, G5_URL) === 0) {
+                    $local_path = G5_PATH . str_replace(G5_URL, '', $img_src);
+                } elseif (strpos($img_src, 'http') !== 0) {
+                    // 상대 경로나 절대 경로
+                    $local_path = $_SERVER['DOCUMENT_ROOT'] . $img_src;
+                }
+
+                if ($local_path && is_file($local_path)) {
+                    $ext = pathinfo($local_path, PATHINFO_EXTENSION);
+                    $new_name = 'images/img_' . sprintf('%03d', $img_idx) . '.' . $ext;
+                    $zip->addFile($local_path, $new_name);
+                    $img_idx++;
+                }
+            }
+        }
+
+        $zip->close();
+
+        // g5_blog_naver_packages 에 기록
+        $tbl_pkg = bp_table('naver_packages');
+        sql_query(" insert into {$tbl_pkg} 
+                    set post_target_id = '" . (int)$post_target_row['id'] . "',
+                        job_id = '{$job_id}',
+                        package_filename = '" . sql_real_escape_string($filename) . "',
+                        package_path = '" . sql_real_escape_string($filepath) . "',
+                        created_at = NOW() ");
+                        
+        $pkg_id = sql_insert_id();
+
+        return array(
+            'ok' => true,
+            'external_post_id' => 'pkg_' . $pkg_id,
+            'published_url' => G5_ADMIN_URL . '/blog/naver_package_download.php?id=' . $pkg_id,
+            'error' => ''
+        );
+    }
+}
+
 // 워드프레스 사이트 연결 테스트 — 실제 성공/실패를 있는 그대로 반환한다.
 // BLOG_AUTOMATION_SECURITY.md가 명시한 전례(PlusTok AI 연결 테스트가 실패해도 항상 "성공"을
 // 반환한 버그)를 반복하지 않기 위해, HTTP 상태와 응답을 그대로 판정에 사용하고 절대 낙관적으로
@@ -341,6 +423,8 @@ function bp_get_publisher(string $platform): BlogPublisherInterface
         return new BlogWordPressPublisher();
     } elseif ($platform === 'php') {
         return new BlogPhpPublisher();
+    } elseif ($platform === 'naver') {
+        return new BlogNaverPackager();
     }
     return new BlogMockPublisher();
 }
@@ -466,6 +550,7 @@ function bp_dispatch_publish_job(int $post_target_id, string $actor): array
     }
 
     $publisher = bp_get_publisher($site['platform']);
+    $target['job_id'] = $job['id'];
     $result = $publisher->publish($target, $site, $cred);
 
     $attempt_no = (int) $job['attempt_count'] + 1;

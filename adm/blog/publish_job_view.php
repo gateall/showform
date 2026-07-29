@@ -101,7 +101,11 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin_extend_s
                 <th scope="row">외부 게시물 URL</th>
                 <td>
                     <?php if ($job['published_url']) { ?>
-                        <a href="<?php echo get_text($job['published_url']); ?>" target="_blank"><?php echo get_text($job['published_url']); ?></a>
+                        <?php if ($job['platform'] === 'naver') { ?>
+                            <a href="<?php echo get_text($job['published_url']); ?>" class="btn btn_03">네이버 패키지 다운로드</a>
+                        <?php } else { ?>
+                            <a href="<?php echo get_text($job['published_url']); ?>" target="_blank"><?php echo get_text($job['published_url']); ?></a>
+                        <?php } ?>
                         (ID: <?php echo get_text($job['external_post_id']); ?>)
                     <?php } else { ?>
                         -
