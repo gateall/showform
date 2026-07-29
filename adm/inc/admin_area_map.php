@@ -16,6 +16,7 @@ function bp_sf_admin_area_map(): array
         'menu500' => 'core',    // 쇼핑몰관리 2/2
         'menu350' => 'content', // 랜딩관리(레거시 플랫 경로)
         'menu360' => 'content', // 블로그자동화 + 광고주 + 발행/보고서/설정 + 랜딩 재사용 링크
+        'menu700' => 'content', // 쇼폼(제작 사례) — 실제 CRUD 화면 있음
         'menu900' => 'content', // 랜딩관리
         'menu910' => 'content', // 문의관리
         'menu920' => 'content', // 랜딩 AI관리
@@ -25,11 +26,13 @@ function bp_sf_admin_area_map(): array
 // content 영역 항목을 신규 업무 상단 메뉴("쇼폼"/"블로그 자동화"/"랜딩페이지" 3개)로
 // 재분류한다. 각 항목의 auth 코드(등록 배열의 4번째 값)를 명시적으로 매핑한다 —
 // 코드 숫자 규칙에 기대지 않는다. 매핑에 없는 항목은 그룹별 기본값으로 떨어진다.
-// "쇼폼"은 실제 화면이 아직 없어 매핑 대상이 없다 — 화면에는 자동으로 생략된다
-// (없는 기능을 가짜 링크로 만들지 않는다, 필요없는 메뉴는 당분간 만들지 않는다).
 function bp_sf_content_vertical_map(): array
 {
     return array(
+        'showform' => '쇼폼',
+        'showform_portfolio_list' => '쇼폼',
+        'showform_portfolio_form' => '쇼폼',
+        'showform_install' => '쇼폼',
         'blog' => '블로그 자동화',
         'blog_dashboard' => '블로그 자동화',
         'blog_post_builder' => '블로그 자동화',
@@ -94,6 +97,7 @@ function bp_sf_group_fallback_vertical(): array
 function bp_sf_vertical_dashboard_code(): array
 {
     return array(
+        '쇼폼' => 'showform_portfolio_list',
         '블로그 자동화' => 'blog_dashboard',
         '랜딩페이지' => 'landing_list',
     );
