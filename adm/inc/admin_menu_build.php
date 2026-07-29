@@ -1,124 +1,136 @@
 <?php
 if (!defined('_GNUBOARD_')) exit;
 
-// admin.head.php가 사용하는 실제 $menu(admin.lib.php가 admin.menu*.php를 글롭으로 읽어
-// 채운 원본 그누보드 메뉴 전역)를 "기본 관리자" 사이드바용 데이터와 "쇼폼·콘텐츠 운영"
-// 상단 가로 메뉴용 데이터로 나눠 만든다. 항목 단위 권한 검사는 기존 print_menu2()와
-// 완전히 동일한 방식을 유지한다 — 화면에서 숨기는 것과 별개로 각 페이지 자체의
-// auth_check_menu() 서버 검사가 그대로 최종 방어선이다.
+// admin.head.php의 네이티브 <nav id="gnb"> 메뉴(화면 그대로 유지)와, 그 아래 별도로
+// 붙는 "쇼폼/블로그 자동화/랜딩페이지" 상단 전환 메뉴에 쓸 데이터를 실제 $menu/$amenu
+// (admin.lib.php가 admin.menu*.php를 글롭으로 읽어 채운 원본)에서 만든다.
+// 항목 단위 권한 검사는 기존 print_menu2()와 완전히 동일한 방식을 유지한다.
 require_once __DIR__ . '/admin_area_map.php';
 
-function bp_sf_build_menus(array $menu, array $auth, string $is_admin): array
+// 네이티브 <nav id="gnb"> 루프가 도는 $amenu를 core로 분류된 그룹만 남도록 거른다.
+// $amenu/$menu 전역 자체는 건드리지 않는다(다른 코드가 원본에 의존할 수 있음).
+function bp_sf_filter_core_amenu(array $amenu, array $area_map): array
+{
+    $filtered = array();
+    foreach ($amenu as $key => $file) {
+        $area = isset($area_map['menu' . $key]) ? $area_map['menu' . $key] : 'core';
+        if ($area === 'core') {
+            $filtered[$key] = $file;
+        }
+    }
+    return $filtered;
+}
+
+// "쇼폼/블로그 자동화/랜딩페이지" 각 수직영역의 대시보드 링크 + 사이트맵형 목록을 만든다.
+function bp_sf_build_content_verticals(array $menu, array $auth, string $is_admin): array
 {
     $area_map = bp_sf_admin_area_map();
-    $bucket_map = bp_sf_content_bucket_map();
-    $fallback_bucket = bp_sf_group_fallback_bucket();
+    $vertical_map = bp_sf_content_vertical_map();
+    $fallback_vertical = bp_sf_group_fallback_vertical();
+    $dashboard_code = bp_sf_vertical_dashboard_code();
 
-    $core_menus = array();
-    $content_items_by_bucket = array();
+    $items_by_vertical = array();
 
     foreach ($menu as $menu_key => $group) {
-        if (!isset($group[0])) {
+        $area = isset($area_map[$menu_key]) ? $area_map[$menu_key] : 'core';
+        if ($area !== 'content' || !isset($group[0])) {
             continue;
         }
-        $area = isset($area_map[$menu_key]) ? $area_map[$menu_key] : 'core';
-
-        $subs = array();
         for ($i = 1; $i < count($group); $i++) {
             if (!isset($group[$i])) {
                 continue;
             }
             $item = $group[$i];
             $auth_code = $item[0];
-            // bucket_map은 4번째 값(각 파일이 auth_check_menu()에서 실제 쓰는 서술형 코드,
-            // 예: 'blog_advertiser')을 키로 쓴다 — 권한 검사에 쓰는 1번째 숫자 코드와는 다른 값이다.
             $label_code = isset($item[3]) ? $item[3] : $auth_code;
             if ($is_admin != 'super' && (!array_key_exists($auth_code, $auth) || !strstr($auth[$auth_code], 'r'))) {
                 continue;
             }
-            $entry = array('code' => $auth_code, 'title' => $item[1], 'href' => $item[2]);
-            $subs[] = $entry;
 
-            if ($area === 'content') {
-                $bucket = isset($bucket_map[$label_code])
-                    ? $bucket_map[$label_code]
-                    : (isset($fallback_bucket[$menu_key]) ? $fallback_bucket[$menu_key] : '기타');
-                if (!isset($content_items_by_bucket[$bucket])) {
-                    $content_items_by_bucket[$bucket] = array();
-                }
-                // 랜딩 재사용 링크처럼 같은 화면이 여러 그룹에 중복 등록된 경우 href 기준으로 한 번만.
-                $dup = false;
-                foreach ($content_items_by_bucket[$bucket] as $existing) {
-                    if ($existing['href'] === $entry['href']) {
-                        $dup = true;
-                        break;
-                    }
-                }
-                if (!$dup) {
-                    $content_items_by_bucket[$bucket][] = $entry;
+            $vertical = isset($vertical_map[$label_code])
+                ? $vertical_map[$label_code]
+                : (isset($fallback_vertical[$menu_key]) ? $fallback_vertical[$menu_key] : null);
+            if ($vertical === null) {
+                continue;
+            }
+
+            $entry = array('code' => $label_code, 'title' => $item[1], 'href' => $item[2]);
+            if (!isset($items_by_vertical[$vertical])) {
+                $items_by_vertical[$vertical] = array();
+            }
+            $dup = false;
+            foreach ($items_by_vertical[$vertical] as $existing) {
+                if ($existing['href'] === $entry['href']) {
+                    $dup = true;
+                    break;
                 }
             }
-        }
-
-        if ($area === 'core' && count($subs) > 0) {
-            $core_menus[$menu_key] = array('title' => $group[0][1], 'subs' => $subs);
-        }
-    }
-
-    $bucket_order = bp_sf_content_bucket_order();
-    $content_buckets = array();
-    foreach ($bucket_order as $bucket_label) {
-        if (!empty($content_items_by_bucket[$bucket_label])) {
-            $content_buckets[$bucket_label] = $content_items_by_bucket[$bucket_label];
+            if (!$dup) {
+                $items_by_vertical[$vertical][] = $entry;
+            }
         }
     }
-    // 매핑표에 없는 새 항목이 실수로 조용히 사라지지 않도록 '기타'는 있으면 맨 뒤에 노출.
-    if (!empty($content_items_by_bucket['기타'])) {
-        $content_buckets['기타'] = $content_items_by_bucket['기타'];
+
+    $verticals = array();
+    foreach (bp_sf_content_vertical_order() as $label) {
+        if (empty($items_by_vertical[$label])) {
+            continue; // 화면이 없는 영역(예: 쇼폼)은 만들지 않는다.
+        }
+        $all_items = $items_by_vertical[$label];
+        $dash_code = isset($dashboard_code[$label]) ? $dashboard_code[$label] : null;
+        $dashboard = null;
+        $items = array();
+        foreach ($all_items as $entry) {
+            if ($dash_code !== null && $entry['code'] === $dash_code && $dashboard === null) {
+                $dashboard = $entry;
+                continue;
+            }
+            $items[] = $entry;
+        }
+        $verticals[$label] = array('dashboard' => $dashboard, 'items' => $items);
     }
 
-    return array('core' => $core_menus, 'content' => $content_buckets);
+    return $verticals;
 }
 
-// 현재 페이지의 $sub_menu 코드가 어느 그룹에 속하는지로 현재 운영 영역을 판정한다.
-// 별도 세션·쿠키 없이 페이지 자체의 등록 코드만으로 항상 정확하게 판정된다.
-// 매칭되는 코드가 없으면 기존 그누보드 화면과의 호환을 위해 기본값은 'core'.
-function bp_sf_resolve_current_area(array $menu, array $area_map, $sub_menu): string
+// 현재 페이지가 어느 수직영역(쇼폼/블로그 자동화/랜딩페이지)에 속하는지 판정 —
+// 상단 전환 메뉴에서 현재 위치를 강조 표시하는 용도. 실제 접근 권한과는 무관하다.
+// $sub_menu 코드 매칭을 우선 시도하고, 여러 blog/landing 파일이 실제 등록 코드와
+// 다른 $sub_menu를 선언하는 경우(확인된 기존 드리프트)를 위해 스크립트 경로를
+// 보조 신호로 사용한다.
+function bp_sf_resolve_current_vertical(array $menu, $sub_menu): ?string
 {
+    $area_map = bp_sf_admin_area_map();
+    $vertical_map = bp_sf_content_vertical_map();
+    $fallback_vertical = bp_sf_group_fallback_vertical();
+
     if ($sub_menu !== null && $sub_menu !== '') {
         foreach ($menu as $menu_key => $group) {
+            if (!isset($area_map[$menu_key]) || $area_map[$menu_key] !== 'content') {
+                continue;
+            }
             for ($i = 1; $i < count($group); $i++) {
-                if (isset($group[$i][0]) && $group[$i][0] == $sub_menu) {
-                    return isset($area_map[$menu_key]) ? $area_map[$menu_key] : 'core';
+                if (!isset($group[$i][0]) || $group[$i][0] != $sub_menu) {
+                    continue;
                 }
+                $label_code = isset($group[$i][3]) ? $group[$i][3] : $group[$i][0];
+                if (isset($vertical_map[$label_code])) {
+                    return $vertical_map[$label_code];
+                }
+                return isset($fallback_vertical[$menu_key]) ? $fallback_vertical[$menu_key] : null;
             }
         }
     }
 
-    // 여러 blog/*.php, landing/*.php 파일이 스스로 선언한 $sub_menu 코드가 실제 등록된
-    // 코드와 어긋나 있는 경우가 다수 확인됨(예: project_list.php는 '360500'을 선언하지만
-    // admin.menu360.php에 등록된 코드는 '360400') — 코드 매칭이 실패하면 현재 스크립트가
-    // 어느 디렉터리에서 실행 중인지로 한 번 더 판정한다. 신규 업무 파일은 전부
-    // adm/blog/ 또는 adm/landing/ 아래에 있으므로 코드 숫자 드리프트와 무관하게 안정적이다.
     $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : (isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
-    if ($script !== '' && (strpos($script, '/blog/') !== false || strpos($script, '/landing/') !== false)) {
-        return 'content';
-    }
-
-    return 'core';
-}
-
-// "쇼폼·콘텐츠 운영" 전환 버튼이 이동할 고정 대시보드 주소.
-// blog_dashboard 코드가 실제로 등록되어 있으면 그 URL을 쓰고, 없으면 콘텐츠 프로젝트
-// 목록으로 안전하게 대체한다 — 중복 대시보드를 새로 만들지 않는다.
-function bp_sf_content_dashboard_url(array $menu): string
-{
-    foreach ($menu as $group) {
-        for ($i = 1; $i < count($group); $i++) {
-            if (isset($group[$i][0]) && $group[$i][0] === 'blog_dashboard') {
-                return $group[$i][2];
-            }
+    if ($script !== '') {
+        if (strpos($script, '/blog/') !== false) {
+            return '블로그 자동화';
+        }
+        if (strpos($script, '/landing/') !== false) {
+            return '랜딩페이지';
         }
     }
-    return G5_ADMIN_URL . '/blog/project_list.php';
+
+    return null;
 }

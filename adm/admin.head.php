@@ -85,6 +85,19 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
     $adm_menu_cookie['gnb'] = 'gnb_small';
     $adm_menu_cookie['btn_gnb'] = 'btn_gnb_open';
 }
+
+// 신규 업무(쇼폼/블로그 자동화/랜딩페이지)는 네이티브 관리자 메뉴(#gnb, 아래)와
+// 완전히 분리된 별도 상단 바로 그린다 — 네이티브 메뉴는 그누보드 원본 구조 그대로
+// 유지하고, 그 안에 신규 메뉴가 섞여 들어가지 않도록 $amenu를 core 그룹만 남도록 거른다.
+require_once __DIR__ . '/inc/admin_menu_build.php';
+
+$sf_menu_all = isset($menu) && is_array($menu) ? $menu : array();
+$sf_auth_all = isset($auth) && is_array($auth) ? $auth : array();
+$sf_amenu_all = isset($amenu) && is_array($amenu) ? $amenu : array();
+
+$sf_core_amenu = bp_sf_filter_core_amenu($sf_amenu_all, bp_sf_admin_area_map());
+$sf_content_verticals = bp_sf_build_content_verticals($sf_menu_all, $sf_auth_all, $is_admin);
+$sf_current_vertical = bp_sf_resolve_current_vertical($sf_menu_all, isset($sub_menu) ? $sub_menu : null);
 ?>
 
 <script>
@@ -112,163 +125,106 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 
 <div id="to_content"><a href="#container">본문 바로가기</a></div>
 
-<?php
-// 관리자 메뉴를 "기본 관리자"(그누보드/영카트 원본)와 "쇼폼·콘텐츠 운영"(신규 업무)
-// 두 영역으로 완전히 분리해 그린다. 실제 $menu(admin.lib.php가 admin.menu*.php를
-// 글롭으로 읽어 채운 원본)를 그대로 쓰고, 어느 그룹이 어느 영역인지는
-// adm/inc/admin_area_map.php의 명시적 설정으로만 판단한다(코드 숫자 추측 금지).
-require_once __DIR__ . '/inc/admin_menu_build.php';
+<header id="hd">
+    <h1><?php echo $config['cf_title'] ?></h1>
+    <div id="hd_top">
+        <button type="button" id="btn_gnb" class="btn_gnb_close <?php echo $adm_menu_cookie['btn_gnb']; ?>">메뉴</button>
+        <div id="logo"><a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img/logo.png" alt="<?php echo get_text($config['cf_title']); ?> 관리자"></a></div>
 
-$sf_menu = isset($menu) && is_array($menu) ? $menu : array();
-$sf_auth = isset($auth) && is_array($auth) ? $auth : array();
-$sf_built = bp_sf_build_menus($sf_menu, $sf_auth, $is_admin);
-$sf_core_menus = $sf_built['core'];
-$sf_content_buckets = $sf_built['content'];
-$sf_current_area = bp_sf_resolve_current_area($sf_menu, bp_sf_admin_area_map(), isset($sub_menu) ? $sub_menu : null);
-$sf_content_dashboard_url = bp_sf_content_dashboard_url($sf_menu);
+        <div id="tnb">
+            <ul>
+                <?php if (defined('G5_USE_SHOP') && G5_USE_SHOP) { ?>
+                    <li class="tnb_li"><a href="<?php echo G5_SHOP_URL ?>/" class="tnb_shop" target="_blank" title="쇼핑몰 바로가기">쇼핑몰 바로가기</a></li>
+                <?php } ?>
+                <li class="tnb_li"><a href="<?php echo G5_URL ?>/" class="tnb_community" target="_blank" title="커뮤니티 바로가기">커뮤니티 바로가기</a></li>
+                <li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/service.php" class="tnb_service">부가서비스</a></li>
+                <li class="tnb_li"><button type="button" class="tnb_mb_btn">관리자<span class="./img/btn_gnb.png">메뉴열기</span></button>
+                    <ul class="tnb_mb_area">
+                        <li><a href="<?php echo G5_ADMIN_URL ?>/member_form.php?w=u&amp;mb_id=<?php echo $member['mb_id'] ?>">관리자정보</a></li>
+                        <li id="tnb_logout"><a href="<?php echo G5_BBS_URL ?>/logout.php">로그아웃</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <nav id="gnb" class="gnb_large <?php echo $adm_menu_cookie['gnb']; ?>">
+        <h2>관리자 주메뉴</h2>
+        <ul class="gnb_ul">
+            <?php
+            $jj = 1;
+            foreach ($sf_core_amenu as $key => $value) {
+                $href1 = $href2 = '';
 
-require __DIR__ . '/inc/admin_area_nav.php';
-require __DIR__ . '/inc/admin_drawer_menu.php';
-?>
+                if (isset($menu['menu' . $key][0][2]) && $menu['menu' . $key][0][2]) {
+                    $href1 = '<a href="' . $menu['menu' . $key][0][2] . '" class="gnb_1da">';
+                    $href2 = '</a>';
+                } else {
+                    continue;
+                }
 
+                $current_class = "";
+                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu' . $key][0][0], 0, 3))) {
+                    $current_class = " on";
+                }
+
+                $button_title = $menu['menu' . $key][0][1];
+            ?>
+                <li class="gnb_li<?php echo $current_class; ?>">
+                    <button type="button" class="btn_op menu-<?php echo $key; ?> menu-order-<?php echo $jj; ?>" title="<?php echo $button_title; ?>"><?php echo $button_title; ?></button>
+                    <div class="gnb_oparea_wr">
+                        <div class="gnb_oparea">
+                            <h3><?php echo $menu['menu' . $key][0][1]; ?></h3>
+                            <?php echo print_menu1('menu' . $key, 1); ?>
+                        </div>
+                    </div>
+                </li>
+            <?php
+                $jj++;
+            }     //end foreach
+            ?>
+        </ul>
+    </nav>
+
+</header>
 <script>
-jQuery(function($) {
-    var $btnGnb = $('#sf-btn-gnb');
-    var $sidebar = $('#sf-admin-sidebar');
-    var $overlay = $('#sf-sidebar-overlay');
-    var $body = $('body');
+    jQuery(function($) {
 
-    function closeSidebar() {
-        $sidebar.removeClass('active');
-        $overlay.removeClass('active');
-        $body.css('overflow', '');
-        $btnGnb.attr('aria-expanded', 'false');
-        $btnGnb.focus();
-    }
+        var menu_cookie_key = 'g5_admin_btn_gnb';
 
-    function openSidebar() {
-        $sidebar.addClass('active');
-        $overlay.addClass('active');
-        $body.css('overflow', 'hidden');
-        $btnGnb.attr('aria-expanded', 'true');
-    }
+        $(".tnb_mb_btn").click(function() {
+            $(".tnb_mb_area").toggle();
+        });
 
-    $btnGnb.on('click', function() {
-        if ($sidebar.hasClass('active')) {
-            closeSidebar();
-        } else {
-            openSidebar();
-        }
+        $("#btn_gnb").click(function() {
+
+            var $this = $(this);
+
+            try {
+                if (!$this.hasClass("btn_gnb_open")) {
+                    set_cookie(menu_cookie_key, 1, 60 * 60 * 24 * 365);
+                } else {
+                    delete_cookie(menu_cookie_key);
+                }
+            } catch (err) {}
+
+            $("#container").toggleClass("container-small");
+            $("#gnb").toggleClass("gnb_small");
+            $this.toggleClass("btn_gnb_open");
+
+        });
+
+        $(".gnb_ul li .btn_op").click(function() {
+            $(this).parent().addClass("on").siblings().removeClass("on");
+        });
+
     });
-
-    $('#sf-btn-close, #sf-sidebar-overlay').on('click', function() {
-        closeSidebar();
-    });
-
-    $(document).keyup(function(e) {
-        if (e.key === "Escape" && $sidebar.hasClass('active')) {
-            closeSidebar();
-        }
-    });
-
-    // 드로어 아코디언 — 한 번에 하나의 1차 메뉴만 펼침(§7 모바일 요구사항)
-    $('.sf-menu-btn').on('click', function() {
-        var $btn = $(this);
-        var $group = $btn.parent('.sf-menu-group');
-        var $sub = $group.find('.sf-menu-sub');
-        var isExpanded = $btn.attr('aria-expanded') === 'true';
-
-        $('.sf-menu-group').not($group).removeClass('active')
-            .find('.sf-menu-btn').attr('aria-expanded', 'false');
-        $('.sf-menu-group').not($group).find('.sf-menu-sub').slideUp(200);
-
-        $group.toggleClass('active', !isExpanded);
-        $btn.attr('aria-expanded', !isExpanded);
-        $sub.slideToggle(200);
-    });
-
-    // 드로어 메뉴 링크 클릭 후 자동 닫힘(§7)
-    $('.sf-menu-link').on('click', function() {
-        closeSidebar();
-    });
-
-    // PC 쇼폼·콘텐츠 운영 가로 메뉴 — 클릭으로 열고닫기(호버 전용 금지, 터치 접근성)
-    $('.sf-content-nav-btn').on('click', function(e) {
-        e.stopPropagation();
-        var $btn = $(this);
-        var $item = $btn.closest('.sf-content-nav-item');
-        var isExpanded = $btn.attr('aria-expanded') === 'true';
-
-        $('.sf-content-nav-item').not($item).removeClass('active')
-            .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
-
-        $item.toggleClass('active', !isExpanded);
-        $btn.attr('aria-expanded', !isExpanded);
-    });
-
-    $(document).on('click', function() {
-        $('.sf-content-nav-item').removeClass('active')
-            .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
-    });
-
-    $(document).keyup(function(e) {
-        if (e.key === 'Escape') {
-            $('.sf-content-nav-item').removeClass('active')
-                .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
-        }
-    });
-
-    // 현재 위치 강조 — 링크 자체의(브라우저가 정규화한) pathname/search로 비교하므로
-    // href 작성 방식이나 쿼리스트링 필터 링크(?status=draft 등)에도 안정적으로 동작한다.
-    var currentPath = window.location.pathname;
-    var currentSearch = window.location.search;
-    var isForm = currentPath.indexOf('_form.php') !== -1;
-    var listPath = currentPath.replace('_form.php', '_list.php');
-
-    $('.sf-menu-link, .sf-content-nav-link').each(function() {
-        var href = $(this).attr('href');
-        if (!href || href === '#') return;
-
-        var linkPath = this.pathname;
-        var linkSearch = this.search;
-
-        var isMatch = linkSearch
-            ? (linkPath === currentPath && linkSearch === currentSearch)
-            : (linkPath === currentPath || (isForm && linkPath === listPath));
-
-        if (isMatch) {
-            $(this).addClass('active').attr('aria-current', 'page');
-
-            var $drawerGroup = $(this).closest('.sf-menu-group');
-            if ($drawerGroup.length) {
-                $drawerGroup.addClass('active');
-                $drawerGroup.find('.sf-menu-btn').attr('aria-expanded', 'true');
-                $drawerGroup.find('.sf-menu-sub').show();
-            }
-
-            var $navItem = $(this).closest('.sf-content-nav-item');
-            if ($navItem.length) {
-                $navItem.find('.sf-content-nav-btn').addClass('sf-current-bucket');
-            }
-        }
-    });
-
-    if ($('.sf-menu-link.active').length) {
-        var top = $('.sf-menu-link.active').offset().top;
-        if (top > $(window).height()) {
-            $sidebar.animate({ scrollTop: top - 100 }, 300);
-        }
-    }
-});
 </script>
 
-<div id="wrapper" class="sf-area-<?php echo $sf_current_area; ?>">
+<?php require __DIR__ . '/inc/admin_content_switch.php'; ?>
+
+<div id="wrapper">
 
     <div id="container" class="<?php echo $adm_menu_cookie['container']; ?>">
 
-<h1 id="container_title"><?php echo $g5['title'] ?></h1>
-
-<?php if ($sf_current_area === 'content') {
-    require __DIR__ . '/inc/admin_content_nav.php';
-} ?>
+        <h1 id="container_title"><?php echo $g5['title'] ?></h1>
         <div class="container_wr">

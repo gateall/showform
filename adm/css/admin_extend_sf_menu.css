@@ -1,307 +1,29 @@
 @charset "UTF-8";
 
 /* ========================================================
-   ShowForm Admin Menu - Mobile First Design
-   기본 관리자(그누보드/영카트 원본) / 쇼폼·콘텐츠 운영(신규 업무) 영역 분리 구조.
+   ShowForm Admin — 네이티브 그누보드 관리자 메뉴(#hd, #gnb)는 그대로 두고,
+   신규 업무(쇼폼/블로그 자동화/랜딩페이지) 전용 상단 전환 메뉴만 별도로 스타일한다.
 ======================================================== */
 
-/* 1. Header (Mobile First) */
-.sf-admin-header {
-    position: sticky;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 56px;
-    background: #fff;
+/* 1. 신규 업무 상단 전환 메뉴 (.sf-vswitch) */
+.sf-vswitch {
+    background: #f7f8fa;
     border-bottom: 1px solid #e5e5e5;
+}
+
+.sf-vswitch-tabs {
+    list-style: none;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    z-index: 1000;
-    box-sizing: border-box;
-    gap: 8px;
-}
-
-.sf-header-left {
-    display: flex;
-    align-items: center;
-    flex: 0 0 auto;
-}
-
-.sf-btn-gnb {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #333;
-    cursor: pointer;
-    margin-right: 12px;
-    min-width: 48px;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sf-header-logo {
-    display: inline-flex;
-    align-items: center;
-}
-
-.sf-header-logo img {
-    height: 28px;
-    vertical-align: middle;
-}
-
-/* 2. 영역 전환 스위치 (기본 관리자 / 쇼폼·콘텐츠 운영) */
-.sf-area-switch {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow-x: auto;
-}
-
-.sf-area-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
+    flex-wrap: wrap;
+    margin: 0;
     padding: 0 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #666;
-    text-decoration: none;
-    white-space: nowrap;
-    border-bottom: 2px solid transparent;
-    flex: 0 0 auto;
 }
 
-.sf-area-btn:hover {
-    background: #f5f5f5;
-    color: #222;
-}
-
-.sf-area-btn.active {
-    color: #0046cc;
-    background: #eef2fa;
-    border-bottom-color: #0046cc;
-    font-weight: 700;
-}
-
-.sf-header-right {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    flex: 0 0 auto;
-}
-
-.sf-header-right a {
-    color: #666;
-    font-size: 20px;
-    text-decoration: none;
-    margin-left: 12px;
-    min-width: 44px;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-}
-
-/* 모바일: 아이디가 길어도 헤더가 깨지지 않도록 말줄임 처리, PC에서만 전체 문구 노출 */
-.sf-admin-whoami {
-    display: none;
-}
-
-@media (min-width: 480px) {
-    .sf-admin-whoami {
-        display: inline-block;
-        font-size: 13px;
-        color: #666;
-        max-width: 140px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-}
-
-@media (min-width: 769px) {
-    .sf-admin-whoami {
-        max-width: 240px;
-        font-size: 14px;
-    }
-}
-
-/* 3. Sidebar Overlay (Mobile) */
-.sf-sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1001;
-}
-
-.sf-sidebar-overlay.active {
-    display: block;
-}
-
-/* 4. Sidebar / 모바일 드로어 (Mobile First) */
-.sf-admin-sidebar {
-    position: fixed;
-    top: 0;
-    left: -340px; /* Hidden by default */
-    width: 86%;
-    max-width: 340px;
-    height: 100%;
-    background: #fff;
-    z-index: 1002;
-    overflow-y: auto;
-    transition: left 0.3s ease;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-}
-
-.sf-admin-sidebar.active {
-    left: 0;
-}
-
-.sf-sidebar-header {
-    padding: 16px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.sf-sidebar-header h2 {
-    margin: 0;
-    font-size: 18px;
-    color: #333;
-}
-
-.sf-btn-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: #999;
-    cursor: pointer;
-    min-width: 48px;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* 5. Menu List (드로어 아코디언 — 기본 관리자/쇼폼 운영 공용) */
-.sf-menu-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sf-menu-group {
-    border-bottom: 1px solid #f5f5f5;
-}
-
-.sf-menu-btn {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 0 16px;
-    min-height: 48px;
-    background: #fff;
-    border: none;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    text-align: left;
-    cursor: pointer;
-    box-sizing: border-box;
-}
-
-.sf-menu-btn:hover {
-    background: #f9f9f9;
-}
-
-.sf-menu-btn i.fa-chevron-down {
-    transition: transform 0.3s;
-    color: #ccc;
-    font-size: 14px;
-}
-
-.sf-menu-group.active .sf-menu-btn i.fa-chevron-down {
-    transform: rotate(180deg);
-}
-
-.sf-menu-sub {
-    display: none;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    background: #fcfcfc;
-}
-
-.sf-menu-group.active .sf-menu-sub {
-    display: block;
-}
-
-.sf-menu-sub li {
-    margin: 0;
-}
-
-.sf-menu-link {
-    display: flex;
-    align-items: center;
-    padding: 0 16px 0 32px;
-    min-height: 48px;
-    color: #555;
-    text-decoration: none;
-    font-size: 15px;
-    border-left: 4px solid transparent;
-    box-sizing: border-box;
-}
-
-.sf-menu-link:hover {
-    background: #f5f5f5;
-    color: #111;
-}
-
-.sf-menu-link.active {
-    background: #eef2fa;
-    color: #0046cc;
-    border-left-color: #0046cc;
-    font-weight: 600;
-}
-
-/* 6. 쇼폼·콘텐츠 운영 PC 가로 1차/2차 메뉴 (좌측 사이드바 대신 사용, §8) */
-.sf-content-nav {
-    position: sticky;
-    top: 56px;
-    z-index: 900;
-    background: #fbfbfb;
-    border-bottom: 1px solid #e5e5e5;
-    overflow-x: auto;
-}
-
-.sf-content-nav-list {
-    list-style: none;
-    display: flex;
-    margin: 0;
-    padding: 0 8px;
-}
-
-.sf-content-nav-item {
+.sf-vswitch-tab-item {
     position: relative;
-    flex: 0 0 auto;
 }
 
-.sf-content-nav-btn {
+.sf-vswitch-tab {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -316,116 +38,103 @@
     white-space: nowrap;
 }
 
-.sf-content-nav-btn i {
+.sf-vswitch-tab i {
     font-size: 11px;
     color: #999;
+    transition: transform 0.2s;
 }
 
-.sf-content-nav-btn.sf-current-bucket,
-.sf-content-nav-item.active .sf-content-nav-btn {
+.sf-vswitch-tab.sf-open i {
+    transform: rotate(180deg);
+}
+
+.sf-vswitch-tab.sf-current,
+.sf-vswitch-tab.sf-open {
     color: #0046cc;
 }
 
-.sf-content-nav-flyout {
+.sf-vswitch-panel {
     display: none;
     position: absolute;
     left: 0;
     top: 100%;
-    min-width: 180px;
-    max-width: 320px;
+    min-width: 240px;
+    max-width: 90vw;
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 6px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    list-style: none;
-    margin: 4px 0 0;
-    padding: 6px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 10px;
     z-index: 950;
 }
 
-.sf-content-nav-item.active .sf-content-nav-flyout {
+.sf-vswitch-panel.active {
     display: block;
 }
 
-.sf-content-nav-link {
-    display: block;
-    padding: 8px 14px;
+.sf-vswitch-dashboard-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 10px;
+    margin-bottom: 6px;
+    background: #eef2fa;
+    border-radius: 4px;
+    color: #0046cc;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.sf-vswitch-dashboard-link:hover {
+    background: #e2eaf8;
+}
+
+/* 사이트맵형 목록 — 부메뉴 전체를 한눈에 보여준다 */
+.sf-vswitch-sitemap {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px 8px;
+}
+
+.sf-vswitch-link {
+    display: flex;
+    align-items: center;
     min-height: 40px;
-    line-height: 24px;
+    padding: 0 10px;
     color: #444;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
+    border-radius: 4px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.sf-content-nav-link:hover {
+.sf-vswitch-link:hover {
     background: #f5f5f5;
     color: #111;
 }
 
-.sf-content-nav-link.active {
+.sf-vswitch-link.active {
     color: #0046cc;
     font-weight: 600;
     background: #eef2fa;
 }
 
-/* 모바일에서는 PC 가로 메뉴 대신 상단 햄버거로 여는 드로어를 쓴다 */
-.sf-content-nav {
-    display: none;
-}
-
-/* 7. PC Extension (769px and above) */
-@media (min-width: 769px) {
-    .sf-btn-gnb {
-        display: none; /* Hide hamburger on PC */
+@media (max-width: 480px) {
+    .sf-vswitch-sitemap {
+        grid-template-columns: 1fr;
     }
-
-    .sf-sidebar-overlay {
-        display: none !important; /* Never show overlay on PC */
-    }
-
-    .sf-btn-close {
-        display: none; /* Hide close button on PC */
-    }
-
-    .sf-content-nav {
-        display: block;
-    }
-
-    /* 기본 관리자 영역만 PC에서 좌측 고정 사이드바를 쓴다(§5, §8) */
-    .sf-admin-header.sf-area-core {
-        left: 260px;
-        width: calc(100% - 260px);
-    }
-
-    .sf-admin-sidebar.sf-area-core {
-        left: 0;
-        width: 260px;
-        border-right: 1px solid #e5e5e5;
-        box-shadow: none;
-        position: fixed;
-    }
-
-    .sf-sidebar-header {
-        height: 56px;
-        box-sizing: border-box;
-    }
-
-    #wrapper.sf-area-core {
-        padding-left: 260px;
-    }
-
-    /* 쇼폼·콘텐츠 운영 영역은 좌측 메뉴를 쓰지 않으므로 드로어를 화면 밖에 완전히 둔다 */
-    .sf-admin-sidebar.sf-area-content {
-        left: -340px !important;
+    .sf-vswitch-panel {
+        min-width: calc(100vw - 24px);
     }
 }
 
 /* ========================================================
-   Title Clipping / Skip Link Fix
+   접근성 스킵링크 / 본문 제목 잘림 방지 (헤더 구조와 무관, 계속 유효)
 ======================================================== */
-
-/* 8.1. Accessibility for skip link (#to_content) — 포커스 받을 때만 보이게 유지 */
 #to_content {
     position: absolute;
     top: 0;
@@ -454,31 +163,7 @@
     top: 12px;
 }
 
-/* 8.2. Fix Title Clipping (#container_title) */
 #container_title {
-    position: static !important;
-    height: auto !important;
-    min-height: 40px !important;
-    margin: 0 !important;
-    padding: 8px 12px !important;
-    font-size: 18px !important;
-    line-height: 1.45 !important;
-    overflow: visible !important;
     word-break: keep-all;
     overflow-wrap: anywhere;
-    width: auto !important;
-    border-bottom: 1px solid #ddd;
-}
-
-/* Fix #container excessive gap on PC/Mobile */
-#container {
-    margin-top: 0 !important;
-    padding-left: 0 !important; /* PC 좌측 여백은 #wrapper.sf-area-core 에서만 관리 */
-}
-
-@media (min-width: 769px) {
-    #container_title {
-        padding: 12px 16px !important;
-        font-size: 20px !important;
-    }
 }
