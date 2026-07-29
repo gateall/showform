@@ -16,8 +16,9 @@ if (is_array($files)) {
             continue;
         }
 
-        $css_file = str_replace(G5_ADMIN_PATH, G5_ADMIN_URL, $css_file);
-        add_stylesheet('<link rel="stylesheet" href="' . $css_file . '">', $k);
+        $css_file_url = str_replace(G5_ADMIN_PATH, G5_ADMIN_URL, $css_file);
+        $css_ver = filemtime($css_file);
+        add_stylesheet('<link rel="stylesheet" href="' . $css_file_url . '?ver=' . $css_ver . '">', $k);
     }
 }
 
@@ -250,36 +251,7 @@ foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
     </ul>
 </nav>
 
-<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="관리자 전체 메뉴">
-    <div class="sf-sitemap-bar">
-        <span class="sf-sitemap-bar-title">관리자 전체 메뉴</span>
-        <button type="button" class="sf-sitemap-toggle" id="sf-admin-sitemap-toggle" aria-expanded="false" aria-controls="sf-admin-sitemap-body">
-            <span class="sf-sitemap-toggle-text">전체 메뉴 펼치기</span>
-            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-    </div>
-    <div class="sf-admin-sitemap-body" id="sf-admin-sitemap-body" hidden>
-        <div class="sf-admin-sitemap-grid">
-            <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
-            <div class="sf-sitemap-group">
-                <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
-                <div class="sf-sitemap-links">
-                    <?php foreach($filtered_subs as $sub): ?>
-                        <?php if ($sub['href'] === '#' || $sub['href'] === '') { ?>
-                        <span class="sf-sitemap-link sf-sitemap-link-disabled" aria-disabled="true"><?php echo $sub['title']; ?><em>준비 중</em></span>
-                        <?php } else { ?>
-                        <a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link">
-                            <span class="sf-sitemap-link-text"><?php echo $sub['title']; ?></span>
-                            <span class="sf-sitemap-url"><?php echo $sub['href']; ?></span>
-                        </a>
-                        <?php } ?>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</nav>
+
 
 <script>
 jQuery(function($) {
@@ -416,4 +388,38 @@ jQuery(function($) {
 </div>
 
         <h1 id="container_title"><?php echo $g5['title'] ?></h1>
+
+<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="관리자 전체 메뉴">
+    <div class="sf-sitemap-bar">
+        <div class="sf-sitemap-breadcrumb">
+            <span class="sf-sitemap-bar-title">전체 메뉴</span>
+            <span class="sf-sitemap-current-path" id="sf-sitemap-current-path"></span>
+        </div>
+        <button type="button" class="sf-sitemap-toggle" id="sf-admin-sitemap-toggle" aria-expanded="false" aria-controls="sf-admin-sitemap-body">
+            <span class="sf-sitemap-toggle-text">전체 메뉴 펼치기</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="sf-admin-sitemap-body" id="sf-admin-sitemap-body" hidden>
+        <div class="sf-admin-sitemap-grid">
+            <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
+            <div class="sf-sitemap-group">
+                <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
+                <div class="sf-sitemap-links">
+                    <?php foreach($filtered_subs as $sub): ?>
+                        <?php if ($sub['href'] === '#' || $sub['href'] === '') { ?>
+                        <span class="sf-sitemap-link sf-sitemap-link-disabled" aria-disabled="true"><?php echo $sub['title']; ?><em>준비 중</em></span>
+                        <?php } else { ?>
+                        <a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link">
+                            <span class="sf-sitemap-link-text"><?php echo $sub['title']; ?></span>
+                            <span class="sf-sitemap-url"><?php echo $sub['href']; ?></span>
+                        </a>
+                        <?php } ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</nav>
         <div class="container_wr">
