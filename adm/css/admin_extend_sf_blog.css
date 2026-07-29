@@ -271,3 +271,38 @@
     }
 }
 
+/* ========================================================
+   Print / PDF Export Styles
+======================================================== */
+@media print {
+    /* Hide Gnuboard Admin layout elements */
+    #hd, #left_menu, #ft, .btn_confirm, .bp-filter-wrap, .local_desc01, .snb, .gnb {
+        display: none !important;
+    }
+    
+    /* Reset layout for print */
+    #wrapper, #container {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        float: none !important;
+    }
+    
+    /* Ensure tables and charts are legible */
+    body {
+        background: #fff;
+        color: #000;
+        font-size: 12pt;
+    }
+    
+    .tbl_wrap, .bp-report-cards {
+        page-break-inside: avoid;
+    }
+    
+    /* Print background colors */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

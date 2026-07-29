@@ -17,11 +17,12 @@ $sql_file_v8 = __DIR__ . '/sql/blog_automation_v8.sql';
 $sql_file_v9 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v9.sql';
 $sql_file_v10 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v10.sql';
 $sql_file_v11 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v11.sql';
+$sql_file_v12 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v12.sql';
 
 if (
     !is_file($sql_file_v1) || !is_file($sql_file_v2) || !is_file($sql_file_v3) ||
     !is_file($sql_file_v4) || !is_file($sql_file_v5) || !is_file($sql_file_v6) ||
-    !is_file($sql_file_v7) || !is_file($sql_file_v8) || !is_file($sql_file_v9) || !is_file($sql_file_v10) || !is_file($sql_file_v11)
+    !is_file($sql_file_v7) || !is_file($sql_file_v8) || !is_file($sql_file_v9) || !is_file($sql_file_v10) || !is_file($sql_file_v11) || !is_file($sql_file_v12)
 ) {
     alert('SQL 파일을 찾을 수 없습니다.');
 }
@@ -120,6 +121,7 @@ $v8_installed = bp_install_table_exists($table_prefix, 'category_mappings');
 $v9_installed = bp_install_table_exists($table_prefix, 'naver_packages');
 $v10_installed = bp_install_table_exists($table_prefix, 'image_presets');
 $v11_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'locked_at');
+$v12_installed = bp_install_table_exists($table_prefix, 'post_performance') && bp_install_table_exists($table_prefix, 'report_snapshots');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
@@ -161,6 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['run_all']) || $_POST['run_v11'] || !$v11_installed) {
         $created = array_merge($created, bp_install_run_sql_file($sql_file_v11, $table_prefix));
     }
+    if (isset($_POST['run_all']) || $_POST['run_v12'] || !$v12_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v12, $table_prefix));
+    }
 
     $did_install = true;
     
@@ -170,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @chmod($blog_img_dir, G5_DIR_PERMISSION);
     }
 }
-$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed && $v9_installed && $v10_installed && $v11_installed;
+$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed && $v9_installed && $v10_installed && $v11_installed && $v12_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -186,7 +191,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     &nbsp;&nbsp;카테고리: <?php echo $v8_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;Naver Pack: <?php echo $v9_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;Image Pipeline: <?php echo $v10_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
-    &nbsp;&nbsp;Scheduler: <?php echo $v11_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
+    &nbsp;&nbsp;Scheduler: <?php echo $v11_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;Reports/Performance: <?php echo $v12_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -226,6 +232,13 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     <td>
                         <button type="submit" name="run_v11" value="1" class="btn btn_02">V11 업데이트 실행</button>
                         <span class="help_txt">publish_jobs 확장(락, 에러코드)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">V12 (Reports/Performance) DB 업데이트</th>
+                    <td>
+                        <button type="submit" name="run_v12" value="1" class="btn btn_02">V12 업데이트 실행</button>
+                        <span class="help_txt">콘텐츠 성과(post_performance) 및 스냅샷 추가</span>
                     </td>
                 </tr>
                 <tr><th scope="row">필수 확장</th>
