@@ -8,7 +8,7 @@ $menu['menu360'] = array(
     array('360400', '콘텐츠 프로젝트', G5_ADMIN_URL . '/blog/project_list.php', 'blog_project'),
     array('360700', '예약 발행 관리', G5_ADMIN_URL . '/blog/publish_job_list.php', 'blog_publish_job'),
     array('360800', '이미지 라이브러리', G5_ADMIN_URL . '/blog/image_list.php', 'blog_image'),
-    array('360900', '테이블 설치', G5_ADMIN_URL . '/blog/install.php', 'blog_install'),
+    array('360900', '테이블 설치', G5_ADMIN_URL . '/blog/install_form.php', 'blog_install'),
     array('361000', '보고서 대시보드', G5_ADMIN_URL . '/blog/report_dashboard.php', 'blog_report'),
     array('361000', '일간 발행 보고서', G5_ADMIN_URL . '/blog/report_daily.php', 'blog_report_daily'),
     array('361010', '주간 운영 보고서', G5_ADMIN_URL . '/blog/report_weekly.php', 'blog_report_weekly'),

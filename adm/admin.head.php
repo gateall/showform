@@ -149,7 +149,7 @@ $sf_menus = array(
         array('title' => '예약 발행 관리', 'href' => G5_ADMIN_URL.'/blog/publish_job_list.php'),
         array('title' => '이미지 라이브러리', 'href' => G5_ADMIN_URL.'/blog/image_list.php'),
         array('title' => '활동 로그', 'href' => '#'),
-        array('title' => '블로그 설정', 'href' => G5_ADMIN_URL.'/blog/install.php'),
+        array('title' => '블로그 설정', 'href' => G5_ADMIN_URL.'/blog/install_form.php'),
     ),
     '랜딩' => array(
         array('title' => '랜딩 대시보드', 'href' => G5_ADMIN_URL.'/landing/landing_list.php'),
