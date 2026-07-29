@@ -5,5 +5,6 @@ $menu['menu360'] = array(
     array('360200', '발행사이트관리', G5_ADMIN_URL . '/blog/site_list.php', 'blog_site'),
     array('360300', 'AI 공급자설정', G5_ADMIN_URL . '/blog/ai_provider_list.php', 'blog_ai_provider'),
     array('360400', '콘텐츠 프로젝트', G5_ADMIN_URL . '/blog/project_list.php', 'blog_project'),
+    array('360700', '예약 발행 관리', G5_ADMIN_URL . '/blog/publish_job_list.php', 'blog_publish_job'),
     array('360900', '테이블 설치', G5_ADMIN_URL . '/blog/install.php', 'blog_install'),
 );
