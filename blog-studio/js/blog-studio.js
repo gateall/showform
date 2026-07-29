@@ -186,6 +186,13 @@ function previewPost() {
     alert("미리보기 화면 (개발 예정)");
 }
 
+function toggleMobileTools() {
+    const tools = document.querySelector('.studio-quick-tools');
+    const overlay = document.getElementById('mobileOverlay');
+    tools.classList.toggle('show');
+    overlay.classList.toggle('show');
+}
+
 // AI Actions
 function openAIAgentSettings() { 
     window.location.href = window.G5_URL + '/adm/blog/ai_provider_list.php'; 

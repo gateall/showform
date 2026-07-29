@@ -102,6 +102,10 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/blog-studio/css/blog-stu
     </div>
 </div>
 
+<!-- Mobile Overlay & FAB -->
+<div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileTools()"></div>
+<button class="mobile-fab" onclick="toggleMobileTools()">🛠️ AI 도구</button>
+
 <?php
 include_once(G5_PATH.'/tail.sub.php');
 ?>

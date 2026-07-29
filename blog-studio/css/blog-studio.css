@@ -295,19 +295,68 @@ body {
     background: #f7fafc;
 }
 
+.mobile-fab {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    z-index: 999;
+    cursor: pointer;
+}
+
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .blog-studio-layout {
         grid-template-columns: 1fr;
     }
     
+    .mobile-fab {
+        display: block;
+    }
+
     .studio-quick-tools {
         position: fixed;
-        bottom: 0;
+        bottom: -100%;
         left: 0;
         right: 0;
         top: auto;
-        z-index: 200;
-        display: none; /* Hide for now, need bottom sheet logic */
+        z-index: 1001;
+        background: white;
+        border-radius: 20px 20px 0 0;
+        padding: 20px;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+        transition: bottom 0.3s ease-in-out;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .studio-quick-tools.show {
+        bottom: 0;
+    }
+    
+    .mobile-overlay.show {
+        display: block;
+    }
+    
+    .quick-tools-inner {
+        box-shadow: none;
+        border: none;
+        padding: 0;
     }
 }
