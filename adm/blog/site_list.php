@@ -24,7 +24,47 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <a href="./site_form.php" class="btn btn_01">사이트 등록</a>
 
-<div class="tbl_head01 tbl_wrap" style="margin-top:10px;">
+<?php
+$list = array();
+if ($result && sql_num_rows($result) > 0) {
+    while ($row = sql_fetch_array($result)) {
+        $list[] = $row;
+    }
+}
+?>
+
+<!-- 모바일: 카드 뷰 -->
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
+    <?php if (count($list) > 0) { ?>
+        <?php foreach ($list as $row) { ?>
+        <div class="bp-project-card">
+            <div class="bp-project-card-head">
+                <a href="./site_form.php?id=<?php echo (int) $row['id']; ?>" class="bp-project-title">
+                    <?php echo get_text($row['name']); ?>
+                </a>
+                <span class="bp-status-badge bp-status-badge-<?php echo $row['status'] === 'Y' ? 'published' : 'failed'; ?>">
+                    <?php echo $row['status'] === 'Y' ? '사용' : '중지'; ?>
+                </span>
+            </div>
+            <div class="bp-project-meta">
+                <span>번호: <?php echo (int) $row['id']; ?></span>
+                <span>광고주: <?php echo get_text($row['advertiser_name']); ?></span>
+                <span>플랫폼: <?php echo get_text($row['platform']); ?></span>
+                <span>WP 인증정보: <?php echo $row['wp_masked_hint'] ? get_text($row['wp_masked_hint']) : '미설정'; ?></span>
+            </div>
+            <div class="bp-project-actions">
+                <a href="./site_form.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">수정</a>
+                <a href="./site_delete.php?id=<?php echo (int) $row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+            </div>
+        </div>
+        <?php } ?>
+    <?php } else { ?>
+        <div class="bp-empty">등록된 사이트가 없습니다.</div>
+    <?php } ?>
+</div>
+
+<!-- PC: 테이블 뷰 -->
+<div class="tbl_head01 tbl_wrap" id="pc_table_view" style="margin-top:10px;">
     <table>
         <caption>발행 사이트 목록</caption>
         <thead>
@@ -39,8 +79,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             </tr>
         </thead>
         <tbody>
-            <?php if ($result && sql_num_rows($result) > 0) { ?>
-                <?php while ($row = sql_fetch_array($result)) { ?>
+            <?php if (count($list) > 0) { ?>
+                <?php foreach ($list as $row) { ?>
                     <tr>
                         <td><?php echo (int)$row['id']; ?></td>
                         <td><?php echo get_text($row['advertiser_name']); ?></td>

@@ -21,7 +21,47 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <a href="./ai_provider_form.php" class="btn btn_01">공급자 등록</a>
 
-<div class="tbl_head01 tbl_wrap" style="margin-top:10px;">
+<?php
+$list = array();
+if ($result && sql_num_rows($result) > 0) {
+    while ($row = sql_fetch_array($result)) {
+        $list[] = $row;
+    }
+}
+?>
+
+<!-- 모바일: 카드 뷰 -->
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
+    <?php if (count($list) > 0) { ?>
+        <?php foreach ($list as $row) { ?>
+        <div class="bp-project-card">
+            <div class="bp-project-card-head">
+                <a href="./ai_provider_form.php?id=<?php echo (int) $row['id']; ?>" class="bp-project-title">
+                    <?php echo get_text($row['display_name']); ?>
+                </a>
+                <span class="bp-status-badge bp-status-badge-<?php echo $row['is_active'] === 'Y' ? 'published' : 'failed'; ?>">
+                    <?php echo $row['is_active'] === 'Y' ? '사용' : '중지'; ?>
+                </span>
+            </div>
+            <div class="bp-project-meta">
+                <span>번호: <?php echo (int) $row['id']; ?></span>
+                <span>코드: <?php echo get_text($row['provider_code']); ?></span>
+                <span>기본 모델: <?php echo get_text($row['default_model']); ?></span>
+                <span>API 키: <?php echo $row['masked_hint'] ? get_text($row['masked_hint']) : '미설정'; ?></span>
+                <span>수정일: <?php echo $row['updated_at'] ? get_text($row['updated_at']) : get_text($row['created_at']); ?></span>
+            </div>
+            <div class="bp-project-actions">
+                <a href="./ai_provider_form.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">수정</a>
+            </div>
+        </div>
+        <?php } ?>
+    <?php } else { ?>
+        <div class="bp-empty">등록된 AI 공급자가 없습니다. 먼저 공급자를 등록해 주세요.</div>
+    <?php } ?>
+</div>
+
+<!-- PC: 테이블 뷰 -->
+<div class="tbl_head01 tbl_wrap" id="pc_table_view" style="margin-top:10px;">
     <table>
         <caption>AI 공급자 목록</caption>
         <thead>
@@ -37,8 +77,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             </tr>
         </thead>
         <tbody>
-            <?php if ($result && sql_num_rows($result) > 0) { ?>
-                <?php while ($row = sql_fetch_array($result)) { ?>
+            <?php if (count($list) > 0) { ?>
+                <?php foreach ($list as $row) { ?>
                     <tr>
                         <td><?php echo (int)$row['id']; ?></td>
                         <td><code><?php echo get_text($row['provider_code']); ?></code></td>

@@ -116,37 +116,50 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </form>
 </details>
 
-<div class="bp-project-cards" style="margin-top:15px;">
-    <?php if ($result && sql_num_rows($result) > 0) { ?>
-        <?php while ($row = sql_fetch_array($result)) {
-            $st = $row['status'];
-            $st_label = isset($status_label[$st]) ? $status_label[$st] : get_text($st);
-            $job_summary = '-';
-            if (!empty($row['job_statuses'])) {
-                $parts = array();
-                foreach (explode(',', $row['job_statuses']) as $js) {
-                    $parts[] = isset($job_status_label[$js]) ? $job_status_label[$js] : get_text($js);
-                }
-                $job_summary = implode(', ', $parts);
+<?php
+$list = array();
+if ($result && sql_num_rows($result) > 0) {
+    while ($row = sql_fetch_array($result)) {
+        $st = $row['status'];
+        $st_label = isset($status_label[$st]) ? $status_label[$st] : get_text($st);
+        $job_summary = '-';
+        if (!empty($row['job_statuses'])) {
+            $parts = array();
+            foreach (explode(',', $row['job_statuses']) as $js) {
+                $parts[] = isset($job_status_label[$js]) ? $job_status_label[$js] : get_text($js);
             }
-            $ai_label = $row['last_ai_provider'] === 'openai' ? 'OpenAI' : ($row['last_ai_provider'] === 'template' ? '템플릿' : '-');
-        ?>
+            $job_summary = implode(', ', $parts);
+        }
+        $ai_label = $row['last_ai_provider'] === 'openai' ? 'OpenAI' : ($row['last_ai_provider'] === 'template' ? '템플릿' : '-');
+        
+        $row['st_label'] = $st_label;
+        $row['job_summary'] = $job_summary;
+        $row['ai_label'] = $ai_label;
+        $list[] = $row;
+    }
+}
+?>
+
+<!-- 모바일: 카드 뷰 -->
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
+    <?php if (count($list) > 0) { ?>
+        <?php foreach ($list as $row) { ?>
         <div class="bp-project-card">
             <div class="bp-project-card-head">
                 <a href="./project_view.php?id=<?php echo (int) $row['id']; ?>" class="bp-project-title">
                     <?php echo get_text($row['post_title'] ? $row['post_title'] : $row['topic']); ?>
                 </a>
-                <span class="bp-status-badge bp-status-badge-<?php echo get_text($st); ?>"><?php echo $st_label; ?></span>
+                <span class="bp-status-badge bp-status-badge-<?php echo get_text($row['status']); ?>"><?php echo $row['st_label']; ?></span>
             </div>
             <div class="bp-project-meta">
                 <span>번호: <?php echo (int) $row['id']; ?></span>
                 <span>광고주: <?php echo get_text($row['advertiser_name']); ?></span>
                 <span>사이트: <?php echo $row['site_name'] ? get_text($row['site_name']) : '-'; ?></span>
-                <span>AI 제공자: <?php echo $ai_label; ?></span>
+                <span>AI 제공자: <?php echo $row['ai_label']; ?></span>
                 <span>승인자: <?php echo $row['reviewed_by'] ? get_text($row['reviewed_by']) : '-'; ?></span>
                 <span>승인일: <?php echo $row['approved_at'] ? get_text($row['approved_at']) : '-'; ?></span>
                 <span>발행 대상: <?php echo (int) $row['target_count']; ?>건</span>
-                <span>배포 작업: <?php echo $job_summary; ?></span>
+                <span>배포 작업: <?php echo $row['job_summary']; ?></span>
                 <span>생성일: <?php echo get_text($row['created_at']); ?></span>
                 <span>수정일: <?php echo $row['updated_at'] ? get_text($row['updated_at']) : '-'; ?></span>
             </div>
@@ -158,6 +171,59 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <?php } else { ?>
         <div class="bp-empty">조건에 맞는 콘텐츠 프로젝트가 없습니다.</div>
     <?php } ?>
+</div>
+
+<!-- PC: 테이블 뷰 -->
+<div class="tbl_head01 tbl_wrap" id="pc_table_view" style="margin-top:15px;">
+    <table>
+        <caption>콘텐츠 프로젝트 목록</caption>
+        <thead>
+            <tr>
+                <th scope="col" style="width:60px;">번호</th>
+                <th scope="col">프로젝트 주제 / 제목</th>
+                <th scope="col" style="width:120px;">광고주/사이트</th>
+                <th scope="col" style="width:100px;">상태</th>
+                <th scope="col" style="width:120px;">AI 제공자</th>
+                <th scope="col" style="width:180px;">발행 정보</th>
+                <th scope="col" style="width:150px;">등록일시</th>
+                <th scope="col" style="width:80px;">관리</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (count($list) > 0) { ?>
+                <?php foreach ($list as $row) { ?>
+                <tr>
+                    <td class="td_num"><?php echo (int) $row['id']; ?></td>
+                    <td>
+                        <a href="./project_view.php?id=<?php echo (int) $row['id']; ?>">
+                            <strong><?php echo get_text($row['post_title'] ? $row['post_title'] : $row['topic']); ?></strong>
+                        </a>
+                    </td>
+                    <td class="td_center">
+                        <?php echo get_text($row['advertiser_name']); ?><br>
+                        <span style="color:#888; font-size:11px;"><?php echo $row['site_name'] ? get_text($row['site_name']) : '-'; ?></span>
+                    </td>
+                    <td class="td_center">
+                        <span class="bp-status-badge bp-status-badge-<?php echo get_text($row['status']); ?>"><?php echo $row['st_label']; ?></span>
+                    </td>
+                    <td class="td_center"><?php echo $row['ai_label']; ?></td>
+                    <td class="td_center">
+                        대상: <?php echo (int) $row['target_count']; ?>건<br>
+                        <span style="color:#888; font-size:11px;"><?php echo $row['job_summary']; ?></span>
+                    </td>
+                    <td class="td_center"><?php echo substr($row['created_at'], 0, 16); ?></td>
+                    <td class="td_center">
+                        <a href="./project_view.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">열기</a>
+                    </td>
+                </tr>
+                <?php } ?>
+            <?php } else { ?>
+                <tr>
+                    <td colspan="8" class="empty_table">조건에 맞는 콘텐츠 프로젝트가 없습니다.</td>
+                </tr>
+            <?php } ?>
+        </tbody>
+    </table>
 </div>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php');

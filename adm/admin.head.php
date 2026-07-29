@@ -144,11 +144,10 @@ $sf_menus = array(
         array('title' => '계정 관리', 'href' => '#'),
         array('title' => 'AI 제공자 관리', 'href' => G5_ADMIN_URL.'/blog/ai_provider_list.php'),
         array('title' => '콘텐츠 프로젝트', 'href' => G5_ADMIN_URL.'/blog/project_list.php'),
-        array('title' => '키워드 관리', 'href' => '#'),
+        array('title' => '키워드 관리', 'href' => G5_ADMIN_URL.'/blog/keyword_list.php'),
         array('title' => '포스트 관리', 'href' => '#'),
-        array('title' => '발행 대상 관리', 'href' => '#'),
-        array('title' => '발행 작업', 'href' => '#'),
-        array('title' => '발행 시도', 'href' => '#'),
+        array('title' => '예약 발행 관리', 'href' => G5_ADMIN_URL.'/blog/publish_job_list.php'),
+        array('title' => '이미지 라이브러리', 'href' => G5_ADMIN_URL.'/blog/image_list.php'),
         array('title' => '활동 로그', 'href' => '#'),
         array('title' => '블로그 설정', 'href' => G5_ADMIN_URL.'/blog/install.php'),
     ),
@@ -364,9 +363,17 @@ jQuery(function($) {
         if (isMatch) {
             $(this).addClass('active').attr('aria-current', 'page');
             var $group = $(this).closest('.sf-menu-group');
-            $group.addClass('active');
-            $group.find('.sf-menu-btn').attr('aria-expanded', 'true');
-            $group.find('.sf-menu-sub').show();
+            if ($group.length) {
+                $group.addClass('active');
+                $group.find('.sf-menu-btn').attr('aria-expanded', 'true');
+                $group.find('.sf-menu-sub').show();
+            }
+
+            if ($(this).hasClass('sf-sitemap-link')) {
+                var groupTitle = $(this).closest('.sf-sitemap-group').find('.sf-sitemap-group-title').text();
+                var subTitle = $(this).find('.sf-sitemap-link-text').text();
+                $('#sf-sitemap-current-path').text(' > ' + groupTitle + ' > ' + subTitle);
+            }
         }
     });
 

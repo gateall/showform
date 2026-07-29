@@ -59,25 +59,21 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin_extend_s
     <a href="./image_form.php" class="bp-btn-primary-lg">새 이미지 업로드</a>
 </div>
 
-<div class="bp-filter-wrap">
-    <details open>
-        <summary class="bp-filter-summary">필터 및 검색</summary>
-        <div class="bp-filter-form">
-            <form name="fsearch" id="fsearch" method="get">
-            <div class="bp-filter-row">
-                <label>
-                    <span>파일명 검색</span>
-                    <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="원본 파일명 검색">
-                </label>
-                <div class="bp-filter-actions">
-                    <button type="submit" class="btn btn_submit">검색</button>
-                    <a href="./image_list.php" class="btn">초기화</a>
-                </div>
+<details class="bp-filter-wrap" <?php echo $stx ? 'open' : ''; ?>>
+    <summary class="bp-filter-summary">필터 및 검색</summary>
+    <form name="fsearch" id="fsearch" method="get" class="bp-filter-form">
+        <div class="bp-filter-row">
+            <label>
+                <span>파일명 검색</span>
+                <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="원본 파일명 검색">
+            </label>
+            <div class="bp-filter-actions">
+                <button type="submit" class="btn btn_submit">검색</button>
+                <a href="./image_list.php" class="btn">초기화</a>
             </div>
-            </form>
         </div>
-    </details>
-</div>
+    </form>
+</details>
 
 <!-- 모바일: 카드 뷰 -->
 <div class="bp-project-cards" id="mobile_card_view">

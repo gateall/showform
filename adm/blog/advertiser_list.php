@@ -38,14 +38,68 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <p>블로그 자동화에서 사용할 광고주(업체) 정보를 관리합니다. 상호·전화·주소·상담URL은 콘텐츠 생성 시 자동 삽입됩니다.</p>
 </div>
 
-<form id="fsearch" method="get" class="local_sch03 local_sch">
-    <input type="text" name="search" value="<?php echo get_text($search); ?>" class="frm_input" placeholder="상호 또는 도메인">
-    <button type="submit" class="btn_submit btn">검색</button>
-    <a href="./advertiser_list.php" class="btn btn_02">초기화</a>
-    <a href="./advertiser_form.php" class="btn btn_01">광고주 등록</a>
-</form>
+<details class="bp-filter-wrap" <?php echo $search ? 'open' : ''; ?>>
+    <summary class="bp-filter-summary">검색·필터</summary>
+    <form id="fsearch" method="get" class="bp-filter-form">
+        <div class="bp-filter-row">
+            <label>
+                <span>검색어</span>
+                <input type="text" name="search" value="<?php echo get_text($search); ?>" class="frm_input" placeholder="상호 또는 도메인">
+            </label>
+            <div class="bp-filter-actions">
+                <button type="submit" class="btn btn_submit btn">검색</button>
+                <a href="./advertiser_list.php" class="btn btn_02">초기화</a>
+            </div>
+        </div>
+    </form>
+</details>
 
-<div class="tbl_head01 tbl_wrap">
+<div class="btn_fixed_top">
+    <a href="./advertiser_form.php" class="btn_01 btn">광고주 등록</a>
+</div>
+
+<?php
+$list = array();
+if ($total_count > 0) {
+    for ($i = 0; $row = sql_fetch_array($result); $i++) {
+        $row['disp_num'] = $total_count - (($page - 1) * $rows) - $i;
+        $list[] = $row;
+    }
+}
+?>
+
+<!-- 모바일: 카드 뷰 -->
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
+    <?php if (count($list) > 0) { ?>
+        <?php foreach ($list as $row) { ?>
+        <div class="bp-project-card">
+            <div class="bp-project-card-head">
+                <a href="./advertiser_form.php?id=<?php echo (int) $row['id']; ?>" class="bp-project-title">
+                    <?php echo get_text($row['name']); ?>
+                </a>
+                <span class="bp-status-badge bp-status-badge-<?php echo $row['status'] === 'Y' ? 'published' : 'failed'; ?>">
+                    <?php echo $row['status'] === 'Y' ? '사용' : '중지'; ?>
+                </span>
+            </div>
+            <div class="bp-project-meta">
+                <span>번호: <?php echo $row['disp_num']; ?></span>
+                <span>전화: <?php echo get_text($row['phone']); ?></span>
+                <span>지역: <?php echo get_text($row['service_region']); ?></span>
+                <span>등록일: <?php echo get_text($row['created_at']); ?></span>
+            </div>
+            <div class="bp-project-actions">
+                <a href="./advertiser_form.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">수정</a>
+                <a href="./advertiser_delete.php?id=<?php echo (int) $row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+            </div>
+        </div>
+        <?php } ?>
+    <?php } else { ?>
+        <div class="bp-empty">등록된 광고주가 없습니다.</div>
+    <?php } ?>
+</div>
+
+<!-- PC: 테이블 뷰 -->
+<div class="tbl_head01 tbl_wrap" id="pc_table_view">
     <table>
         <caption>광고주 목록</caption>
         <thead>
@@ -60,10 +114,10 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             </tr>
         </thead>
         <tbody>
-            <?php if ($total_count > 0) { ?>
-                <?php for ($i = 0; $row = sql_fetch_array($result); $i++) { ?>
+            <?php if (count($list) > 0) { ?>
+                <?php foreach ($list as $row) { ?>
                     <tr>
-                        <td><?php echo $total_count - (($page - 1) * $rows) - $i; ?></td>
+                        <td><?php echo $row['disp_num']; ?></td>
                         <td style="text-align:left;"><a href="./advertiser_form.php?id=<?php echo (int)$row['id']; ?>"><strong><?php echo get_text($row['name']); ?></strong></a></td>
                         <td><?php echo get_text($row['phone']); ?></td>
                         <td><?php echo get_text($row['service_region']); ?></td>

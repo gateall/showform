@@ -81,145 +81,158 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin_extend_s
     <p>포스트의 예약 발행 일정을 관리합니다. 생성된 발행 작업은 설정된 시각에 크론 데몬 또는 관리자 수동 조작을 통해 외부 사이트로 전송됩니다.</p>
 </div>
 
-<div class="local_sch01 local_sch">
-    <form name="fsearch" id="fsearch" class="local_sch01 local_sch" method="get">
-    <label for="sfl_status" class="sound_only">상태</label>
-    <select name="sfl_status" id="sfl_status">
-        <option value="">전체 상태</option>
-        <option value="scheduled" <?php echo $sfl_status=='scheduled'?'selected':'';?>>예약됨</option>
-        <option value="pending" <?php echo $sfl_status=='pending'?'selected':'';?>>대기중</option>
-        <option value="processing" <?php echo $sfl_status=='processing'?'selected':'';?>>처리중</option>
-        <option value="succeeded" <?php echo $sfl_status=='succeeded'?'selected':'';?>>성공</option>
-        <option value="failed" <?php echo $sfl_status=='failed'?'selected':'';?>>실패</option>
-        <option value="cancelled" <?php echo $sfl_status=='cancelled'?'selected':'';?>>취소</option>
-    </select>
-    
-    <label for="sfl_project" class="sound_only">프로젝트</label>
-    <select name="sfl_project" id="sfl_project">
-        <option value="">전체 프로젝트</option>
-        <?php while($prow = sql_fetch_array($projects)){ ?>
-        <option value="<?php echo $prow['id'];?>" <?php echo $sfl_project==$prow['id']?'selected':'';?>><?php echo get_text(cut_str($prow['topic'], 20));?></option>
-        <?php } ?>
-    </select>
-
-    <label for="sfl_site" class="sound_only">사이트</label>
-    <select name="sfl_site" id="sfl_site">
-        <option value="">전체 사이트</option>
-        <?php while($srow = sql_fetch_array($sites)){ ?>
-        <option value="<?php echo $srow['id'];?>" <?php echo $sfl_site==$srow['id']?'selected':'';?>><?php echo get_text($srow['name']);?></option>
-        <?php } ?>
-    </select>
-
-    <label for="sdate" class="sound_only">예약일 시작</label>
-    <input type="text" name="sdate" value="<?php echo get_text($sdate); ?>" id="sdate" class="frm_input" size="10" maxlength="10" placeholder="YYYY-MM-DD"> ~
-    <label for="edate" class="sound_only">예약일 종료</label>
-    <input type="text" name="edate" value="<?php echo get_text($edate); ?>" id="edate" class="frm_input" size="10" maxlength="10" placeholder="YYYY-MM-DD">
-    
-    <label for="stx" class="sound_only">검색어</label>
-    <input type="text" name="stx" value="<?php echo get_text($stx); ?>" id="stx" class="frm_input" size="15" placeholder="포스트 제목 검색">
-    <input type="submit" class="btn_submit" value="검색">
+<details class="bp-filter-wrap" <?php echo ($sfl_status || $sfl_project || $sfl_site || $sdate || $edate || $stx) ? 'open' : ''; ?>>
+    <summary class="bp-filter-summary">검색·필터</summary>
+    <form name="fsearch" id="fsearch" class="bp-filter-form" method="get">
+        <div class="bp-filter-row">
+            <label>상태
+                <select name="sfl_status" id="sfl_status">
+                    <option value="">전체 상태</option>
+                    <option value="scheduled" <?php echo $sfl_status=='scheduled'?'selected':'';?>>예약됨</option>
+                    <option value="pending" <?php echo $sfl_status=='pending'?'selected':'';?>>대기중</option>
+                    <option value="processing" <?php echo $sfl_status=='processing'?'selected':'';?>>처리중</option>
+                    <option value="succeeded" <?php echo $sfl_status=='succeeded'?'selected':'';?>>성공</option>
+                    <option value="failed" <?php echo $sfl_status=='failed'?'selected':'';?>>실패</option>
+                    <option value="cancelled" <?php echo $sfl_status=='cancelled'?'selected':'';?>>취소</option>
+                </select>
+            </label>
+            <label>프로젝트
+                <select name="sfl_project" id="sfl_project">
+                    <option value="">전체 프로젝트</option>
+                    <?php while($prow = sql_fetch_array($projects)){ ?>
+                    <option value="<?php echo $prow['id'];?>" <?php echo $sfl_project==$prow['id']?'selected':'';?>><?php echo get_text(cut_str($prow['topic'], 20));?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <label>사이트
+                <select name="sfl_site" id="sfl_site">
+                    <option value="">전체 사이트</option>
+                    <?php while($srow = sql_fetch_array($sites)){ ?>
+                    <option value="<?php echo $srow['id'];?>" <?php echo $sfl_site==$srow['id']?'selected':'';?>><?php echo get_text($srow['name']);?></option>
+                    <?php } ?>
+                </select>
+            </label>
+        </div>
+        <div class="bp-filter-row">
+            <label>예약일 시작<input type="text" name="sdate" value="<?php echo get_text($sdate); ?>" id="sdate" class="frm_input" size="10" maxlength="10" placeholder="YYYY-MM-DD"></label>
+            <label>예약일 종료<input type="text" name="edate" value="<?php echo get_text($edate); ?>" id="edate" class="frm_input" size="10" maxlength="10" placeholder="YYYY-MM-DD"></label>
+            <label>검색어<input type="text" name="stx" value="<?php echo get_text($stx); ?>" id="stx" class="frm_input" size="15" placeholder="포스트 제목 검색"></label>
+        </div>
+        <div class="bp-filter-actions">
+            <button type="submit" class="btn btn_submit btn">검색</button>
+            <a href="./publish_job_list.php" class="btn btn_02">초기화</a>
+        </div>
     </form>
-</div>
+</details>
 
 <div class="btn_fixed_top">
     <a href="./publish_job_form.php" class="btn_01 btn">예약 등록</a>
 </div>
 
-<div class="tbl_head01 tbl_wrap">
-    <!-- 모바일 퍼스트 카드 컨테이너 -->
-    <div class="mobile-card-list">
-        <?php
-        if ($total_count > 0) {
-            $i = 0;
-            while ($row = sql_fetch_array($result)) {
-                $status_color = '#666';
-                if ($row['status'] == 'succeeded') $status_color = '#008000';
-                if ($row['status'] == 'failed') $status_color = '#ff0000';
-                if ($row['status'] == 'processing') $status_color = '#ff9900';
-                if ($row['status'] == 'pending' || $row['status'] == 'scheduled') $status_color = '#0066cc';
-                
-                $can_edit = in_array($row['status'], array('scheduled', 'pending'));
-                $can_cancel = $can_edit;
-                $can_retry = ($row['status'] == 'failed');
-        ?>
-        <!-- 모바일 카드 -->
-        <div class="sf-card-item">
-            <div class="sf-card-header">
-                <span class="sf-badge" style="background-color:<?php echo $status_color; ?>"><?php echo strtoupper($row['status']); ?></span>
-                <span class="sf-card-title"><?php echo get_text(cut_str($row['post_title'], 40)); ?></span>
+<?php
+$list = array();
+if ($total_count > 0) {
+    while ($row = sql_fetch_array($result)) {
+        $status_color = '#666';
+        if ($row['status'] == 'succeeded') $status_color = '#008000';
+        if ($row['status'] == 'failed') $status_color = '#ff0000';
+        if ($row['status'] == 'processing') $status_color = '#ff9900';
+        if ($row['status'] == 'pending' || $row['status'] == 'scheduled') $status_color = '#0066cc';
+        
+        $can_edit = in_array($row['status'], array('scheduled', 'pending'));
+        $can_cancel = $can_edit;
+        $can_retry = ($row['status'] == 'failed');
+
+        $row['status_color'] = $status_color;
+        $row['can_edit'] = $can_edit;
+        $row['can_cancel'] = $can_cancel;
+        $row['can_retry'] = $can_retry;
+        $list[] = $row;
+    }
+}
+?>
+
+<!-- 모바일: 카드 뷰 -->
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
+    <?php if (count($list) > 0) { ?>
+        <?php foreach ($list as $row) { ?>
+        <div class="bp-project-card">
+            <div class="bp-project-card-head">
+                <span class="bp-status-badge" style="background-color:<?php echo $row['status_color']; ?>"><?php echo strtoupper($row['status']); ?></span>
+                <span class="bp-project-title"><?php echo get_text(cut_str($row['post_title'], 40)); ?></span>
             </div>
-            <div class="sf-card-body">
-                <p><strong>작업ID:</strong> <?php echo $row['id']; ?></p>
-                <p><strong>사이트:</strong> <?php echo get_text($row['site_name']); ?></p>
-                <p><strong>일시:</strong> <?php echo $row['scheduled_at'] ? substr($row['scheduled_at'], 0, 16) : '-'; ?></p>
-                <p><strong>방식:</strong> <?php echo $row['schedule_type']; ?></p>
-                <p><strong>재시도:</strong> <?php echo $row['attempt_count']; ?> / <?php echo $row['max_retries']; ?></p>
+            <div class="bp-project-meta">
+                <span>작업ID: <?php echo $row['id']; ?></span>
+                <span>사이트: <?php echo get_text($row['site_name']); ?></span>
+                <span>일시: <?php echo $row['scheduled_at'] ? substr($row['scheduled_at'], 0, 16) : '-'; ?></span>
+                <span>방식: <?php echo $row['schedule_type']; ?></span>
+                <span>재시도: <?php echo $row['attempt_count']; ?> / <?php echo $row['max_retries']; ?></span>
                 <?php if($row['status'] == 'failed' && $row['last_error']) { ?>
-                    <p style="color:red; word-break:break-all;"><strong>오류:</strong> <?php echo get_text(cut_str($row['last_error'], 100)); ?></p>
+                    <span style="color:red; word-break:break-all;">오류: <?php echo get_text(cut_str($row['last_error'], 100)); ?></span>
                 <?php } ?>
             </div>
-            <div class="sf-card-footer">
+            <div class="bp-project-actions">
                 <a href="./publish_job_view.php?id=<?php echo $row['id']; ?>" class="btn_02 btn">상세</a>
-                <?php if ($can_edit) { ?>
+                <?php if ($row['can_edit']) { ?>
                     <a href="./publish_job_form.php?id=<?php echo $row['id']; ?>&w=u" class="btn_03 btn">수정</a>
                     <button type="button" class="btn_02 btn btn-cancel" data-id="<?php echo $row['id']; ?>">취소</button>
                 <?php } ?>
-                <?php if ($can_retry) { ?>
+                <?php if ($row['can_retry']) { ?>
                     <button type="button" class="btn_03 btn btn-retry" data-id="<?php echo $row['id']; ?>">재시도</button>
                 <?php } ?>
             </div>
         </div>
-        
-        <!-- PC 테이블 Row (숨김 처리됨: CSS 미디어쿼리로 제어) -->
-        <div class="sf-table-row">
-            <table style="width:100%;">
-            <?php if($i==0) { ?>
-            <thead>
+        <?php } ?>
+    <?php } else { ?>
+        <div class="bp-empty">자료가 없습니다.</div>
+    <?php } ?>
+</div>
+
+<!-- PC: 테이블 뷰 -->
+<div class="tbl_head01 tbl_wrap" id="pc_table_view" style="margin-top:15px;">
+    <table>
+        <thead>
             <tr>
-                <th>작업ID</th>
-                <th>포스트 제목</th>
-                <th>프로젝트</th>
-                <th>대상 사이트</th>
-                <th>예약 방식</th>
-                <th>예약 일시</th>
-                <th>상태</th>
-                <th>재시도</th>
-                <th>관리</th>
+                <th scope="col" style="width:60px;">작업ID</th>
+                <th scope="col">포스트 제목</th>
+                <th scope="col">프로젝트</th>
+                <th scope="col" style="width:120px;">대상 사이트</th>
+                <th scope="col" style="width:100px;">예약 방식</th>
+                <th scope="col" style="width:140px;">예약 일시</th>
+                <th scope="col" style="width:100px;">상태</th>
+                <th scope="col" style="width:80px;">재시도</th>
+                <th scope="col" style="width:150px;">관리</th>
             </tr>
-            </thead>
+        </thead>
+        <tbody>
+            <?php if (count($list) > 0) { ?>
+                <?php foreach ($list as $row) { ?>
+                <tr>
+                    <td style="text-align:center;"><?php echo $row['id']; ?></td>
+                    <td><?php echo get_text(cut_str($row['post_title'], 40)); ?></td>
+                    <td><?php echo get_text(cut_str($row['project_topic'], 20)); ?></td>
+                    <td style="text-align:center;"><?php echo get_text($row['site_name']); ?></td>
+                    <td style="text-align:center;"><?php echo $row['schedule_type']; ?></td>
+                    <td style="text-align:center;"><?php echo $row['scheduled_at'] ? substr($row['scheduled_at'], 0, 16) : '-'; ?></td>
+                    <td style="text-align:center;"><span style="color:<?php echo $row['status_color']; ?>; font-weight:bold;"><?php echo strtoupper($row['status']); ?></span></td>
+                    <td style="text-align:center;"><?php echo $row['attempt_count']; ?>/<?php echo $row['max_retries']; ?></td>
+                    <td style="text-align:center;">
+                        <a href="./publish_job_view.php?id=<?php echo $row['id']; ?>" class="btn_02 btn" style="padding:2px 5px;">상세</a>
+                        <?php if ($row['can_edit']) { ?>
+                            <a href="./publish_job_form.php?id=<?php echo $row['id']; ?>&w=u" class="btn_03 btn" style="padding:2px 5px;">수정</a>
+                            <button type="button" class="btn_02 btn btn-cancel" data-id="<?php echo $row['id']; ?>" style="padding:2px 5px;">취소</button>
+                        <?php } ?>
+                        <?php if ($row['can_retry']) { ?>
+                            <button type="button" class="btn_03 btn btn-retry" data-id="<?php echo $row['id']; ?>" style="padding:2px 5px;">재시도</button>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <?php } ?>
+            <?php } else { ?>
+                <tr><td colspan="9" class="empty_table">자료가 없습니다.</td></tr>
             <?php } ?>
-            <tbody>
-            <tr>
-                <td style="width:60px; text-align:center;"><?php echo $row['id']; ?></td>
-                <td><?php echo get_text(cut_str($row['post_title'], 40)); ?></td>
-                <td><?php echo get_text(cut_str($row['project_topic'], 20)); ?></td>
-                <td><?php echo get_text($row['site_name']); ?></td>
-                <td style="text-align:center;"><?php echo $row['schedule_type']; ?></td>
-                <td style="text-align:center;"><?php echo $row['scheduled_at'] ? substr($row['scheduled_at'], 0, 16) : '-'; ?></td>
-                <td style="text-align:center;"><span style="color:<?php echo $status_color; ?>; font-weight:bold;"><?php echo strtoupper($row['status']); ?></span></td>
-                <td style="text-align:center;"><?php echo $row['attempt_count']; ?>/<?php echo $row['max_retries']; ?></td>
-                <td style="text-align:center;">
-                    <a href="./publish_job_view.php?id=<?php echo $row['id']; ?>" class="btn_02 btn" style="padding:2px 5px;">상세</a>
-                    <?php if ($can_edit) { ?>
-                        <a href="./publish_job_form.php?id=<?php echo $row['id']; ?>&w=u" class="btn_03 btn" style="padding:2px 5px;">수정</a>
-                        <button type="button" class="btn_02 btn btn-cancel" data-id="<?php echo $row['id']; ?>" style="padding:2px 5px;">취소</button>
-                    <?php } ?>
-                    <?php if ($can_retry) { ?>
-                        <button type="button" class="btn_03 btn btn-retry" data-id="<?php echo $row['id']; ?>" style="padding:2px 5px;">재시도</button>
-                    <?php } ?>
-                </td>
-            </tr>
-            </tbody>
-            </table>
-        </div>
-        <?php
-                $i++;
-            }
-        } else {
-            echo '<div class="empty_table" style="text-align:center; padding:50px;">자료가 없습니다.</div>';
-        }
-        ?>
-    </div>
+        </tbody>
+    </table>
 </div>
 
 <?php echo get_paging(G5_IS_MOBILE ? $config['cf_mobile_pages'] : $config['cf_write_pages'], $page, $total_page, "{$_SERVER['SCRIPT_NAME']}?$qstr&amp;page="); ?>
@@ -249,41 +262,5 @@ $(function() {
     }
 });
 </script>
-
-<style>
-/* CSS 분기 처리 (기본 PC 테이블 레이아웃을 모바일 카드와 분리) */
-@media (max-width: 768px) {
-    .sf-table-row { display: none; }
-    .sf-card-item {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        padding: 15px;
-        background: #fff;
-    }
-    .sf-card-header { margin-bottom: 10px; }
-    .sf-badge {
-        color: #fff;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 0.85em;
-        margin-right: 8px;
-        display: inline-block;
-    }
-    .sf-card-title { font-weight: bold; font-size: 1.1em; }
-    .sf-card-body p { margin: 5px 0; color: #555; }
-    .sf-card-footer { margin-top: 15px; text-align: right; }
-    .sf-card-footer .btn { min-height: 48px; min-width: 60px; line-height: 48px; padding: 0 15px; }
-}
-@media (min-width: 769px) {
-    .sf-card-item { display: none; }
-    .sf-table-row table { border-collapse: collapse; width: 100%; }
-    .sf-table-row th, .sf-table-row td {
-        border: 1px solid #ddd;
-        padding: 8px;
-    }
-    .sf-table-row th { background: #f5f5f5; text-align: center; font-weight: bold; }
-}
-</style>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php'); ?>

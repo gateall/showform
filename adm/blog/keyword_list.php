@@ -62,24 +62,9 @@ $qstr_page = $qstr . '&amp;page=';
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <style>
-/* 반응형 모바일 카드 UI */
-.mobile-card-wrap { display: none; margin-top: 15px; }
-.mobile-card { border: 1px solid #ddd; background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 5px; }
-.mobile-card .card-row { margin-bottom: 8px; font-size: 16px; display: flex; align-items: flex-start; }
-.mobile-card .card-row span.label { font-weight: bold; min-width: 100px; color: #555; }
-.mobile-card .card-row span.value { flex-grow: 1; word-break: break-all; }
-.mobile-card .card-actions { margin-top: 15px; text-align: right; border-top: 1px solid #eee; padding-top: 10px; }
-.mobile-card .card-actions .btn { min-height: 48px; min-width: 60px; line-height: 48px; font-size: 16px; padding: 0 15px; margin-left: 5px; }
-
-/* PC 테이블 숨김 처리 (모바일 시) */
+/* 폼 요소 반응형 유지 */
 @media (max-width: 768px) {
-    .pc-table-wrap { display: none; }
-    .mobile-card-wrap { display: block; }
     .local_sch select, .local_sch input[type="text"], .local_sch .btn { min-height: 48px; font-size: 16px; margin-bottom: 5px; box-sizing: border-box; width: 100%; display: block; }
-}
-@media (min-width: 769px) {
-    .pc-table-wrap { display: block; }
-    .mobile-card-wrap { display: none; }
 }
 .local_sch { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 </style>
@@ -88,25 +73,45 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <p>콘텐츠 프로젝트의 메인 키워드를 전역적으로 관리합니다. 사용 상태에 따라 포스팅 생성 대상 여부가 결정됩니다.</p>
 </div>
 
-<form method="get" class="local_sch03 local_sch" style="margin-top:15px;">
-    <select name="project_id" onchange="this.form.submit();">
-        <option value="0">전체 프로젝트</option>
-        <?php while ($prow = sql_fetch_array($res_projects)) { ?>
-            <option value="<?php echo (int)$prow['id']; ?>" <?php echo $project_id === (int)$prow['id'] ? 'selected' : ''; ?>><?php echo get_text($prow['topic']); ?></option>
-        <?php } ?>
-    </select>
-    <select name="status" onchange="this.form.submit();">
-        <option value="">전체 상태</option>
-        <option value="Y" <?php echo $status === 'Y' ? 'selected' : ''; ?>>사용(활성)</option>
-        <option value="N" <?php echo $status === 'N' ? 'selected' : ''; ?>>미사용(비활성)</option>
-    </select>
-    <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="메인 키워드 검색" class="frm_input">
-    <button type="submit" class="btn_submit btn">검색</button>
-    <a href="./keyword_form.php" class="btn btn_01" style="margin-left:auto;">키워드 신규 등록</a>
-</form>
+<details class="bp-filter-wrap" <?php echo ($project_id || $status !== '' || $stx !== '') ? 'open' : ''; ?>>
+    <summary class="bp-filter-summary">검색·필터</summary>
+    <form method="get" class="bp-filter-form">
+        <div class="bp-filter-row">
+            <label>
+                <span>프로젝트</span>
+                <select name="project_id" onchange="this.form.submit();">
+                    <option value="0">전체 프로젝트</option>
+                    <?php while ($prow = sql_fetch_array($res_projects)) { ?>
+                        <option value="<?php echo (int)$prow['id']; ?>" <?php echo $project_id === (int)$prow['id'] ? 'selected' : ''; ?>><?php echo get_text($prow['topic']); ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <label>
+                <span>상태</span>
+                <select name="status" onchange="this.form.submit();">
+                    <option value="">전체 상태</option>
+                    <option value="Y" <?php echo $status === 'Y' ? 'selected' : ''; ?>>사용(활성)</option>
+                    <option value="N" <?php echo $status === 'N' ? 'selected' : ''; ?>>미사용(비활성)</option>
+                </select>
+            </label>
+            <label>
+                <span>키워드</span>
+                <input type="text" name="stx" value="<?php echo get_text($stx); ?>" placeholder="메인 키워드 검색" class="frm_input">
+            </label>
+            <div class="bp-filter-actions">
+                <button type="submit" class="btn_submit btn">검색</button>
+                <a href="./keyword_list.php" class="btn btn_02">초기화</a>
+            </div>
+        </div>
+    </form>
+</details>
+
+<div class="btn_fixed_top">
+    <a href="./keyword_form.php" class="btn btn_01">키워드 신규 등록</a>
+</div>
 
 <!-- PC 테이블 (769px 이상) -->
-<div class="tbl_head01 tbl_wrap pc-table-wrap" style="margin-top:15px;">
+<div class="tbl_head01 tbl_wrap" id="pc_table_view" style="margin-top:15px;">
     <table>
         <caption>키워드 관리 목록</caption>
         <thead>
@@ -148,38 +153,24 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 </div>
 
 <!-- 모바일 카드 목록 (768px 이하) -->
-<div class="mobile-card-wrap">
+<div class="bp-project-cards" id="mobile_card_view" style="margin-top:15px;">
     <?php if ($total_count > 0) { 
         // 결과셋 포인터 리셋
-        mysqli_data_seek($result, 0);
+        sql_data_seek($result, 0);
         while ($row = sql_fetch_array($result)) {
     ?>
-    <div class="mobile-card">
-        <div class="card-row">
-            <span class="label">ID</span>
-            <span class="value"><?php echo (int)$row['id']; ?></span>
+    <div class="bp-project-card">
+        <div class="bp-project-card-head">
+            <span class="bp-project-title"><strong><?php echo get_text($row['keyword']); ?></strong></span>
+            <span class="bp-status-badge"><?php echo $row['status'] === 'Y' ? '활성' : '<span style="color:#c00;">비활성</span>'; ?></span>
         </div>
-        <div class="card-row">
-            <span class="label">프로젝트</span>
-            <span class="value"><?php echo get_text($row['project_topic']); ?></span>
+        <div class="bp-project-meta">
+            <span>ID: <?php echo (int)$row['id']; ?></span>
+            <span>프로젝트: <?php echo get_text($row['project_topic']); ?></span>
+            <span>광고주: <?php echo get_text($row['advertiser_name']); ?></span>
+            <span>등록일: <?php echo get_text($row['created_at']); ?></span>
         </div>
-        <div class="card-row">
-            <span class="label">광고주</span>
-            <span class="value"><?php echo get_text($row['advertiser_name']); ?></span>
-        </div>
-        <div class="card-row">
-            <span class="label">메인 키워드</span>
-            <span class="value"><strong><?php echo get_text($row['keyword']); ?></strong></span>
-        </div>
-        <div class="card-row">
-            <span class="label">상태</span>
-            <span class="value"><?php echo $row['status'] === 'Y' ? '활성' : '<span style="color:#c00;">비활성</span>'; ?></span>
-        </div>
-        <div class="card-row">
-            <span class="label">등록일</span>
-            <span class="value"><?php echo get_text($row['created_at']); ?></span>
-        </div>
-        <div class="card-actions">
+        <div class="bp-project-actions">
             <a href="./keyword_form.php?w=u&amp;id=<?php echo (int)$row['id']; ?><?php echo $qstr; ?>" class="btn btn_02">수정</a>
             <a href="./keyword_update.php?mode=delete&amp;id=<?php echo (int)$row['id']; ?>&amp;token=<?php echo get_admin_token(); ?><?php echo $qstr; ?>" class="btn btn_01" onclick="return confirm('이 키워드를 삭제하시겠습니까?');">삭제</a>
         </div>
