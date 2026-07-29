@@ -113,95 +113,34 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 <div id="to_content"><a href="#container">본문 바로가기</a></div>
 
 <?php
-// Function to find the auth key based on URL from the original $menu arrays
-function get_sf_auth_key_by_url($url) {
-    global $menu;
-    foreach($menu as $key => $sub_menus) {
-        foreach($sub_menus as $idx => $m) {
-            if ($idx > 0 && isset($m[2]) && $m[2] === $url) {
-                return $m[0];
-            }
-        }
-    }
-    return null;
-}
-
-$sf_menus = array(
-    '쇼폼' => array(
-        array('title' => '쇼폼 대시보드', 'href' => '#'),
-        array('title' => '쇼폼 관리', 'href' => '#'),
-        array('title' => '쇼폼 등록', 'href' => '#'),
-        array('title' => '신청·문의 관리', 'href' => '#'),
-        array('title' => '고객 관리', 'href' => '#'),
-        array('title' => '템플릿 관리', 'href' => '#'),
-        array('title' => '사용 현황', 'href' => '#'),
-        array('title' => '쇼폼 설정', 'href' => '#'),
-    ),
-    '블로그' => array(
-        array('title' => '블로그 대시보드', 'href' => G5_ADMIN_URL.'/blog/project_list.php'),
-        array('title' => '광고주 관리', 'href' => G5_ADMIN_URL.'/blog/advertiser_list.php'),
-        array('title' => '사이트 관리', 'href' => G5_ADMIN_URL.'/blog/site_list.php'),
-        array('title' => '계정 관리', 'href' => '#'),
-        array('title' => 'AI 제공자 관리', 'href' => G5_ADMIN_URL.'/blog/ai_provider_list.php'),
-        array('title' => '콘텐츠 프로젝트', 'href' => G5_ADMIN_URL.'/blog/project_list.php'),
-        array('title' => '키워드 관리', 'href' => G5_ADMIN_URL.'/blog/keyword_list.php'),
-        array('title' => '포스트 관리', 'href' => '#'),
-        array('title' => '예약 발행 관리', 'href' => G5_ADMIN_URL.'/blog/publish_job_list.php'),
-        array('title' => '이미지 라이브러리', 'href' => G5_ADMIN_URL.'/blog/image_list.php'),
-        array('title' => '활동 로그', 'href' => '#'),
-        array('title' => '블로그 설정', 'href' => G5_ADMIN_URL.'/blog/install_form.php'),
-    ),
-    '랜딩' => array(
-        array('title' => '랜딩 대시보드', 'href' => G5_ADMIN_URL.'/landing/landing_list.php'),
-        array('title' => '랜딩페이지 관리', 'href' => G5_ADMIN_URL.'/landing/landing_list.php'),
-        array('title' => '랜딩페이지 등록', 'href' => G5_ADMIN_URL.'/landing/landing_form.php'),
-        array('title' => '템플릿 관리', 'href' => G5_ADMIN_URL.'/landing/template_list.php'),
-        array('title' => '상담·문의 관리', 'href' => G5_ADMIN_URL.'/landing/inquiry_list.php'),
-        array('title' => '고객 관리', 'href' => '#'),
-        array('title' => '도메인 관리', 'href' => '#'),
-        array('title' => '방문·전환 통계', 'href' => G5_ADMIN_URL.'/landing/inquiry_stats.php'),
-        array('title' => '랜딩 설정', 'href' => G5_ADMIN_URL.'/landing/ai_setting.php'),
-    ),
-    'SaaS 관리' => array(
-        array('title' => 'SaaS 대시보드', 'href' => '#'),
-        array('title' => '고객사 관리', 'href' => '#'),
-        array('title' => '요금제 관리', 'href' => '#'),
-        array('title' => '구독 관리', 'href' => '#'),
-        array('title' => '결제 관리', 'href' => '#'),
-        array('title' => '사용량 관리', 'href' => '#'),
-        array('title' => '도메인 관리', 'href' => '#'),
-        array('title' => '파트너 관리', 'href' => '#'),
-        array('title' => 'API 관리', 'href' => '#'),
-        array('title' => 'Webhook 관리', 'href' => '#'),
-        array('title' => '시스템 로그', 'href' => '#'),
-    ),
-    '공통 관리' => array(
-        array('title' => '통합 고객 관리', 'href' => G5_ADMIN_URL.'/member_list.php'),
-        array('title' => '통합 상담 관리', 'href' => '#'),
-        array('title' => '관리자 계정', 'href' => G5_ADMIN_URL.'/auth_list.php'),
-        array('title' => '역할·권한 관리', 'href' => G5_ADMIN_URL.'/auth_list.php'),
-        array('title' => '파일 관리', 'href' => '#'),
-        array('title' => '알림 관리', 'href' => '#'),
-        array('title' => '공통 설정', 'href' => G5_ADMIN_URL.'/config_form.php'),
-    )
-);
-
-// Single shared permission filter, reused by both the left sidebar and the top sitemap bar.
+// 사이드바/상단 전체메뉴는 admin.lib.php가 admin.menu*.php 파일들을 글롭으로 읽어
+// 채운 실제 $menu 전역을 그대로 사용한다. 이전에는 여기서 하드코딩한 $sf_menus
+// 배열을 따로 그려서 그누보드 기본 관리자 메뉴(환경설정/회원관리/게시판관리 등)가
+// 화면에 전혀 나오지 않는 문제가 있었다 — $menu 자체는 정상적으로 채워져 있었지만
+// 렌더링에서 아예 사용되지 않았다. admin.menu100.php 등 원본 파일의 관례대로
+// $menu[$key][0]을 그룹 제목/대표링크로, $menu[$key][1..]을 하위 메뉴로 사용하고,
+// print_menu2()와 동일한 권한 검사를 항목 단위로 그대로 적용한다.
 $sf_menus_filtered = array();
-foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
-    $sf_filtered_subs = array();
-    foreach ($sf_sub_menus as $sf_sub) {
-        if ($sf_sub['href'] === '#') {
-            if ($is_admin === 'super') $sf_filtered_subs[] = $sf_sub;
+if (isset($menu) && is_array($menu)) {
+    foreach ($menu as $sf_menu_key => $sf_group) {
+        if (!isset($sf_group[0])) {
             continue;
         }
-        $sf_auth_key = get_sf_auth_key_by_url($sf_sub['href']);
-        if ($is_admin === 'super' || ($sf_auth_key && isset($auth[$sf_auth_key]) && strpos($auth[$sf_auth_key], 'r') !== false)) {
-            $sf_filtered_subs[] = $sf_sub;
+        $sf_subs = array();
+        for ($i = 1; $i < count($sf_group); $i++) {
+            if (!isset($sf_group[$i])) {
+                continue;
+            }
+            $sf_item = $sf_group[$i];
+            $sf_auth_code = $sf_item[0];
+            if ($is_admin != 'super' && (!array_key_exists($sf_auth_code, $auth) || !strstr($auth[$sf_auth_code], 'r'))) {
+                continue;
+            }
+            $sf_subs[] = array('title' => $sf_item[1], 'href' => $sf_item[2]);
         }
-    }
-    if (count($sf_filtered_subs) > 0) {
-        $sf_menus_filtered[$sf_group_title] = $sf_filtered_subs;
+        if (count($sf_subs) > 0) {
+            $sf_menus_filtered[$sf_menu_key] = array('title' => $sf_group[0][1], 'subs' => $sf_subs);
+        }
     }
 }
 ?>
@@ -215,7 +154,15 @@ foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
         </div>
     </div>
     <div class="sf-header-right">
-        <a href="<?php echo G5_URL ?>/" target="_blank" title="홈페이지" aria-label="홈페이지"><i class="fa-solid fa-house" aria-hidden="true"></i></a>
+        <span class="sf-admin-whoami">
+            <?php
+            $sf_admin_label = ($is_admin === 'super') ? '최고관리자' : '관리자';
+            $sf_admin_name = isset($member['mb_nick']) && $member['mb_nick'] !== '' ? $member['mb_nick'] : (isset($member['mb_id']) ? $member['mb_id'] : '');
+            echo get_text($sf_admin_label . '(' . $sf_admin_name . ') 로그인 중');
+            ?>
+        </span>
+        <a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>" title="관리자 메인" aria-label="관리자 메인"><i class="fa-solid fa-gauge" aria-hidden="true"></i></a>
+        <a href="<?php echo G5_URL ?>/" target="_blank" rel="noopener noreferrer" title="홈페이지" aria-label="홈페이지"><i class="fa-solid fa-house" aria-hidden="true"></i></a>
         <a href="<?php echo G5_BBS_URL ?>/logout.php" title="로그아웃" aria-label="로그아웃"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></a>
     </div>
 </header>
@@ -231,17 +178,17 @@ foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
     <ul class="sf-menu-list">
         <?php
         $sf_group_id = 0;
-        foreach($sf_menus_filtered as $group_title => $filtered_subs):
+        foreach($sf_menus_filtered as $sf_menu_key => $sf_group_data):
             $sf_group_id++;
             $group_html_id = 'sf-menu-group-' . $sf_group_id;
         ?>
         <li class="sf-menu-group">
             <button type="button" class="sf-menu-btn" aria-expanded="false" aria-controls="<?php echo $group_html_id; ?>">
-                <span><?php echo $group_title; ?></span>
+                <span><?php echo $sf_group_data['title']; ?></span>
                 <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
             </button>
             <ul class="sf-menu-sub" id="<?php echo $group_html_id; ?>">
-                <?php foreach($filtered_subs as $sub): ?>
+                <?php foreach($sf_group_data['subs'] as $sub): ?>
                 <li><a href="<?php echo $sub['href']; ?>" class="sf-menu-link"><?php echo $sub['title']; ?></a></li>
                 <?php endforeach; ?>
             </ul>
@@ -407,11 +354,11 @@ jQuery(function($) {
     </div>
     <div class="sf-admin-sitemap-body" id="sf-admin-sitemap-body" hidden>
         <div class="sf-admin-sitemap-grid">
-            <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
+            <?php foreach($sf_menus_filtered as $sf_menu_key => $sf_group_data): ?>
             <div class="sf-sitemap-group">
-                <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
+                <h3 class="sf-sitemap-group-title"><?php echo $sf_group_data['title']; ?></h3>
                 <div class="sf-sitemap-links">
-                    <?php foreach($filtered_subs as $sub): ?>
+                    <?php foreach($sf_group_data['subs'] as $sub): ?>
                         <?php if ($sub['href'] === '#' || $sub['href'] === '') { ?>
                         <span class="sf-sitemap-link sf-sitemap-link-disabled" aria-disabled="true"><?php echo $sub['title']; ?><em>준비 중</em></span>
                         <?php } else { ?>

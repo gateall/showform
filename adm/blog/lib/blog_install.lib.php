@@ -163,5 +163,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v14.sql',
             'installed' => bp_install_table_exists($table_prefix, 'channel_apps'),
         ),
+        15 => array(
+            'label' => '통합 제작 폼', 'desc' => 'posts 테이블 builder_state 추가',
+            'file' => $sql_dir . '/blog_automation_v15.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'posts', 'builder_state'),
+        ),
     );
 }

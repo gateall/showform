@@ -1,6 +1,7 @@
 <?php
 $menu['menu360'] = array(
     array('360000', '블로그자동화', G5_ADMIN_URL . '/blog/project_list.php', 'blog'),
+    array('360050', '통합 포스팅 제작', G5_ADMIN_URL . '/blog/post_builder.php', 'blog_post_builder'),
     array('360100', '광고주관리', G5_ADMIN_URL . '/blog/advertiser_list.php', 'blog_advertiser'),
     array('361100', '광고주 계정관리', G5_ADMIN_URL . '/blog/advertiser_account_list.php', 'blog_advertiser_account'),
     array('361110', 'SNS/채널 앱 설정', G5_ADMIN_URL . '/blog/channel_app_list.php', 'blog_channel_app'),

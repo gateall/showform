@@ -45,16 +45,47 @@
     vertical-align: middle;
 }
 
+.sf-header-right {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
 .sf-header-right a {
     color: #666;
     font-size: 20px;
     text-decoration: none;
     margin-left: 12px;
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 44px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
+}
+
+/* 모바일: 아이디가 길어도 헤더가 깨지지 않도록 말줄임 처리, PC에서만 전체 문구 노출 */
+.sf-admin-whoami {
+    display: none;
+}
+
+@media (min-width: 480px) {
+    .sf-admin-whoami {
+        display: inline-block;
+        font-size: 13px;
+        color: #666;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 769px) {
+    .sf-admin-whoami {
+        max-width: 240px;
+        font-size: 14px;
+    }
 }
 
 /* Body adjustment for fixed header */
