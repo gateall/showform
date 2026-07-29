@@ -19,11 +19,12 @@ $sql_file_v10 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v10.sql';
 $sql_file_v11 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v11.sql';
 $sql_file_v12 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v12.sql';
 $sql_file_v13 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v13.sql';
+$sql_file_v14 = G5_ADMIN_PATH . '/blog/sql/blog_automation_v14.sql';
 
 if (
     !is_file($sql_file_v1) || !is_file($sql_file_v2) || !is_file($sql_file_v3) ||
     !is_file($sql_file_v4) || !is_file($sql_file_v5) || !is_file($sql_file_v6) ||
-    !is_file($sql_file_v7) || !is_file($sql_file_v8) || !is_file($sql_file_v9) || !is_file($sql_file_v10) || !is_file($sql_file_v11) || !is_file($sql_file_v12) || !is_file($sql_file_v13)
+    !is_file($sql_file_v7) || !is_file($sql_file_v8) || !is_file($sql_file_v9) || !is_file($sql_file_v10) || !is_file($sql_file_v11) || !is_file($sql_file_v12) || !is_file($sql_file_v13) || !is_file($sql_file_v14)
 ) {
     alert('SQL 파일을 찾을 수 없습니다.');
 }
@@ -112,9 +113,12 @@ $table_prefix = G5_TABLE_PREFIX;
 $v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
 $v2_installed = bp_install_table_exists($table_prefix, 'content_title_candidates')
     && bp_install_table_exists($table_prefix, 'content_quality_checks');
-$v3_installed = bp_install_table_exists($table_prefix, 'content_hashtags')
-    && bp_install_table_exists($table_prefix, 'content_generation_logs');
-$v4_installed = bp_install_table_exists($table_prefix, 'keywords');
+// v3는 posts.hashtags 컬럼 + content_generation_logs 테이블을 만든다('content_hashtags'라는
+// 테이블은 애초에 존재하지 않아 이 체크가 항상 거짓으로 나와 매번 재실행되고 있었다).
+$v3_installed = bp_install_table_exists($table_prefix, 'content_generation_logs')
+    && bp_install_column_exists($table_prefix, 'posts', 'hashtags');
+// v4는 content_keywords 테이블에 컬럼을 추가할 뿐 'keywords'라는 별도 테이블은 만들지 않는다.
+$v4_installed = bp_install_column_exists($table_prefix, 'content_keywords', 'status');
 $v5_installed = bp_install_column_exists($table_prefix, 'posts', 'deleted_at');
 $v6_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'schedule_type');
 $v7_installed = bp_install_table_exists($table_prefix, 'images');
@@ -124,6 +128,7 @@ $v10_installed = bp_install_table_exists($table_prefix, 'image_presets');
 $v11_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'locked_at');
 $v12_installed = bp_install_table_exists($table_prefix, 'post_performance') && bp_install_table_exists($table_prefix, 'report_snapshots');
 $v13_installed = bp_install_table_exists($table_prefix, 'advertiser_accounts') && bp_install_column_exists($table_prefix, 'advertisers', 'contract_start_date');
+$v14_installed = bp_install_table_exists($table_prefix, 'channel_apps');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
@@ -171,6 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['run_all']) || $_POST['run_v13'] || !$v13_installed) {
         $created = array_merge($created, bp_install_run_sql_file($sql_file_v13, $table_prefix));
     }
+    if (isset($_POST['run_all']) || $_POST['run_v14'] || !$v14_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v14, $table_prefix));
+    }
 
     $did_install = true;
     
@@ -180,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @chmod($blog_img_dir, G5_DIR_PERMISSION);
     }
 }
-$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed && $v9_installed && $v10_installed && $v11_installed && $v12_installed && $v13_installed;
+$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed && $v8_installed && $v9_installed && $v10_installed && $v11_installed && $v12_installed && $v13_installed && $v14_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -198,7 +206,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     &nbsp;&nbsp;Image Pipeline: <?php echo $v10_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;Scheduler: <?php echo $v11_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;Reports/Performance: <?php echo $v12_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
-    &nbsp;&nbsp;Adv Dashboard: <?php echo $v13_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
+    &nbsp;&nbsp;Adv Dashboard: <?php echo $v13_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;SNS 채널 연동: <?php echo $v14_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -254,6 +263,13 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                         <span class="help_txt">광고주 계정 및 계약 정보 컬럼 추가</span>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row">V14 (SNS/채널 연동) DB 업데이트</th>
+                    <td>
+                        <button type="submit" name="run_v14" value="1" class="btn btn_02">V14 업데이트 실행</button>
+                        <span class="help_txt">channel_apps 테이블(채널별 OAuth 앱 설정) 추가</span>
+                    </td>
+                </tr>
                 <tr><th scope="row">필수 확장</th>
                     <td>
                         <?php foreach ($diagnostics['extensions'] as $ext => $loaded) { ?>
@@ -272,7 +288,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </div>
 <?php } elseif ($did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>설치할 테이블이 있습니다. (원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code> ~ <code>v8.sql</code>)</p>
+        <p>설치할 테이블이 있습니다. (원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code> ~ <code>v14.sql</code>)</p>
         <ul>
             <?php foreach ($created as $t) { ?>
                 <li><?php echo get_text($t); ?></li>

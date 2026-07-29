@@ -15,10 +15,11 @@ function bp_table(string $name): string
         'publish_jobs', 'publish_attempts', 'content_activity_logs',
         'content_title_candidates', 'content_quality_checks',
         'content_generation_logs',
-        // v7~v12에서 추가된 테이블 — bp_table() 호출부는 이미 여러 파일에 존재했으나
+        // v7~v14에서 추가된 테이블 — bp_table() 호출부는 이미 여러 파일에 존재했으나
         // 이 허용 목록이 갱신되지 않아 전부 '잘못된 테이블 요청입니다' 처리되고 있었다.
         'images', 'post_images', 'category_mappings', 'naver_packages',
-        'post_performance', 'report_snapshots',
+        'post_performance', 'report_snapshots', 'advertiser_accounts',
+        'channel_apps',
     );
     if (!in_array($name, $allowed, true)) {
         alert('잘못된 테이블 요청입니다.');
