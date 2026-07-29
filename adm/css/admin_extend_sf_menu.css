@@ -2,11 +2,12 @@
 
 /* ========================================================
    ShowForm Admin Menu - Mobile First Design
+   기본 관리자(그누보드/영카트 원본) / 쇼폼·콘텐츠 운영(신규 업무) 영역 분리 구조.
 ======================================================== */
 
 /* 1. Header (Mobile First) */
 .sf-admin-header {
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     width: 100%;
@@ -19,11 +20,13 @@
     padding: 0 16px;
     z-index: 1000;
     box-sizing: border-box;
+    gap: 8px;
 }
 
 .sf-header-left {
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .sf-btn-gnb {
@@ -40,15 +43,59 @@
     justify-content: center;
 }
 
+.sf-header-logo {
+    display: inline-flex;
+    align-items: center;
+}
+
 .sf-header-logo img {
     height: 28px;
     vertical-align: middle;
+}
+
+/* 2. 영역 전환 스위치 (기본 관리자 / 쇼폼·콘텐츠 운영) */
+.sf-area-switch {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.sf-area-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    flex: 0 0 auto;
+}
+
+.sf-area-btn:hover {
+    background: #f5f5f5;
+    color: #222;
+}
+
+.sf-area-btn.active {
+    color: #0046cc;
+    background: #eef2fa;
+    border-bottom-color: #0046cc;
+    font-weight: 700;
 }
 
 .sf-header-right {
     display: flex;
     align-items: center;
     min-width: 0;
+    flex: 0 0 auto;
 }
 
 .sf-header-right a {
@@ -88,12 +135,7 @@
     }
 }
 
-/* Body adjustment for fixed header */
-body {
-    padding-top: 56px;
-}
-
-/* 2. Sidebar Overlay (Mobile) */
+/* 3. Sidebar Overlay (Mobile) */
 .sf-sidebar-overlay {
     display: none;
     position: fixed;
@@ -109,7 +151,7 @@ body {
     display: block;
 }
 
-/* 3. Sidebar (Mobile First) */
+/* 4. Sidebar / 모바일 드로어 (Mobile First) */
 .sf-admin-sidebar {
     position: fixed;
     top: 0;
@@ -155,7 +197,7 @@ body {
     justify-content: center;
 }
 
-/* 4. Menu List */
+/* 5. Menu List (드로어 아코디언 — 기본 관리자/쇼폼 운영 공용) */
 .sf-menu-list {
     list-style: none;
     padding: 0;
@@ -237,178 +279,103 @@ body {
     font-weight: 600;
 }
 
-/* 4b. Top Sitemap Bar (Mobile First) — collapsed by default, no fixed height when closed */
-.sf-admin-sitemap {
+/* 6. 쇼폼·콘텐츠 운영 PC 가로 1차/2차 메뉴 (좌측 사이드바 대신 사용, §8) */
+.sf-content-nav {
     position: sticky;
     top: 56px;
     z-index: 900;
     background: #fbfbfb;
     border-bottom: 1px solid #e5e5e5;
+    overflow-x: auto;
 }
 
-.sf-sitemap-bar {
+.sf-content-nav-list {
+    list-style: none;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 48px;
-    max-height: 60px;
-    padding: 0 16px;
-    box-sizing: border-box;
+    margin: 0;
+    padding: 0 8px;
 }
 
-.sf-sitemap-bar-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #333;
+.sf-content-nav-item {
+    position: relative;
+    flex: 0 0 auto;
 }
 
-.sf-sitemap-toggle {
+.sf-content-nav-btn {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 48px;
-    padding: 0 4px;
+    min-height: 44px;
+    padding: 0 14px;
     background: none;
     border: none;
-    color: #0046cc;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
+    color: #333;
     cursor: pointer;
-}
-
-.sf-sitemap-toggle i {
-    transition: transform 0.2s;
-    font-size: 12px;
-}
-
-.sf-sitemap-toggle[aria-expanded="true"] i {
-    transform: rotate(180deg);
-}
-
-/* Collapsed state must take zero layout space — [hidden] alone can lose to
-   a later class rule (e.g. display:grid on a descendant) without !important. */
-.sf-admin-sitemap-body[hidden] {
-    display: none !important;
-}
-
-.sf-admin-sitemap-grid {
-    padding: 4px 16px 12px;
-}
-
-.sf-sitemap-group {
-    padding: 8px 0;
-    border-top: 1px solid #eee;
-}
-
-.sf-sitemap-group:first-child {
-    border-top: none;
-}
-
-.sf-sitemap-group-title {
-    margin: 0 0 6px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #888;
-}
-
-.sf-sitemap-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.sf-sitemap-link {
-    display: inline-flex;
-    align-items: center;
     white-space: nowrap;
-    padding: 6px 10px;
-    min-height: 48px; /* mobile touch target */
-    box-sizing: border-box;
+}
+
+.sf-content-nav-btn i {
+    font-size: 11px;
+    color: #999;
+}
+
+.sf-content-nav-btn.sf-current-bucket,
+.sf-content-nav-item.active .sf-content-nav-btn {
+    color: #0046cc;
+}
+
+.sf-content-nav-flyout {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    min-width: 180px;
+    max-width: 320px;
     background: #fff;
     border: 1px solid #e5e5e5;
-    border-radius: 16px;
-    color: #555;
-    text-decoration: none;
-    font-size: 13px;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 6px 0;
+    z-index: 950;
 }
 
-.sf-sitemap-link:hover {
+.sf-content-nav-item.active .sf-content-nav-flyout {
+    display: block;
+}
+
+.sf-content-nav-link {
+    display: block;
+    padding: 8px 14px;
+    min-height: 40px;
+    line-height: 24px;
+    color: #444;
+    text-decoration: none;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.sf-content-nav-link:hover {
     background: #f5f5f5;
     color: #111;
 }
 
-.sf-sitemap-link.active {
-    background: #eef2fa;
+.sf-content-nav-link.active {
     color: #0046cc;
-    border-color: #0046cc;
     font-weight: 600;
+    background: #eef2fa;
 }
 
-.sf-sitemap-link-disabled {
-    color: #bbb;
-    background: #f5f5f5;
-    cursor: default;
+/* 모바일에서는 PC 가로 메뉴 대신 상단 햄버거로 여는 드로어를 쓴다 */
+.sf-content-nav {
+    display: none;
 }
 
-.sf-sitemap-link-disabled em {
-    margin-left: 6px;
-    font-style: normal;
-    font-size: 11px;
-    color: #ccc;
-}
-
-/* 769px~1023px: 2 columns */
-@media (min-width: 769px) and (max-width: 1023px) {
-    .sf-admin-sitemap-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0 24px;
-        align-items: start;
-    }
-
-    .sf-sitemap-group {
-        border-top: none;
-        padding: 8px 0;
-    }
-}
-
-/* 1024px~1439px: 3 columns */
-@media (min-width: 1024px) and (max-width: 1439px) {
-    .sf-admin-sitemap-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0 24px;
-        align-items: start;
-    }
-
-    .sf-sitemap-group {
-        border-top: none;
-        padding: 8px 0;
-    }
-}
-
-/* 1440px and above: 5 columns (one per top-level category) */
-@media (min-width: 1440px) {
-    .sf-admin-sitemap-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0 24px;
-        align-items: start;
-    }
-
-    .sf-sitemap-group {
-        border-top: none;
-        padding: 8px 0;
-    }
-}
-
-/* 5. PC Extension (769px and above) */
+/* 7. PC Extension (769px and above) */
 @media (min-width: 769px) {
-    .sf-admin-header {
-        left: 260px;
-        width: calc(100% - 260px);
-    }
-
     .sf-btn-gnb {
         display: none; /* Hide hamburger on PC */
     }
@@ -417,11 +384,26 @@ body {
         display: none !important; /* Never show overlay on PC */
     }
 
-    .sf-admin-sidebar {
+    .sf-btn-close {
+        display: none; /* Hide close button on PC */
+    }
+
+    .sf-content-nav {
+        display: block;
+    }
+
+    /* 기본 관리자 영역만 PC에서 좌측 고정 사이드바를 쓴다(§5, §8) */
+    .sf-admin-header.sf-area-core {
+        left: 260px;
+        width: calc(100% - 260px);
+    }
+
+    .sf-admin-sidebar.sf-area-core {
         left: 0;
         width: 260px;
         border-right: 1px solid #e5e5e5;
         box-shadow: none;
+        position: fixed;
     }
 
     .sf-sidebar-header {
@@ -429,48 +411,21 @@ body {
         box-sizing: border-box;
     }
 
-    .sf-btn-close {
-        display: none; /* Hide close button on PC */
-    }
-
-    body {
+    #wrapper.sf-area-core {
         padding-left: 260px;
     }
 
-    /* Mouse-driven breakpoints can use a more compact chip height than the
-       48px mobile touch target, keeping expanded height within ~180-260px. */
-    .sf-sitemap-link {
-        min-height: 36px;
-        font-size: 14px;
+    /* 쇼폼·콘텐츠 운영 영역은 좌측 메뉴를 쓰지 않으므로 드로어를 화면 밖에 완전히 둔다 */
+    .sf-admin-sidebar.sf-area-content {
+        left: -340px !important;
     }
 }
 
-
 /* ========================================================
-   Sitemap Compression & Title Clipping Fix
+   Title Clipping / Skip Link Fix
 ======================================================== */
-.sf-sitemap-breadcrumb {
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: #333;
-    white-space: normal;
-    word-break: break-all;
-}
 
-.sf-sitemap-current-path {
-    font-weight: 400;
-    color: #666;
-    margin-left: 4px;
-    font-size: 13px;
-}
-
-.sf-sitemap-url {
-    display: none; /* URL hidden by default */
-}
-
-/* 7.1. Accessibility for skip link (#to_content) */
+/* 8.1. Accessibility for skip link (#to_content) — 포커스 받을 때만 보이게 유지 */
 #to_content {
     position: absolute;
     top: 0;
@@ -499,7 +454,7 @@ body {
     top: 12px;
 }
 
-/* 7.2. Fix Title Clipping (#container_title) */
+/* 8.2. Fix Title Clipping (#container_title) */
 #container_title {
     position: static !important;
     height: auto !important;
@@ -518,16 +473,10 @@ body {
 /* Fix #container excessive gap on PC/Mobile */
 #container {
     margin-top: 0 !important;
-    padding-left: 0 !important; /* Managed by body padding-left on PC */
+    padding-left: 0 !important; /* PC 좌측 여백은 #wrapper.sf-area-core 에서만 관리 */
 }
 
 @media (min-width: 769px) {
-    .sf-sitemap-breadcrumb {
-        font-size: 15px;
-    }
-    .sf-sitemap-current-path {
-        font-size: 14px;
-    }
     #container_title {
         padding: 12px 16px !important;
         font-size: 20px !important;

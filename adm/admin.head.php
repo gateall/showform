@@ -113,91 +113,23 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 <div id="to_content"><a href="#container">본문 바로가기</a></div>
 
 <?php
-// 사이드바/상단 전체메뉴는 admin.lib.php가 admin.menu*.php 파일들을 글롭으로 읽어
-// 채운 실제 $menu 전역을 그대로 사용한다. 이전에는 여기서 하드코딩한 $sf_menus
-// 배열을 따로 그려서 그누보드 기본 관리자 메뉴(환경설정/회원관리/게시판관리 등)가
-// 화면에 전혀 나오지 않는 문제가 있었다 — $menu 자체는 정상적으로 채워져 있었지만
-// 렌더링에서 아예 사용되지 않았다. admin.menu100.php 등 원본 파일의 관례대로
-// $menu[$key][0]을 그룹 제목/대표링크로, $menu[$key][1..]을 하위 메뉴로 사용하고,
-// print_menu2()와 동일한 권한 검사를 항목 단위로 그대로 적용한다.
-$sf_menus_filtered = array();
-if (isset($menu) && is_array($menu)) {
-    foreach ($menu as $sf_menu_key => $sf_group) {
-        if (!isset($sf_group[0])) {
-            continue;
-        }
-        $sf_subs = array();
-        for ($i = 1; $i < count($sf_group); $i++) {
-            if (!isset($sf_group[$i])) {
-                continue;
-            }
-            $sf_item = $sf_group[$i];
-            $sf_auth_code = $sf_item[0];
-            if ($is_admin != 'super' && (!array_key_exists($sf_auth_code, $auth) || !strstr($auth[$sf_auth_code], 'r'))) {
-                continue;
-            }
-            $sf_subs[] = array('title' => $sf_item[1], 'href' => $sf_item[2]);
-        }
-        if (count($sf_subs) > 0) {
-            $sf_menus_filtered[$sf_menu_key] = array('title' => $sf_group[0][1], 'subs' => $sf_subs);
-        }
-    }
-}
+// 관리자 메뉴를 "기본 관리자"(그누보드/영카트 원본)와 "쇼폼·콘텐츠 운영"(신규 업무)
+// 두 영역으로 완전히 분리해 그린다. 실제 $menu(admin.lib.php가 admin.menu*.php를
+// 글롭으로 읽어 채운 원본)를 그대로 쓰고, 어느 그룹이 어느 영역인지는
+// adm/inc/admin_area_map.php의 명시적 설정으로만 판단한다(코드 숫자 추측 금지).
+require_once __DIR__ . '/inc/admin_menu_build.php';
+
+$sf_menu = isset($menu) && is_array($menu) ? $menu : array();
+$sf_auth = isset($auth) && is_array($auth) ? $auth : array();
+$sf_built = bp_sf_build_menus($sf_menu, $sf_auth, $is_admin);
+$sf_core_menus = $sf_built['core'];
+$sf_content_buckets = $sf_built['content'];
+$sf_current_area = bp_sf_resolve_current_area($sf_menu, bp_sf_admin_area_map(), isset($sub_menu) ? $sub_menu : null);
+$sf_content_dashboard_url = bp_sf_content_dashboard_url($sf_menu);
+
+require __DIR__ . '/inc/admin_area_nav.php';
+require __DIR__ . '/inc/admin_drawer_menu.php';
 ?>
-<header class="sf-admin-header">
-    <div class="sf-header-left">
-        <button type="button" class="sf-btn-gnb" id="sf-btn-gnb" aria-expanded="false" aria-controls="sf-admin-sidebar" aria-label="메뉴 열기">
-            <i class="fa-solid fa-bars" aria-hidden="true"></i>
-        </button>
-        <div class="sf-header-logo">
-            <a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img/logo.png" alt="관리자"></a>
-        </div>
-    </div>
-    <div class="sf-header-right">
-        <span class="sf-admin-whoami">
-            <?php
-            $sf_admin_label = ($is_admin === 'super') ? '최고관리자' : '관리자';
-            $sf_admin_name = isset($member['mb_nick']) && $member['mb_nick'] !== '' ? $member['mb_nick'] : (isset($member['mb_id']) ? $member['mb_id'] : '');
-            echo get_text($sf_admin_label . '(' . $sf_admin_name . ') 로그인 중');
-            ?>
-        </span>
-        <a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>" title="관리자 메인" aria-label="관리자 메인"><i class="fa-solid fa-gauge" aria-hidden="true"></i></a>
-        <a href="<?php echo G5_URL ?>/" target="_blank" rel="noopener noreferrer" title="홈페이지" aria-label="홈페이지"><i class="fa-solid fa-house" aria-hidden="true"></i></a>
-        <a href="<?php echo G5_BBS_URL ?>/logout.php" title="로그아웃" aria-label="로그아웃"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></a>
-    </div>
-</header>
-
-<div class="sf-sidebar-overlay" id="sf-sidebar-overlay" aria-hidden="true"></div>
-<nav class="sf-admin-sidebar" id="sf-admin-sidebar" aria-label="관리자 주메뉴">
-    <div class="sf-sidebar-header">
-        <h2>관리자 메뉴</h2>
-        <button type="button" class="sf-btn-close" id="sf-btn-close" aria-label="메뉴 닫기">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-    </div>
-    <ul class="sf-menu-list">
-        <?php
-        $sf_group_id = 0;
-        foreach($sf_menus_filtered as $sf_menu_key => $sf_group_data):
-            $sf_group_id++;
-            $group_html_id = 'sf-menu-group-' . $sf_group_id;
-        ?>
-        <li class="sf-menu-group">
-            <button type="button" class="sf-menu-btn" aria-expanded="false" aria-controls="<?php echo $group_html_id; ?>">
-                <span><?php echo $sf_group_data['title']; ?></span>
-                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-            </button>
-            <ul class="sf-menu-sub" id="<?php echo $group_html_id; ?>">
-                <?php foreach($sf_group_data['subs'] as $sub): ?>
-                <li><a href="<?php echo $sub['href']; ?>" class="sf-menu-link"><?php echo $sub['title']; ?></a></li>
-                <?php endforeach; ?>
-            </ul>
-        </li>
-        <?php endforeach; ?>
-    </ul>
-</nav>
-
-
 
 <script>
 jQuery(function($) {
@@ -239,64 +171,61 @@ jQuery(function($) {
         }
     });
 
-    // Accordion Menu
+    // 드로어 아코디언 — 한 번에 하나의 1차 메뉴만 펼침(§7 모바일 요구사항)
     $('.sf-menu-btn').on('click', function() {
         var $btn = $(this);
         var $group = $btn.parent('.sf-menu-group');
         var $sub = $group.find('.sf-menu-sub');
         var isExpanded = $btn.attr('aria-expanded') === 'true';
 
-        $group.toggleClass('active');
+        $('.sf-menu-group').not($group).removeClass('active')
+            .find('.sf-menu-btn').attr('aria-expanded', 'false');
+        $('.sf-menu-group').not($group).find('.sf-menu-sub').slideUp(200);
+
+        $group.toggleClass('active', !isExpanded);
         $btn.attr('aria-expanded', !isExpanded);
-        $sub.slideToggle(300);
+        $sub.slideToggle(200);
     });
 
-    // Top Sitemap: single expand/collapse toggle (no per-category accordion)
-    var SF_SITEMAP_STORAGE_KEY = 'sf_admin_sitemap_expanded';
-    var $sitemapToggle = $('#sf-admin-sitemap-toggle');
-    var $sitemapBody = $('#sf-admin-sitemap-body');
+    // 드로어 메뉴 링크 클릭 후 자동 닫힘(§7)
+    $('.sf-menu-link').on('click', function() {
+        closeSidebar();
+    });
 
-    function setSitemapExpanded(expanded) {
-        if (expanded) {
-            $sitemapBody.removeAttr('hidden');
-            $sitemapToggle.attr('aria-expanded', 'true');
-            $sitemapToggle.find('.sf-sitemap-toggle-text').text('전체 메뉴 닫기');
-        } else {
-            $sitemapBody.attr('hidden', 'hidden');
-            $sitemapToggle.attr('aria-expanded', 'false');
-            $sitemapToggle.find('.sf-sitemap-toggle-text').text('전체 메뉴 펼치기');
-        }
-        try {
-            sessionStorage.setItem(SF_SITEMAP_STORAGE_KEY, expanded ? '1' : '0');
-        } catch (e) { /* sessionStorage unavailable (private mode etc.) — state just won't persist */ }
-    }
+    // PC 쇼폼·콘텐츠 운영 가로 메뉴 — 클릭으로 열고닫기(호버 전용 금지, 터치 접근성)
+    $('.sf-content-nav-btn').on('click', function(e) {
+        e.stopPropagation();
+        var $btn = $(this);
+        var $item = $btn.closest('.sf-content-nav-item');
+        var isExpanded = $btn.attr('aria-expanded') === 'true';
 
-    var sfSitemapInitialExpanded = false;
-    try {
-        sfSitemapInitialExpanded = sessionStorage.getItem(SF_SITEMAP_STORAGE_KEY) === '1';
-    } catch (e) { /* default to collapsed */ }
-    setSitemapExpanded(sfSitemapInitialExpanded);
+        $('.sf-content-nav-item').not($item).removeClass('active')
+            .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
 
-    $sitemapToggle.on('click', function() {
-        setSitemapExpanded($sitemapToggle.attr('aria-expanded') !== 'true');
+        $item.toggleClass('active', !isExpanded);
+        $btn.attr('aria-expanded', !isExpanded);
+    });
+
+    $(document).on('click', function() {
+        $('.sf-content-nav-item').removeClass('active')
+            .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
     });
 
     $(document).keyup(function(e) {
-        if (e.key === 'Escape' && $sitemapToggle.attr('aria-expanded') === 'true') {
-            setSitemapExpanded(false);
-            $sitemapToggle.focus();
+        if (e.key === 'Escape') {
+            $('.sf-content-nav-item').removeClass('active')
+                .find('.sf-content-nav-btn').attr('aria-expanded', 'false');
         }
     });
 
-    // Active Menu Highlighting — uses the anchor element's own (browser-normalized)
-    // pathname/search so it works regardless of how each href was authored, and so
-    // query-string filter links (e.g. project_list.php?status=draft) compare correctly.
+    // 현재 위치 강조 — 링크 자체의(브라우저가 정규화한) pathname/search로 비교하므로
+    // href 작성 방식이나 쿼리스트링 필터 링크(?status=draft 등)에도 안정적으로 동작한다.
     var currentPath = window.location.pathname;
     var currentSearch = window.location.search;
     var isForm = currentPath.indexOf('_form.php') !== -1;
     var listPath = currentPath.replace('_form.php', '_list.php');
 
-    $('.sf-menu-link, .sf-sitemap-link').each(function() {
+    $('.sf-menu-link, .sf-content-nav-link').each(function() {
         var href = $(this).attr('href');
         if (!href || href === '#') return;
 
@@ -309,69 +238,37 @@ jQuery(function($) {
 
         if (isMatch) {
             $(this).addClass('active').attr('aria-current', 'page');
-            var $group = $(this).closest('.sf-menu-group');
-            if ($group.length) {
-                $group.addClass('active');
-                $group.find('.sf-menu-btn').attr('aria-expanded', 'true');
-                $group.find('.sf-menu-sub').show();
+
+            var $drawerGroup = $(this).closest('.sf-menu-group');
+            if ($drawerGroup.length) {
+                $drawerGroup.addClass('active');
+                $drawerGroup.find('.sf-menu-btn').attr('aria-expanded', 'true');
+                $drawerGroup.find('.sf-menu-sub').show();
             }
 
-            if ($(this).hasClass('sf-sitemap-link')) {
-                var groupTitle = $(this).closest('.sf-sitemap-group').find('.sf-sitemap-group-title').text();
-                var subTitle = $(this).find('.sf-sitemap-link-text').text();
-                $('#sf-sitemap-current-path').text(' > ' + groupTitle + ' > ' + subTitle);
+            var $navItem = $(this).closest('.sf-content-nav-item');
+            if ($navItem.length) {
+                $navItem.find('.sf-content-nav-btn').addClass('sf-current-bucket');
             }
         }
     });
 
-    // On mobile, if active is found, scroll to it
     if ($('.sf-menu-link.active').length) {
         var top = $('.sf-menu-link.active').offset().top;
-        if(top > $(window).height()) {
+        if (top > $(window).height()) {
             $sidebar.animate({ scrollTop: top - 100 }, 300);
         }
     }
 });
 </script>
 
-
-<div id="wrapper">
+<div id="wrapper" class="sf-area-<?php echo $sf_current_area; ?>">
 
     <div id="container" class="<?php echo $adm_menu_cookie['container']; ?>">
 
 <h1 id="container_title"><?php echo $g5['title'] ?></h1>
 
-<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="관리자 전체 메뉴">
-    <div class="sf-sitemap-bar">
-        <div class="sf-sitemap-breadcrumb">
-            <span class="sf-sitemap-bar-title">전체 메뉴</span>
-            <span class="sf-sitemap-current-path" id="sf-sitemap-current-path"></span>
-        </div>
-        <button type="button" class="sf-sitemap-toggle" id="sf-admin-sitemap-toggle" aria-expanded="false" aria-controls="sf-admin-sitemap-body">
-            <span class="sf-sitemap-toggle-text">전체 메뉴 펼치기</span>
-            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-    </div>
-    <div class="sf-admin-sitemap-body" id="sf-admin-sitemap-body" hidden>
-        <div class="sf-admin-sitemap-grid">
-            <?php foreach($sf_menus_filtered as $sf_menu_key => $sf_group_data): ?>
-            <div class="sf-sitemap-group">
-                <h3 class="sf-sitemap-group-title"><?php echo $sf_group_data['title']; ?></h3>
-                <div class="sf-sitemap-links">
-                    <?php foreach($sf_group_data['subs'] as $sub): ?>
-                        <?php if ($sub['href'] === '#' || $sub['href'] === '') { ?>
-                        <span class="sf-sitemap-link sf-sitemap-link-disabled" aria-disabled="true"><?php echo $sub['title']; ?><em>준비 중</em></span>
-                        <?php } else { ?>
-                        <a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link">
-                            <span class="sf-sitemap-link-text"><?php echo $sub['title']; ?></span>
-                            <span class="sf-sitemap-url"><?php echo $sub['href']; ?></span>
-                        </a>
-                        <?php } ?>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</nav>
+<?php if ($sf_current_area === 'content') {
+    require __DIR__ . '/inc/admin_content_nav.php';
+} ?>
         <div class="container_wr">
