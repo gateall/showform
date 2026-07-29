@@ -8,27 +8,67 @@ $g5['title'] = '콘텐츠 프로젝트';
 
 $projects_table = bp_table('content_projects');
 $adv_table = bp_table('advertisers');
+$sites_table = bp_table('sites');
+$posts_table = bp_table('posts');
+$targets_table = bp_table('post_targets');
+$jobs_table = bp_table('publish_jobs');
+$gen_logs_table = bp_table('content_generation_logs');
 
+$status_label = array(
+    'draft' => '초안', 'pending_approval' => '승인대기', 'approved' => '승인됨',
+    'publish_pending' => '발행대기', 'publishing' => '발행중', 'published' => '발행완료', 'failed' => '발행실패',
+);
+$job_status_label = array(
+    'pending' => '대기', 'claimed' => '할당됨', 'processing' => '처리중', 'published' => '완료', 'failed' => '실패',
+);
+$valid_status = array_keys($status_label);
+
+$stx_title = isset($_GET['stx_title']) ? trim($_GET['stx_title']) : '';
+$stx_advertiser = isset($_GET['stx_advertiser']) ? trim($_GET['stx_advertiser']) : '';
+$stx_site = isset($_GET['stx_site']) ? trim($_GET['stx_site']) : '';
 $status = isset($_GET['status']) ? trim($_GET['status']) : '';
-$valid_status = array('draft', 'generated', 'review_required', 'approved', 'publish_pending', 'publishing', 'published', 'failed');
+$ai_provider = isset($_GET['ai_provider']) ? trim($_GET['ai_provider']) : '';
+$date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+$date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
-$where = array('1=1');
+$where = array('p.deleted_at is null');
+if ($stx_title !== '') {
+    $where[] = "(po.title like '%" . sql_real_escape_string($stx_title) . "%' or p.topic like '%" . sql_real_escape_string($stx_title) . "%')";
+}
+if ($stx_advertiser !== '') {
+    $where[] = "a.name like '%" . sql_real_escape_string($stx_advertiser) . "%'";
+}
+if ($stx_site !== '') {
+    $where[] = "s.name like '%" . sql_real_escape_string($stx_site) . "%'";
+}
 if (in_array($status, $valid_status, true)) {
     $where[] = "p.status = '" . sql_real_escape_string($status) . "'";
 }
+if ($date_from !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_from)) {
+    $where[] = "p.created_at >= '" . sql_real_escape_string($date_from) . " 00:00:00'";
+}
+if ($date_to !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_to)) {
+    $where[] = "p.created_at <= '" . sql_real_escape_string($date_to) . " 23:59:59'";
+}
 $where_sql = ' where ' . implode(' and ', $where);
 
-$result = sql_query(" select p.*, a.name as advertiser_name
+$having_sql = '';
+if ($ai_provider !== '' && in_array($ai_provider, array('openai', 'template'), true)) {
+    $having_sql = " having last_ai_provider = '" . sql_real_escape_string($ai_provider) . "' ";
+}
+
+$result = sql_query(" select p.*, a.name as advertiser_name, s.name as site_name, po.id as post_id, po.title as post_title,
+                      (select count(*) from {$targets_table} pt where pt.post_id = po.id) as target_count,
+                      (select group_concat(distinct pj.status) from {$jobs_table} pj
+                        join {$targets_table} pt2 on pt2.id = pj.post_target_id where pt2.post_id = po.id) as job_statuses,
+                      (select g.provider from {$gen_logs_table} g where g.project_id = p.id order by g.id desc limit 1) as last_ai_provider
                       from {$projects_table} p
                       left join {$adv_table} a on a.id = p.advertiser_id
+                      left join {$sites_table} s on s.id = p.primary_site_id
+                      left join {$posts_table} po on po.project_id = p.id
                       {$where_sql}
+                      {$having_sql}
                       order by p.id desc limit 100 ");
-
-$status_label = array(
-    'draft' => '초안', 'generated' => 'AI생성완료', 'review_required' => '검수대기',
-    'approved' => '승인됨', 'publish_pending' => '발행대기', 'publishing' => '발행중',
-    'published' => '발행완료', 'failed' => '발행실패',
-);
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -36,48 +76,88 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <p>광고주·계약에 종속된 블로그 콘텐츠 프로젝트를 관리합니다. 승인(approved) 이전에는 발행할 수 없습니다.</p>
 </div>
 
-<form method="get" class="local_sch03 local_sch">
-    <select name="status" onchange="this.form.submit();">
-        <option value="">전체 상태</option>
-        <?php foreach ($status_label as $code => $label) { ?>
-            <option value="<?php echo $code; ?>" <?php echo $status === $code ? 'selected' : ''; ?>><?php echo get_text($label); ?></option>
-        <?php } ?>
-    </select>
-    <a href="./project_form.php" class="btn btn_01">콘텐츠 프로젝트 등록</a>
-</form>
+<div class="bp-list-toolbar">
+    <a href="./project_form.php" class="bp-btn-primary-lg">+ 새 블로그 글 만들기</a>
+</div>
 
-<div class="tbl_head01 tbl_wrap" style="margin-top:10px;">
-    <table>
-        <caption>콘텐츠 프로젝트 목록</caption>
-        <thead>
-            <tr>
-                <th scope="col">번호</th>
-                <th scope="col">광고주</th>
-                <th scope="col">주제</th>
-                <th scope="col">대표 키워드</th>
-                <th scope="col">상태</th>
-                <th scope="col">등록일</th>
-                <th scope="col">관리</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if ($result && sql_num_rows($result) > 0) { ?>
-                <?php while ($row = sql_fetch_array($result)) { ?>
-                    <tr>
-                        <td><?php echo (int)$row['id']; ?></td>
-                        <td><?php echo get_text($row['advertiser_name']); ?></td>
-                        <td style="text-align:left;"><a href="./project_view.php?id=<?php echo (int)$row['id']; ?>"><strong><?php echo get_text($row['topic']); ?></strong></a></td>
-                        <td><?php echo get_text($row['primary_keyword']); ?></td>
-                        <td><?php echo isset($status_label[$row['status']]) ? $status_label[$row['status']] : get_text($row['status']); ?></td>
-                        <td><?php echo get_text($row['created_at']); ?></td>
-                        <td><a href="./project_view.php?id=<?php echo (int)$row['id']; ?>" class="btn btn_02">열기</a></td>
-                    </tr>
-                <?php } ?>
-            <?php } else { ?>
-                <tr><td colspan="7" class="empty_table">등록된 콘텐츠 프로젝트가 없습니다.</td></tr>
-            <?php } ?>
-        </tbody>
-    </table>
+<details class="bp-filter-wrap" <?php echo ($stx_title || $stx_advertiser || $stx_site || $status || $ai_provider || $date_from || $date_to) ? 'open' : ''; ?>>
+    <summary class="bp-filter-summary">검색·필터</summary>
+    <form method="get" class="bp-filter-form">
+        <div class="bp-filter-row">
+            <label>제목 검색<input type="text" name="stx_title" value="<?php echo get_text($stx_title); ?>" class="frm_input"></label>
+            <label>광고주<input type="text" name="stx_advertiser" value="<?php echo get_text($stx_advertiser); ?>" class="frm_input"></label>
+            <label>사이트<input type="text" name="stx_site" value="<?php echo get_text($stx_site); ?>" class="frm_input"></label>
+        </div>
+        <div class="bp-filter-row">
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <?php foreach ($status_label as $code => $label) { ?>
+                        <option value="<?php echo $code; ?>" <?php echo $status === $code ? 'selected' : ''; ?>><?php echo get_text($label); ?></option>
+                    <?php } ?>
+                </select>
+            </label>
+            <label>AI 제공자
+                <select name="ai_provider">
+                    <option value="">전체</option>
+                    <option value="openai" <?php echo $ai_provider === 'openai' ? 'selected' : ''; ?>>OpenAI</option>
+                    <option value="template" <?php echo $ai_provider === 'template' ? 'selected' : ''; ?>>템플릿</option>
+                </select>
+            </label>
+        </div>
+        <div class="bp-filter-row">
+            <label>생성일(부터)<input type="date" name="date_from" value="<?php echo get_text($date_from); ?>" class="frm_input"></label>
+            <label>생성일(까지)<input type="date" name="date_to" value="<?php echo get_text($date_to); ?>" class="frm_input"></label>
+        </div>
+        <div class="bp-filter-actions">
+            <button type="submit" class="btn btn_submit btn">검색</button>
+            <a href="./project_list.php" class="btn btn_02">초기화</a>
+        </div>
+    </form>
+</details>
+
+<div class="bp-project-cards" style="margin-top:15px;">
+    <?php if ($result && sql_num_rows($result) > 0) { ?>
+        <?php while ($row = sql_fetch_array($result)) {
+            $st = $row['status'];
+            $st_label = isset($status_label[$st]) ? $status_label[$st] : get_text($st);
+            $job_summary = '-';
+            if (!empty($row['job_statuses'])) {
+                $parts = array();
+                foreach (explode(',', $row['job_statuses']) as $js) {
+                    $parts[] = isset($job_status_label[$js]) ? $job_status_label[$js] : get_text($js);
+                }
+                $job_summary = implode(', ', $parts);
+            }
+            $ai_label = $row['last_ai_provider'] === 'openai' ? 'OpenAI' : ($row['last_ai_provider'] === 'template' ? '템플릿' : '-');
+        ?>
+        <div class="bp-project-card">
+            <div class="bp-project-card-head">
+                <a href="./project_view.php?id=<?php echo (int) $row['id']; ?>" class="bp-project-title">
+                    <?php echo get_text($row['post_title'] ? $row['post_title'] : $row['topic']); ?>
+                </a>
+                <span class="bp-status-badge bp-status-badge-<?php echo get_text($st); ?>"><?php echo $st_label; ?></span>
+            </div>
+            <div class="bp-project-meta">
+                <span>번호: <?php echo (int) $row['id']; ?></span>
+                <span>광고주: <?php echo get_text($row['advertiser_name']); ?></span>
+                <span>사이트: <?php echo $row['site_name'] ? get_text($row['site_name']) : '-'; ?></span>
+                <span>AI 제공자: <?php echo $ai_label; ?></span>
+                <span>승인자: <?php echo $row['reviewed_by'] ? get_text($row['reviewed_by']) : '-'; ?></span>
+                <span>승인일: <?php echo $row['approved_at'] ? get_text($row['approved_at']) : '-'; ?></span>
+                <span>발행 대상: <?php echo (int) $row['target_count']; ?>건</span>
+                <span>배포 작업: <?php echo $job_summary; ?></span>
+                <span>생성일: <?php echo get_text($row['created_at']); ?></span>
+                <span>수정일: <?php echo $row['updated_at'] ? get_text($row['updated_at']) : '-'; ?></span>
+            </div>
+            <div class="bp-project-actions">
+                <a href="./project_view.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_submit btn">열기</a>
+            </div>
+        </div>
+        <?php } ?>
+    <?php } else { ?>
+        <div class="bp-empty">조건에 맞는 콘텐츠 프로젝트가 없습니다.</div>
+    <?php } ?>
 </div>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php');

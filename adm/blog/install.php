@@ -12,6 +12,7 @@ $sql_file_v3 = __DIR__ . '/sql/blog_automation_v3.sql';
 $sql_file_v4 = __DIR__ . '/sql/blog_automation_v4.sql';
 $sql_file_v5 = __DIR__ . '/sql/blog_automation_v5.sql';
 $sql_file_v6 = __DIR__ . '/sql/blog_automation_v6.sql';
+$sql_file_v7 = __DIR__ . '/sql/blog_automation_v7.sql';
 if (!is_file($sql_file_v1)) {
     alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v1);
 }
@@ -29,6 +30,9 @@ if (!is_file($sql_file_v5)) {
 }
 if (!is_file($sql_file_v6)) {
     alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v6);
+}
+if (!is_file($sql_file_v7)) {
+    alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v7);
 }
 
 global $g5;
@@ -125,12 +129,13 @@ $v4_installed = bp_install_column_exists($table_prefix, 'content_keywords', 'sta
 $v5_installed = bp_install_column_exists($table_prefix, 'posts', 'slug')
     && bp_install_column_exists($table_prefix, 'content_projects', 'deleted_at');
 $v6_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'schedule_type');
+$v7_installed = bp_install_table_exists($table_prefix, 'images');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
 $created = array();
 
-if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v5_installed || !$v6_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v5_installed || !$v6_installed || !$v7_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     check_admin_token();
 
     if (!$v1_installed) {
@@ -143,6 +148,7 @@ if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v
     $created = array_merge($created, bp_install_run_sql_file($sql_file_v4, $table_prefix));
     $created = array_merge($created, bp_install_run_sql_file($sql_file_v5, $table_prefix));
     $created = array_merge($created, bp_install_run_sql_file($sql_file_v6, $table_prefix));
+    $created = array_merge($created, bp_install_run_sql_file($sql_file_v7, $table_prefix));
 
     $did_install = true;
     $v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
@@ -153,8 +159,15 @@ if ((!$v1_installed || !$v2_installed || !$v3_installed || !$v4_installed || !$v
     $v5_installed = bp_install_column_exists($table_prefix, 'posts', 'slug')
         && bp_install_column_exists($table_prefix, 'content_projects', 'deleted_at');
     $v6_installed = bp_install_column_exists($table_prefix, 'publish_jobs', 'schedule_type');
+    $v7_installed = bp_install_table_exists($table_prefix, 'images');
+    
+    $blog_img_dir = G5_DATA_PATH.'/blog_images';
+    if (!is_dir($blog_img_dir)) {
+        @mkdir($blog_img_dir, G5_DIR_PERMISSION);
+        @chmod($blog_img_dir, G5_DIR_PERMISSION);
+    }
 }
-$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed;
+$already_installed = $v1_installed && $v2_installed && $v3_installed && $v4_installed && $v5_installed && $v6_installed && $v7_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -165,7 +178,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     &nbsp;&nbsp;콘텐츠 파이프라인(해시태그/생성 로그): <?php echo $v3_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;키워드 운영(Phase 2 / Step 3-5): <?php echo $v4_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
     &nbsp;&nbsp;포스트 관리(메타데이터/소프트 삭제): <?php echo $v5_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
-    &nbsp;&nbsp;예약 발행 관리(Phase 2 / Step 3-6): <?php echo $v6_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
+    &nbsp;&nbsp;예약 발행 관리(Phase 2 / Step 3-6): <?php echo $v6_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;이미지 라이브러리(Phase 2 / Step 3-7): <?php echo $v7_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -189,12 +203,12 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <?php if ($already_installed && !$did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>이미 설치되어 있습니다(Phase 1·Phase 2·콘텐츠 파이프라인·키워드 운영·일정 관리 테이블 모두 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
+        <p>이미 설치되어 있습니다(Phase 1·Phase 2·콘텐츠 파이프라인·키워드 운영·일정 관리·이미지 관리 테이블 모두 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
         <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
     </div>
 <?php } elseif ($did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>다음 테이블을 생성/업데이트했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code> ~ <code>v6.sql</code></p>
+        <p>다음 테이블을 생성/업데이트했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code> ~ <code>v7.sql</code></p>
         <ul>
             <?php foreach ($created as $t) { ?>
                 <li><?php echo get_text($t); ?></li>

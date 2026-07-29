@@ -69,7 +69,15 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
        <a href="./project_form.php?id=<?php echo (int)$id; ?>" class="btn btn_02">기본정보 수정</a>
        <?php } ?>
        <a href="./keyword_list.php?project_id=<?php echo (int)$id; ?>" class="btn btn_02">키워드 관리</a>
-       <a href="./project_list.php" class="btn btn_02">목록으로</a></p>
+       <a href="./project_list.php" class="btn btn_02">목록으로</a>
+       <?php if ($project['status'] === 'draft') { ?>
+       <form method="post" action="./project_action.php" style="display:inline;" onsubmit="return confirm('이 콘텐츠 프로젝트를 삭제하시겠습니까? 삭제 후에는 목록에 표시되지 않습니다.');">
+           <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+           <input type="hidden" name="mode" value="delete">
+           <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+           <button type="submit" class="bp-btn-danger">삭제</button>
+       </form>
+       <?php } ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -204,6 +212,45 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </table>
 </div>
 
+<?php $meta_editable = in_array($project['status'], array('draft', 'pending_approval'), true); ?>
+<div class="tbl_frm01 tbl_wrap" style="margin-top:20px;">
+    <form method="post" action="./project_action.php">
+        <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+        <input type="hidden" name="mode" value="edit_post_meta">
+        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+        <table>
+            <caption>SEO·편집 메타데이터</caption>
+            <tbody>
+                <tr><th scope="row"><label for="slug">슬러그</label></th>
+                    <td><input type="text" name="slug" id="slug" class="frm_input" maxlength="255" value="<?php echo $post ? get_text($post['slug']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="excerpt">요약문</label></th>
+                    <td><textarea name="excerpt" id="excerpt" rows="2" style="width:100%;" maxlength="500" <?php echo !$meta_editable ? 'disabled' : ''; ?>><?php echo $post ? get_text($post['excerpt']) : ''; ?></textarea></td></tr>
+                <tr><th scope="row"><label for="meta_title">메타 제목</label></th>
+                    <td><input type="text" name="meta_title" id="meta_title" class="frm_input" maxlength="255" value="<?php echo $post ? get_text($post['meta_title']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="meta_description">메타 설명</label></th>
+                    <td><textarea name="meta_description" id="meta_description" rows="2" style="width:100%;" maxlength="500" <?php echo !$meta_editable ? 'disabled' : ''; ?>><?php echo $post ? get_text($post['meta_description']) : ''; ?></textarea></td></tr>
+                <tr><th scope="row"><label for="secondary_keywords">보조 키워드</label></th>
+                    <td><input type="text" name="secondary_keywords" id="secondary_keywords" class="frm_input" maxlength="500" value="<?php echo $post ? get_text($post['secondary_keywords']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="category">카테고리</label></th>
+                    <td><input type="text" name="category" id="category" class="frm_input" maxlength="100" value="<?php echo $post ? get_text($post['category']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="tags">태그</label></th>
+                    <td><input type="text" name="tags" id="tags" class="frm_input" maxlength="500" value="<?php echo $post ? get_text($post['tags']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="featured_image_url">대표 이미지 URL</label></th>
+                    <td><input type="text" name="featured_image_url" id="featured_image_url" class="frm_input" maxlength="500" value="<?php echo $post ? get_text($post['featured_image_url']) : ''; ?>" <?php echo !$meta_editable ? 'disabled' : ''; ?>></td></tr>
+                <tr><th scope="row"><label for="internal_memo">내부 메모</label></th>
+                    <td><textarea name="internal_memo" id="internal_memo" rows="2" style="width:100%;" maxlength="1000" <?php echo !$meta_editable ? 'disabled' : ''; ?>><?php echo $post ? get_text($post['internal_memo']) : ''; ?></textarea></td></tr>
+                <tr><th scope="row"><label for="review_comment">검수 의견</label></th>
+                    <td><textarea name="review_comment" id="review_comment" rows="2" style="width:100%;" maxlength="1000" <?php echo !$meta_editable ? 'disabled' : ''; ?>><?php echo $post ? get_text($post['review_comment']) : ''; ?></textarea></td></tr>
+            </tbody>
+        </table>
+        <?php if ($meta_editable) { ?>
+        <div class="btn_confirm01 btn_confirm">
+            <button type="submit" class="btn btn_submit btn">메타데이터 저장</button>
+        </div>
+        <?php } ?>
+    </form>
+</div>
+
 <div class="tbl_head01 tbl_wrap" style="margin-top:20px;">
     <table>
         <caption>품질 검사 결과<?php echo $has_blocking_quality_failure ? ' — 승인 차단 중' : ''; ?></caption>
@@ -253,14 +300,30 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 <div class="tbl_head01 tbl_wrap" style="margin-top:20px;">
     <table>
         <caption>사이트별 발행 대상 (post_targets)</caption>
-        <thead><tr><th scope="col">사이트</th><th scope="col">플랫폼</th><th scope="col">발행 상태</th><th scope="col">외부 URL</th><th scope="col">재시도</th><th scope="col">발행/재시도</th></tr></thead>
+        <thead><tr><th scope="col">사이트</th><th scope="col">플랫폼</th><th scope="col">발행 상태</th><th scope="col">예약 발행일</th><th scope="col">외부 URL</th><th scope="col">재시도</th><th scope="col">발행/재시도</th></tr></thead>
         <tbody>
             <?php if ($targets && sql_num_rows($targets) > 0) { ?>
-                <?php while ($t = sql_fetch_array($targets)) { ?>
+                <?php while ($t = sql_fetch_array($targets)) {
+                    $target_schedule_editable = $t['publish_status'] !== 'published';
+                ?>
                     <tr>
                         <td><?php echo get_text($t['site_name']); ?></td>
                         <td><?php echo get_text($t['platform']); ?></td>
                         <td><?php echo get_text($t['publish_status']); ?><?php echo $t['last_error'] ? '<div style="color:#c00;font-size:12px;">' . get_text($t['last_error']) . '</div>' : ''; ?></td>
+                        <td>
+                            <?php if ($target_schedule_editable) { ?>
+                            <form method="post" action="./project_action.php" style="display:flex;gap:4px;align-items:center;">
+                                <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+                                <input type="hidden" name="mode" value="update_target_schedule">
+                                <input type="hidden" name="post_target_id" value="<?php echo (int)$t['id']; ?>">
+                                <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+                                <input type="datetime-local" name="scheduled_at" value="<?php echo $t['scheduled_at'] ? date('Y-m-d\TH:i', strtotime($t['scheduled_at'])) : ''; ?>" class="frm_input">
+                                <button type="submit" class="btn btn_02">저장</button>
+                            </form>
+                            <?php } else { ?>
+                                <?php echo $t['scheduled_at'] ? get_text($t['scheduled_at']) : '-'; ?>
+                            <?php } ?>
+                        </td>
                         <td><?php echo $t['published_url'] ? '<a href="' . get_text($t['published_url']) . '" target="_blank">' . get_text($t['published_url']) . '</a>' : '-'; ?></td>
                         <td><?php echo (int)$t['retry_count']; ?> / <?php echo BP_MAX_PUBLISH_ATTEMPTS; ?></td>
                         <td>
@@ -282,7 +345,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     </tr>
                 <?php } ?>
             <?php } else { ?>
-                <tr><td colspan="6" class="empty_table">발행 대상 사이트가 없습니다.</td></tr>
+                <tr><td colspan="7" class="empty_table">발행 대상 사이트가 없습니다.</td></tr>
             <?php } ?>
         </tbody>
     </table>

@@ -10,6 +10,7 @@ $adv_table = bp_table('advertisers');
 $posts_table = bp_table('posts');
 $targets_table = bp_table('post_targets');
 $candidates_table = bp_table('content_title_candidates');
+$jobs_table = bp_table('publish_jobs');
 
 $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 $mode = isset($_POST['mode']) ? trim($_POST['mode']) : '';
@@ -18,6 +19,9 @@ $actor = bp_current_admin_id();
 $project = sql_fetch(" select * from {$projects_table} where id = '{$id}' ");
 if (!$project) {
     alert('콘텐츠 프로젝트를 찾을 수 없습니다.', G5_ADMIN_URL . '/blog/project_list.php');
+}
+if (!empty($project['deleted_at'])) {
+    alert('이미 삭제된 프로젝트입니다.', G5_ADMIN_URL . '/blog/project_list.php');
 }
 
 $advertiser = sql_fetch(" select * from {$adv_table} where id = '" . (int)$project['advertiser_id'] . "' ");
@@ -269,6 +273,122 @@ if ($mode === 'retry') {
         alert('재시도 실패: ' . $result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
     alert('재시도 발행이 완료되었습니다. URL: ' . $result['published_url'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+}
+
+if ($mode === 'edit_post_meta') {
+    if (!in_array($project['status'], array('draft', 'pending_approval'), true)) {
+        alert("'{$project['status']}' 상태에서는 직접 수정할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+
+    $slug = isset($_POST['slug']) ? trim($_POST['slug']) : '';
+    $slug = trim(preg_replace('/[^a-zA-Z0-9\-]+/', '-', $slug), '-');
+    $slug = strtolower($slug);
+    $excerpt = isset($_POST['excerpt']) ? trim($_POST['excerpt']) : '';
+    $meta_title = isset($_POST['meta_title']) ? trim($_POST['meta_title']) : '';
+    $meta_description = isset($_POST['meta_description']) ? trim($_POST['meta_description']) : '';
+    $secondary_keywords = isset($_POST['secondary_keywords']) ? trim($_POST['secondary_keywords']) : '';
+    $category = isset($_POST['category']) ? trim($_POST['category']) : '';
+    $tags = isset($_POST['tags']) ? trim($_POST['tags']) : '';
+    $featured_image_url = isset($_POST['featured_image_url']) ? trim($_POST['featured_image_url']) : '';
+    $internal_memo = isset($_POST['internal_memo']) ? trim($_POST['internal_memo']) : '';
+    $review_comment = isset($_POST['review_comment']) ? trim($_POST['review_comment']) : '';
+
+    $length_checks = array(
+        'slug' => array($slug, 255, '슬러그'),
+        'excerpt' => array($excerpt, 500, '요약문'),
+        'meta_title' => array($meta_title, 255, '메타 제목'),
+        'meta_description' => array($meta_description, 500, '메타 설명'),
+        'secondary_keywords' => array($secondary_keywords, 500, '보조 키워드'),
+        'category' => array($category, 100, '카테고리'),
+        'tags' => array($tags, 500, '태그'),
+        'featured_image_url' => array($featured_image_url, 500, '대표 이미지 URL'),
+        'internal_memo' => array($internal_memo, 1000, '내부 메모'),
+        'review_comment' => array($review_comment, 1000, '검수 의견'),
+    );
+    foreach ($length_checks as $check) {
+        list($value, $max, $label) = $check;
+        if (mb_strlen($value) > $max) {
+            alert("{$label}이(가) 너무 깁니다(최대 {$max}자).", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+        }
+    }
+
+    sql_query(" update {$posts_table}
+                    set slug = '" . sql_real_escape_string($slug) . "',
+                        excerpt = '" . sql_real_escape_string($excerpt) . "',
+                        meta_title = '" . sql_real_escape_string($meta_title) . "',
+                        meta_description = '" . sql_real_escape_string($meta_description) . "',
+                        secondary_keywords = '" . sql_real_escape_string($secondary_keywords) . "',
+                        category = '" . sql_real_escape_string($category) . "',
+                        tags = '" . sql_real_escape_string($tags) . "',
+                        featured_image_url = '" . sql_real_escape_string($featured_image_url) . "',
+                        internal_memo = '" . sql_real_escape_string($internal_memo) . "',
+                        review_comment = '" . sql_real_escape_string($review_comment) . "',
+                        updated_at = '" . G5_TIME_YMDHIS . "'
+                    where id = '" . (int) $post['id'] . "' ");
+
+    bp_log_activity($id, 'post_meta_edited', $actor, '메타데이터 수정');
+    alert('포스트 메타데이터가 수정되었습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+}
+
+if ($mode === 'update_target_schedule') {
+    $post_target_id = isset($_POST['post_target_id']) ? (int) $_POST['post_target_id'] : 0;
+    $scheduled_at = isset($_POST['scheduled_at']) ? trim($_POST['scheduled_at']) : '';
+
+    $target = sql_fetch(" select t.* from {$targets_table} t where t.id = '{$post_target_id}' and t.post_id = '" . (int) $post['id'] . "' ");
+    if (!$target) {
+        alert('발행 대상을 찾을 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    if ($target['publish_status'] === 'published') {
+        alert('이미 발행 완료된 대상은 예약일을 변경할 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    $active_job = sql_fetch(" select id from {$jobs_table} where post_target_id = '{$post_target_id}' and status in ('pending','claimed','processing') limit 1 ");
+    if ($active_job) {
+        alert('현재 발행 작업이 진행 중인 대상은 예약일을 변경할 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+
+    if ($scheduled_at !== '') {
+        $ts = strtotime($scheduled_at);
+        if ($ts === false) {
+            alert('예약일 형식이 올바르지 않습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+        }
+        if ($ts < time()) {
+            alert('예약일은 현재 시각 이후로 설정해야 합니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+        }
+        $scheduled_sql = "'" . date('Y-m-d H:i:s', $ts) . "'";
+        $log_detail = "target#{$post_target_id} -> " . date('Y-m-d H:i', $ts);
+    } else {
+        $scheduled_sql = 'NULL';
+        $log_detail = "target#{$post_target_id} -> (해제)";
+    }
+
+    sql_query(" update {$targets_table} set scheduled_at = {$scheduled_sql}, updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$post_target_id}' ");
+    bp_log_activity($id, 'target_schedule_updated', $actor, $log_detail);
+    alert('예약일이 저장되었습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+}
+
+if ($mode === 'delete') {
+    if ($project['status'] !== 'draft') {
+        alert("'{$project['status']}' 상태에서는 삭제할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+
+    $has_target_history = sql_fetch(" select pt.id from {$targets_table} pt
+                                       where pt.post_id = '" . (int) $post['id'] . "'
+                                       and (pt.publish_status != 'draft' or pt.retry_count > 0) limit 1 ");
+    if ($has_target_history) {
+        alert('발행 이력이 있는 발행 대상이 있어 삭제할 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    $has_jobs = sql_fetch(" select j.id from {$jobs_table} j
+                             join {$targets_table} pt on pt.id = j.post_target_id
+                             where pt.post_id = '" . (int) $post['id'] . "' limit 1 ");
+    if ($has_jobs) {
+        alert('연결된 배포 작업이 있어 삭제할 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+
+    sql_query(" update {$projects_table}
+                    set deleted_at = '" . G5_TIME_YMDHIS . "', deleted_by = '" . sql_real_escape_string($actor) . "'
+                    where id = '{$id}' ");
+    bp_log_activity($id, 'project_deleted', $actor, $project['topic']);
+    alert('콘텐츠 프로젝트가 삭제되었습니다.', G5_ADMIN_URL . '/blog/project_list.php');
 }
 
 alert('알 수 없는 요청입니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
