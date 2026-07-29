@@ -6,16 +6,20 @@ if ($is_admin != 'super') {
     alert('최고관리자만 접근 가능합니다.');
 }
 
-$sql_file = __DIR__ . '/sql/blog_automation_v1.sql';
-if (!is_file($sql_file)) {
-    alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file);
+$sql_file_v1 = __DIR__ . '/sql/blog_automation_v1.sql';
+$sql_file_v2 = __DIR__ . '/sql/blog_automation_v2.sql';
+if (!is_file($sql_file_v1)) {
+    alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v1);
+}
+if (!is_file($sql_file_v2)) {
+    alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v2);
 }
 
 global $g5;
 
 function bp_install_check_extensions(): array
 {
-    $required = array('mysqli', 'openssl', 'json', 'mbstring');
+    $required = array('mysqli', 'openssl', 'json', 'mbstring', 'curl');
     $status = array();
     foreach ($required as $ext) {
         $status[$ext] = extension_loaded($ext);
@@ -23,13 +27,40 @@ function bp_install_check_extensions(): array
     return $status;
 }
 
-// 첫 번째 테이블(advertisers) 존재 여부로 설치 상태를 판단한다 — 비밀정보 노출 없이
+// 테이블 존재 여부로 설치 상태를 판단한다 — 비밀정보 노출 없이
 // information_schema 대신 SHOW TABLES LIKE 를 사용해 최소 권한으로도 동작하게 한다.
-function bp_install_already_installed(string $prefix): bool
+function bp_install_table_exists(string $prefix, string $table): bool
 {
-    $like = sql_real_escape_string($prefix . 'advertisers');
+    $like = sql_real_escape_string($prefix . $table);
     $result = sql_query(" show tables like '{$like}' ", false);
     return $result && sql_num_rows($result) > 0;
+}
+
+// SQL 파일 하나를 읽어 {prefix} 치환 후 세미콜론 기준으로 분리 실행한다(v1/v2 공용).
+function bp_install_run_sql_file(string $path, string $prefix): array
+{
+    $sql_content = file_get_contents($path);
+    $sql_content = str_replace('{prefix}', $prefix, $sql_content);
+
+    // 주석 라인 제거 후 세미콜론 기준으로 문장 분리
+    $lines = explode("\n", $sql_content);
+    $lines = array_filter($lines, function ($line) {
+        return strpos(trim($line), '--') !== 0;
+    });
+    $clean_sql = implode("\n", $lines);
+    $statements = array_filter(array_map('trim', explode(';', $clean_sql)));
+
+    $created = array();
+    foreach ($statements as $stmt) {
+        if ($stmt === '') {
+            continue;
+        }
+        sql_query($stmt, false);
+        if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
+            $created[] = $m[1];
+        }
+    }
+    return $created;
 }
 
 function bp_install_diagnostics(): array
@@ -61,44 +92,37 @@ function bp_install_diagnostics(): array
 }
 
 $table_prefix = G5_TABLE_PREFIX;
-$already_installed = bp_install_already_installed($table_prefix);
+$v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
+$v2_installed = bp_install_table_exists($table_prefix, 'content_title_candidates')
+    && bp_install_table_exists($table_prefix, 'content_quality_checks');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
 $created = array();
 
-if (!$already_installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ((!$v1_installed || !$v2_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     check_admin_token();
 
-    $sql_content = file_get_contents($sql_file);
-    $sql_content = str_replace('{prefix}', $table_prefix, $sql_content);
-
-    // 주석 라인 제거 후 세미콜론 기준으로 문장 분리
-    $lines = explode("\n", $sql_content);
-    $lines = array_filter($lines, function ($line) {
-        return strpos(trim($line), '--') !== 0;
-    });
-    $clean_sql = implode("\n", $lines);
-    $statements = array_filter(array_map('trim', explode(';', $clean_sql)));
-
-    foreach ($statements as $stmt) {
-        if ($stmt === '') {
-            continue;
-        }
-        sql_query($stmt, false);
-        if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
-            $created[] = $m[1];
-        }
+    if (!$v1_installed) {
+        $created = array_merge($created, bp_install_run_sql_file($sql_file_v1, $table_prefix));
     }
+    // v2는 항상 실행한다 — 신설 테이블은 CREATE TABLE IF NOT EXISTS, 컬럼 추가는
+    // ADD COLUMN IF NOT EXISTS라 v1만 있던 기존 설치 위에서도 안전하게 재실행된다.
+    $created = array_merge($created, bp_install_run_sql_file($sql_file_v2, $table_prefix));
 
     $did_install = true;
-    $already_installed = bp_install_already_installed($table_prefix);
+    $v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
+    $v2_installed = bp_install_table_exists($table_prefix, 'content_title_candidates')
+        && bp_install_table_exists($table_prefix, 'content_quality_checks');
 }
+$already_installed = $v1_installed && $v2_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
-    <h2>블로그 자동화 MVP Phase 1 — 테이블 설치</h2>
+    <h2>블로그 자동화 MVP — 테이블 설치</h2>
+    <p>Phase 1(광고주/사이트/발행 파이프라인 11개 테이블): <?php echo $v1_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;Phase 2(제목 후보/품질 검사 등): <?php echo $v2_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -122,12 +146,12 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <?php if ($already_installed && !$did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>이미 설치되어 있습니다(<code><?php echo get_text($table_prefix . 'advertisers'); ?></code> 테이블 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
+        <p>이미 설치되어 있습니다(Phase 1·Phase 2 테이블 모두 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
         <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
     </div>
 <?php } elseif ($did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code></p>
+        <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code>, <code>adm/blog/sql/blog_automation_v2.sql</code></p>
         <ul>
             <?php foreach ($created as $t) { ?>
                 <li><?php echo get_text($t); ?></li>
@@ -137,13 +161,14 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </div>
 <?php } else { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>아직 설치되어 있지 않습니다. 아래 확인 후 설치를 진행하세요. 설치는 <code>CREATE TABLE IF NOT EXISTS</code>만 실행하며 기존 데이터를 삭제하지 않습니다.
+        <p><?php echo (!$v1_installed) ? 'Phase 1과 Phase 2를 함께 설치합니다.' : 'Phase 1은 이미 설치되어 있습니다 — Phase 2만 추가로 설치합니다.'; ?>
+        설치는 <code>CREATE TABLE IF NOT EXISTS</code> / <code>ADD COLUMN IF NOT EXISTS</code>만 실행하며 기존 데이터를 삭제하지 않습니다.
         운영 DB에 적용하기 전에는 반드시 백업을 먼저 받아 두세요.</p>
     </div>
     <form method="post" action="./install.php">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
         <div class="btn_confirm01 btn_confirm">
-            <input type="submit" value="테이블 11개 설치 진행" class="btn_submit btn" onclick="return confirm('블로그 자동화 테이블을 설치하시겠습니까?');">
+            <input type="submit" value="설치 진행" class="btn_submit btn" onclick="return confirm('블로그 자동화 테이블을 설치하시겠습니까?');">
         </div>
     </form>
 <?php } ?>

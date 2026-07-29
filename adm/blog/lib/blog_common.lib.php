@@ -7,6 +7,7 @@ function bp_table(string $name): string
         'advertisers', 'sites', 'site_credentials', 'ai_providers',
         'content_projects', 'content_keywords', 'posts', 'post_targets',
         'publish_jobs', 'publish_attempts', 'content_activity_logs',
+        'content_title_candidates', 'content_quality_checks',
     );
     if (!in_array($name, $allowed, true)) {
         alert('잘못된 테이블 요청입니다.');
@@ -62,4 +63,31 @@ function bp_ensure_utf8mb4_connection(): void
     if (!mysqli_set_charset($g5['connect_db'], 'utf8mb4')) {
         alert('블로그 자동화 DB 연결 문자셋(utf8mb4) 설정에 실패했습니다.');
     }
+}
+
+// AI가 생성한(또는 템플릿이 만든) 본문의 {{...}} 자리표시자를 실제 광고주 정보로 치환한다.
+// 실 API 공급자·템플릿 공급자 양쪽 모두 이 함수를 거쳐야 전화번호·상호가 항상 정확하다
+// (BLOG_AUTOMATION_SECURITY.md: "전화번호·상호 자동 치환 — 수기 오기 방지").
+function bp_apply_business_placeholders(string $body, array $advertiser): string
+{
+    $map = array(
+        '{{business_name}}' => isset($advertiser['name']) ? $advertiser['name'] : '',
+        '{{phone}}' => isset($advertiser['phone']) ? $advertiser['phone'] : '',
+        '{{address}}' => isset($advertiser['address']) ? $advertiser['address'] : '',
+        '{{service_region}}' => isset($advertiser['service_region']) ? $advertiser['service_region'] : '',
+        '{{consult_url}}' => isset($advertiser['consult_url']) ? $advertiser['consult_url'] : '',
+    );
+    return str_replace(array_keys($map), array_values($map), $body);
+}
+
+// 비밀정보로 오인/유출될 수 있는 문자열이 저장·표시용 텍스트에 섞여 들어가는 것을 막는
+// 마지막 방어선. 호출부가 애초에 비밀값을 넣지 않는 것이 1차 방어이며, 이 함수는 그 위에
+// 얹는 2차 방어(defense in depth)다 — Authorization 헤더 값, Basic 인증 문자열, WordPress
+// Application Password 형식(xxxx xxxx xxxx xxxx xxxx xxxx)을 마스킹한다.
+function bp_scrub_secrets(string $text): string
+{
+    $text = preg_replace('/Authorization:\s*.+/i', 'Authorization: [REDACTED]', $text);
+    $text = preg_replace('/Basic\s+[A-Za-z0-9+\/=]+/', 'Basic [REDACTED]', $text);
+    $text = preg_replace('/\b([a-zA-Z0-9]{4}\s){5}[a-zA-Z0-9]{4}\b/', '[REDACTED]', $text);
+    return $text;
 }

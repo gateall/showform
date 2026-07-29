@@ -83,6 +83,11 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                         <input type="password" name="wp_app_password" id="wp_app_password" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다">
                         <span class="help_txt"><?php echo $cred['masked_hint'] ? '현재 저장된 값: ' . get_text($cred['masked_hint']) : '저장된 값 없음'; ?></span>
                     </td></tr>
+                <tr><th scope="row">연결 확인</th>
+                    <td>
+                        <button type="button" id="btn_wp_test" class="btn btn_02">연결 테스트</button>
+                        <span id="wp_test_result" class="help_txt"></span>
+                    </td></tr>
             </tbody>
         </table>
     </div>
@@ -99,6 +104,37 @@ function fsiteform_submit(f) {
     if (!f.name.value.trim()) { alert('사이트명을 입력해 주세요.'); f.name.focus(); return false; }
     return true;
 }
+
+document.getElementById('btn_wp_test').addEventListener('click', function () {
+    var btn = this;
+    var resultEl = document.getElementById('wp_test_result');
+    btn.disabled = true;
+    btn.textContent = '테스트 중…';
+    resultEl.textContent = '';
+
+    $.post('./site_test_connection.php', {
+        token: document.getElementsByName('token')[0].value,
+        site_id: document.getElementsByName('id')[0].value,
+        base_url: document.getElementById('base_url').value,
+        wp_username: document.getElementById('wp_username').value,
+        wp_app_password: document.getElementById('wp_app_password').value
+    }, function (res) {
+        btn.disabled = false;
+        btn.textContent = '연결 테스트';
+        if (res.success) {
+            resultEl.style.color = '#0a0';
+            resultEl.textContent = '연결 성공';
+        } else {
+            resultEl.style.color = '#c00';
+            resultEl.textContent = '연결 실패: ' + res.error;
+        }
+    }, 'json').fail(function () {
+        btn.disabled = false;
+        btn.textContent = '연결 테스트';
+        resultEl.style.color = '#c00';
+        resultEl.textContent = '서버 통신 오류';
+    });
+});
 </script>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php');

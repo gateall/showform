@@ -6,6 +6,7 @@ require_once __DIR__ . '/lib/blog_common.lib.php';
 require_once __DIR__ . '/lib/blog_crypto.lib.php';
 require_once __DIR__ . '/lib/blog_state_machine.lib.php';
 require_once __DIR__ . '/lib/blog_ai_service.lib.php';
+require_once __DIR__ . '/lib/blog_quality.lib.php';
 require_once __DIR__ . '/lib/blog_publisher.lib.php';
 
 bp_ensure_utf8mb4_connection();

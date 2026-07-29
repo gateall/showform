@@ -2,19 +2,18 @@
 if (!defined('_GNUBOARD_')) exit;
 
 // 발행 채널 인터페이스 (BLOG_AUTOMATION_API_SPEC.md 워드프레스/자체 PHP 연동)
-// Phase 1에서는 어떤 구현체도 실제 외부 HTTP 호출을 하지 않는다 (작업지시서 명시 사항).
+// $site_row는 base_url·platform 등 발행 대상 사이트 정보, $credentials_row는 인증정보(없을 수 있음).
 interface BlogPublisherInterface
 {
     // 반환: array('ok'=>bool, 'external_post_id'=>string, 'published_url'=>string, 'error'=>string)
-    // $credentials_row는 아직 인증정보가 없는 사이트일 수 있어 null을 허용한다.
-    public function publish(array $post_target_row, ?array $credentials_row): array;
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array;
 }
 
 // 테스트 가능한 목 발행기 — 실제 네트워크 호출 없이 발행 성공/실패를 재현한다.
 // 제목에 리터럴 문자열 '[FAIL_TEST]'가 포함되면 의도적으로 실패를 반환한다(재시도·중복방지 테스트용 트리거).
 class BlogMockPublisher implements BlogPublisherInterface
 {
-    public function publish(array $post_target_row, ?array $credentials_row): array
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array
     {
         $title = isset($post_target_row['title']) ? $post_target_row['title'] : '';
         if (strpos($title, '[FAIL_TEST]') !== false) {
@@ -36,24 +35,169 @@ class BlogMockPublisher implements BlogPublisherInterface
     }
 }
 
-// 워드프레스 실연동 구조 자리 — Phase 2에서 Application Password 기반 REST 호출을 이 안에 채운다.
-// Phase 1에서는 절대 호출되지 않으며, 호출되더라도 즉시 미구현 오류를 반환한다.
+// 워드프레스 REST 연동 — Application Password 인증, HTTPS 필수, 항상 draft로만 생성한다
+// (BLOG_AUTOMATION_QA.md: "공개 자동발행 없음 — publish_status = draft 고정" — 이 MVP 전체의
+// 하드 룰이며 옵션으로 바꿀 수 없다. 실제 공개 발행 경로는 이 클래스에 존재하지 않는다).
+// external_post_id가 이미 있으면 새로 만들지 않고 같은 글을 갱신한다(중복 발행 방지).
 class BlogWordPressPublisher implements BlogPublisherInterface
 {
-    public function publish(array $post_target_row, ?array $credentials_row): array
+    /** @var callable */
+    private $transport;
+
+    // $transport(string $method, string $url, array $headers, ?string $body): array{http_code:int, body:string, error:string}
+    // 테스트 하네스가 실제 네트워크 호출 없이 응답을 주입할 수 있도록 하는 최소한의 접합점.
+    public function __construct(?callable $transport = null)
     {
-        return array(
-            'ok' => false,
-            'external_post_id' => '',
-            'published_url' => '',
-            'error' => 'WordPress 실연동은 Phase 2 예정입니다 (Phase 1은 Mock Publisher만 사용).',
+        $this->transport = $transport !== null ? $transport : array($this, 'curlTransport');
+    }
+
+    public function publish(array $post_target_row, array $site_row, ?array $credentials_row): array
+    {
+        $base_url = isset($site_row['base_url']) ? rtrim($site_row['base_url'], '/') : '';
+        if (strpos($base_url, 'https://') !== 0) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => 'HTTPS 사이트만 발행할 수 있습니다.');
+        }
+
+        if (!$credentials_row || empty($credentials_row['cred_username']) || empty($credentials_row['cred_value_enc'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '이 사이트에 워드프레스 인증정보가 설정되지 않았습니다.');
+        }
+
+        $app_password = bp_decrypt_secret($credentials_row['cred_value_enc']);
+        if ($app_password === '') {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '인증정보 복호화에 실패했습니다.');
+        }
+
+        $existing_id = isset($post_target_row['external_post_id']) ? trim((string) $post_target_row['external_post_id']) : '';
+        $url = $existing_id !== ''
+            ? $base_url . '/wp-json/wp/v2/posts/' . rawurlencode($existing_id)
+            : $base_url . '/wp-json/wp/v2/posts';
+
+        $payload = array(
+            'title' => isset($post_target_row['title']) ? $post_target_row['title'] : '',
+            'content' => isset($post_target_row['body']) ? $post_target_row['body'] : '',
+            'status' => 'draft', // 하드코딩 — 운영 publish 상태 발행 금지, 옵션화하지 않는다.
         );
+
+        $auth = base64_encode($credentials_row['cred_username'] . ':' . $app_password);
+        $headers = array(
+            'Content-Type: application/json',
+            'Authorization: Basic ' . $auth,
+        );
+
+        $transport = $this->transport;
+        $res = $transport('POST', $url, $headers, json_encode($payload));
+        // $app_password/$auth는 여기서 스코프를 벗어나며, 아래로는 절대 전달하지 않는다.
+
+        if (!empty($res['error'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 연결 오류: ' . $res['error']));
+        }
+
+        $http_code = (int) $res['http_code'];
+        if ($http_code === 401 || $http_code === 403) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 인증 실패(HTTP ' . $http_code . ') — Application Password를 확인해 주세요.');
+        }
+        if ($http_code < 200 || $http_code >= 300) {
+            $parsed = json_decode((string) $res['body'], true);
+            $msg = isset($parsed['message']) ? $parsed['message'] : ('HTTP ' . $http_code);
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => bp_scrub_secrets('워드프레스 오류: ' . $msg));
+        }
+
+        $parsed = json_decode((string) $res['body'], true);
+        if (!is_array($parsed) || !isset($parsed['id'])) {
+            return array('ok' => false, 'external_post_id' => '', 'published_url' => '', 'error' => '워드프레스 응답을 해석할 수 없습니다.');
+        }
+
+        return array(
+            'ok' => true,
+            'external_post_id' => (string) $parsed['id'],
+            'published_url' => isset($parsed['link']) ? (string) $parsed['link'] : '',
+            'error' => '',
+        );
+    }
+
+    private function curlTransport(string $method, string $url, array $headers, ?string $body): array
+    {
+        if (!function_exists('curl_init')) {
+            return array('http_code' => 0, 'body' => '', 'error' => '서버에 curl 확장이 설치되어 있지 않습니다.');
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        return array('http_code' => (int) $http_code, 'body' => (string) $response, 'error' => $err);
     }
 }
 
-// Phase 1은 플랫폼과 무관하게 항상 Mock을 반환한다 — 팩토리 구조만 실 연동 대비로 마련해 둔다.
+// 워드프레스 사이트 연결 테스트 — 실제 성공/실패를 있는 그대로 반환한다.
+// BLOG_AUTOMATION_SECURITY.md가 명시한 전례(PlusTok AI 연결 테스트가 실패해도 항상 "성공"을
+// 반환한 버그)를 반복하지 않기 위해, HTTP 상태와 응답을 그대로 판정에 사용하고 절대 낙관적으로
+// 가정하지 않는다. $app_password는 이 함수 호출 스코프 밖으로 전달되지 않는다.
+function bp_wp_test_connection(string $base_url, string $username, string $app_password): array
+{
+    $base_url = rtrim($base_url, '/');
+    if (strpos($base_url, 'https://') !== 0) {
+        return array('ok' => false, 'error' => 'HTTPS 사이트만 테스트할 수 있습니다.');
+    }
+    if ($username === '' || $app_password === '') {
+        return array('ok' => false, 'error' => '사용자명과 Application Password를 입력해 주세요.');
+    }
+    if (!function_exists('curl_init')) {
+        return array('ok' => false, 'error' => '서버에 curl 확장이 설치되어 있지 않습니다.');
+    }
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $base_url . '/wp-json/wp/v2/users/me');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Basic ' . base64_encode($username . ':' . $app_password)));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        return array('ok' => false, 'error' => bp_scrub_secrets('연결 오류: ' . $err));
+    }
+    if ($http_code === 401 || $http_code === 403) {
+        return array('ok' => false, 'error' => '인증 실패(HTTP ' . $http_code . ') — 사용자명 또는 Application Password를 확인해 주세요.');
+    }
+    if ($http_code !== 200) {
+        return array('ok' => false, 'error' => 'HTTP ' . $http_code . ' — 워드프레스 REST API 응답을 확인해 주세요.');
+    }
+
+    $parsed = json_decode((string) $response, true);
+    if (!is_array($parsed) || !isset($parsed['id'])) {
+        return array('ok' => false, 'error' => '응답을 해석할 수 없습니다(워드프레스 REST API가 아닐 수 있음).');
+    }
+
+    return array('ok' => true, 'error' => '');
+}
+
+// 워드프레스는 실제 REST 연동을, 그 외(php/naver 등 아직 미구현) 플랫폼은 안전한 Mock을 사용한다.
 function bp_get_publisher(string $platform): BlogPublisherInterface
 {
+    if ($platform === 'wordpress') {
+        return new BlogWordPressPublisher();
+    }
     return new BlogMockPublisher();
 }
 
@@ -81,6 +225,15 @@ function bp_get_or_create_publish_job(int $post_target_id): ?array
                         updated_at = '" . G5_TIME_YMDHIS . "' ");
 
     return sql_fetch(" select * from {$jobs_table} where post_target_id = '{$post_target_id}' order by id desc limit 1 ");
+}
+
+const BP_MAX_PUBLISH_ATTEMPTS = 3;
+
+// 재시도 백오프: 시도 횟수가 늘수록 대기 시간을 늘린다(최대 30분). 워드프레스/외부 서비스에
+// 실패 직후 바로 다시 두드리는 것을 막기 위함이다.
+function bp_next_retry_backoff_minutes(int $attemptCount): int
+{
+    return min(30, (int) pow(2, max(0, $attemptCount)));
 }
 
 // 승인 게이트 + 잠금 + 발행 + 이력 기록을 한 번에 처리하는 오케스트레이션 함수.
@@ -146,18 +299,22 @@ function bp_dispatch_publish_job(int $post_target_id, string $actor): array
 
     $site = sql_fetch(" select * from {$sites_table} where id = '" . (int)$target['site_id'] . "' ");
     $cred = sql_fetch(" select * from {$creds_table} where site_id = '" . (int)$target['site_id'] . "' limit 1 ");
+    if (!$site) {
+        return array('ok' => false, 'error' => '발행 대상 사이트를 찾을 수 없습니다.');
+    }
 
-    $publisher = bp_get_publisher($site ? $site['platform'] : 'wordpress');
-    $result = $publisher->publish($target, $cred);
+    $publisher = bp_get_publisher($site['platform']);
+    $result = $publisher->publish($target, $site, $cred);
 
     $attempt_no = (int) $job['attempt_count'] + 1;
     $status = $result['ok'] ? 'success' : 'failed';
+    $safe_message = bp_scrub_secrets(mb_substr($result['error'], 0, 500));
     sql_query(" insert into {$attempts_table}
                     set publish_job_id = '" . (int)$job['id'] . "',
                         attempt_no = '{$attempt_no}',
                         status = '" . sql_real_escape_string($status) . "',
                         response_code = '" . ($result['ok'] ? '200' : 'ERR') . "',
-                        response_message = '" . sql_real_escape_string(mb_substr($result['error'], 0, 500)) . "',
+                        response_message = '" . sql_real_escape_string($safe_message) . "',
                         created_at = '" . G5_TIME_YMDHIS . "' ");
 
     if ($result['ok']) {
@@ -168,19 +325,70 @@ function bp_dispatch_publish_job(int $post_target_id, string $actor): array
                             last_error = '',
                             updated_at = '" . G5_TIME_YMDHIS . "'
                         where id = '{$post_target_id}' ");
-        sql_query(" update {$jobs_table} set status = 'published', active_lock_key = NULL, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$job['id'] . "' ");
+        sql_query(" update {$jobs_table} set status = 'published', active_lock_key = NULL, next_retry_at = NULL, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$job['id'] . "' ");
         bp_transition_project($project['id'], 'published', $actor, 'job#' . $job['id'] . ' success');
         return array('ok' => true, 'external_post_id' => $result['external_post_id'], 'published_url' => $result['published_url']);
     }
 
+    $backoff_minutes = bp_next_retry_backoff_minutes((int) $job['attempt_count'] + 1);
     sql_query(" update {$targets_table}
                     set publish_status = 'failed',
-                        last_error = '" . sql_real_escape_string(mb_substr($result['error'], 0, 500)) . "',
+                        last_error = '" . sql_real_escape_string($safe_message) . "',
                         retry_count = retry_count + 1,
                         updated_at = '" . G5_TIME_YMDHIS . "'
                     where id = '{$post_target_id}' ");
-    sql_query(" update {$jobs_table} set status = 'failed', active_lock_key = NULL, updated_at = '" . G5_TIME_YMDHIS . "' where id = '" . (int)$job['id'] . "' ");
-    bp_transition_project($project['id'], 'failed', $actor, 'job#' . $job['id'] . ' ' . $result['error']);
+    sql_query(" update {$jobs_table}
+                    set status = 'failed', active_lock_key = NULL,
+                        next_retry_at = DATE_ADD('" . G5_TIME_YMDHIS . "', INTERVAL {$backoff_minutes} MINUTE),
+                        updated_at = '" . G5_TIME_YMDHIS . "'
+                    where id = '" . (int)$job['id'] . "' ");
+    bp_transition_project($project['id'], 'failed', $actor, 'job#' . $job['id'] . ' ' . $safe_message);
 
     return array('ok' => false, 'error' => $result['error'], 'job_id' => $job['id']);
+}
+
+// 재시도 진입점 — project_action.php mode=retry가 호출한다. 시도 횟수 상한과 백오프 대기
+// 시간을 통과해야만 실제 재발행(bp_dispatch_publish_job)으로 넘어간다.
+function bp_retry_publish_job(int $post_target_id, string $actor): array
+{
+    $targets_table = bp_table('post_targets');
+    $posts_table = bp_table('posts');
+    $projects_table = bp_table('content_projects');
+    $jobs_table = bp_table('publish_jobs');
+
+    $target = sql_fetch(" select * from {$targets_table} where id = '{$post_target_id}' ");
+    if (!$target) {
+        return array('ok' => false, 'error' => '발행 대상을 찾을 수 없습니다.');
+    }
+
+    if ((int) $target['retry_count'] >= BP_MAX_PUBLISH_ATTEMPTS) {
+        return array('ok' => false, 'error' => '재시도 가능 횟수(' . BP_MAX_PUBLISH_ATTEMPTS . '회)를 모두 사용했습니다.');
+    }
+
+    $latest_job = sql_fetch(" select * from {$jobs_table} where post_target_id = '{$post_target_id}' order by id desc limit 1 ");
+    if ($latest_job && !empty($latest_job['next_retry_at'])) {
+        $wait_check = sql_fetch(" select (NOW() >= '" . sql_real_escape_string($latest_job['next_retry_at']) . "') as can_retry ");
+        if (!$wait_check || !(int) $wait_check['can_retry']) {
+            return array('ok' => false, 'error' => '아직 재시도 대기 시간입니다(' . $latest_job['next_retry_at'] . ' 이후 가능).');
+        }
+    }
+
+    $post = sql_fetch(" select * from {$posts_table} where id = '" . (int)$target['post_id'] . "' ");
+    if (!$post) {
+        return array('ok' => false, 'error' => '원본 포스팅을 찾을 수 없습니다.');
+    }
+    $project = sql_fetch(" select * from {$projects_table} where id = '" . (int)$post['project_id'] . "' ");
+    if (!$project) {
+        return array('ok' => false, 'error' => '콘텐츠 프로젝트를 찾을 수 없습니다.');
+    }
+    if ($project['status'] !== 'failed') {
+        return array('ok' => false, 'error' => "'{$project['status']}' 상태에서는 재시도할 수 없습니다(failed 상태에서만 가능).");
+    }
+
+    $transition = bp_transition_project($project['id'], 'publish_pending', $actor, '재시도');
+    if (!$transition['ok']) {
+        return array('ok' => false, 'error' => $transition['error']);
+    }
+
+    return bp_dispatch_publish_job($post_target_id, $actor);
 }
