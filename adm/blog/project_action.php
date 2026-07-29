@@ -385,7 +385,7 @@ if ($mode === 'update_target_schedule') {
             sql_query(" insert into {$jobs_table}
                             set post_target_id = '{$post_target_id}',
                                 status = 'pending',
-                                active_lock_key = 'sched_' . '{$post_target_id}',
+                                active_lock_key = 'sched_{$post_target_id}',
                                 scheduled_at = {$scheduled_sql},
                                 attempt_count = 0,
                                 created_at = '" . G5_TIME_YMDHIS . "',
