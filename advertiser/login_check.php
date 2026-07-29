@@ -29,8 +29,13 @@ if ($row['contract_status'] === '계약 종료') {
 
 // 비밀번호 확인 (password_verify)
 if (!password_verify($login_pw, $row['password_hash'])) {
-    $fail_count = (int)$row['login_fail_count'] + 1;
-    sql_query(" update {$tbl_acc} set login_fail_count = '{$fail_count}' where id = '{$row['id']}' ");
+    // race condition 방지를 위해 DB 원자적 증가 사용
+    sql_query(" update {$tbl_acc} set login_fail_count = login_fail_count + 1 where id = '{$row['id']}' ");
+    
+    // 증가된 실패 횟수 다시 가져오기
+    $fail_row = sql_fetch(" select login_fail_count from {$tbl_acc} where id = '{$row['id']}' ");
+    $fail_count = (int)$fail_row['login_fail_count'];
+    
     if ($fail_count >= 5) {
         // 보안: 5회 이상 실패 시 계정 잠금 처리
         sql_query(" update {$tbl_acc} set status = 'inactive' where id = '{$row['id']}' ");

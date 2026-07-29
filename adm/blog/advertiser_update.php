@@ -1,7 +1,7 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '360200';
+$sub_menu = '360100';
 auth_check_menu($auth, $sub_menu, 'w');
 check_admin_token();
 

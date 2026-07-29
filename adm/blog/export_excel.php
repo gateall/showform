@@ -1,8 +1,10 @@
 <?php
 include_once('./_common.php');
 
-$sub_menu = '361000';
-auth_check_menu($auth, $sub_menu, 'r');
+if (!defined('IS_ADVERTISER_PORTAL')) {
+    $sub_menu = '361000';
+    auth_check_menu($auth, $sub_menu, 'r');
+}
 
 $type = isset($_GET['type']) ? $_GET['type'] : '';
 if (!$type) {

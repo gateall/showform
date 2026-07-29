@@ -1,6 +1,11 @@
 <?php
 // /advertiser/_common.php
 include_once('../common.php');
+
+define('IS_ADVERTISER_PORTAL', true);
+
+require_once(G5_ADMIN_PATH . '/blog/lib/blog_common.lib.php');
+require_once(G5_ADMIN_PATH . '/blog/lib/blog_report.lib.php');
 include_once(G5_PATH . '/advertiser/lib/auth.lib.php');
 
 // 세션 시작
