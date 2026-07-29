@@ -10,7 +10,8 @@ $row = array(
     'id' => 0, 'name' => '', 'phone' => '', 'sub_phone' => '', 'address' => '',
     'domain' => '', 'consult_url' => '', 'kakao_channel' => '', 'service_region' => '',
     'core_service' => '', 'intro_text' => '', 'forbidden_words' => '', 'mandatory_notice' => '',
-    'status' => 'Y',
+    'status' => 'Y', 'contract_start_date' => '', 'contract_end_date' => '', 
+    'contract_status' => '운영 중', 'monthly_post_quota' => 0,
 );
 
 if ($id > 0) {
@@ -61,10 +62,27 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     <td><textarea name="forbidden_words" id="forbidden_words" rows="2" style="width:100%;" placeholder="한 줄에 하나씩, 예: 업계 1위"><?php echo get_text($row['forbidden_words']); ?></textarea></td></tr>
                 <tr><th scope="row"><label for="mandatory_notice">필수 고지</label></th>
                     <td><textarea name="mandatory_notice" id="mandatory_notice" rows="2" style="width:100%;" placeholder="예: 요금·조건은 현장에 따라 달라질 수 있음"><?php echo get_text($row['mandatory_notice']); ?></textarea></td></tr>
-                <tr><th scope="row">상태</th>
+                <tr><th scope="row">시스템 활성 상태</th>
                     <td>
                         <label><input type="radio" name="status" value="Y" <?php echo $row['status'] === 'Y' ? 'checked' : ''; ?>> 사용</label>
                         <label style="margin-left:15px;"><input type="radio" name="status" value="N" <?php echo $row['status'] === 'N' ? 'checked' : ''; ?>> 중지</label>
+                    </td></tr>
+                <tr><th scope="row"><label for="contract_start_date">계약 시작일</label></th>
+                    <td><input type="date" name="contract_start_date" id="contract_start_date" value="<?php echo $row['contract_start_date']; ?>" class="frm_input"></td></tr>
+                <tr><th scope="row"><label for="contract_end_date">계약 종료일</label></th>
+                    <td><input type="date" name="contract_end_date" id="contract_end_date" value="<?php echo $row['contract_end_date']; ?>" class="frm_input"></td></tr>
+                <tr><th scope="row"><label for="monthly_post_quota">월간 발행 목표</label></th>
+                    <td><input type="number" name="monthly_post_quota" id="monthly_post_quota" value="<?php echo (int)$row['monthly_post_quota']; ?>" class="frm_input" style="width:100px;"> 건</td></tr>
+                <tr><th scope="row">계약 상태</th>
+                    <td>
+                        <?php 
+                        $c_status = $row['contract_status']; 
+                        $status_opts = array('계약 예정', '운영 중', '종료 예정', '일시 중지', '계약 종료');
+                        foreach ($status_opts as $so) {
+                            $checked = ($c_status === $so) ? 'checked' : '';
+                            echo "<label style='margin-right:15px;'><input type='radio' name='contract_status' value='{$so}' {$checked}> {$so}</label>";
+                        }
+                        ?>
                     </td></tr>
             </tbody>
         </table>

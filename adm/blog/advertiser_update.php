@@ -21,6 +21,12 @@ $intro_text = isset($_POST['intro_text']) ? trim($_POST['intro_text']) : '';
 $forbidden_words = isset($_POST['forbidden_words']) ? trim($_POST['forbidden_words']) : '';
 $mandatory_notice = isset($_POST['mandatory_notice']) ? trim($_POST['mandatory_notice']) : '';
 $status = isset($_POST['status']) && $_POST['status'] === 'N' ? 'N' : 'Y';
+$contract_start_date = isset($_POST['contract_start_date']) ? trim($_POST['contract_start_date']) : '';
+if (!$contract_start_date) $contract_start_date = '0000-00-00';
+$contract_end_date = isset($_POST['contract_end_date']) ? trim($_POST['contract_end_date']) : '';
+if (!$contract_end_date) $contract_end_date = '0000-00-00';
+$contract_status = isset($_POST['contract_status']) ? trim($_POST['contract_status']) : '운영 중';
+$monthly_post_quota = isset($_POST['monthly_post_quota']) ? (int)$_POST['monthly_post_quota'] : 0;
 
 if ($name === '') {
     alert('상호를 입력해 주세요.');
@@ -40,6 +46,10 @@ $set_sql = "
     forbidden_words = '" . sql_real_escape_string($forbidden_words) . "',
     mandatory_notice = '" . sql_real_escape_string($mandatory_notice) . "',
     status = '{$status}',
+    contract_start_date = IF('{$contract_start_date}'='0000-00-00', NULL, '{$contract_start_date}'),
+    contract_end_date = IF('{$contract_end_date}'='0000-00-00', NULL, '{$contract_end_date}'),
+    contract_status = '" . sql_real_escape_string($contract_status) . "',
+    monthly_post_quota = '{$monthly_post_quota}',
     updated_at = '" . G5_TIME_YMDHIS . "'
 ";
 

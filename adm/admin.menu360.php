@@ -2,6 +2,7 @@
 $menu['menu360'] = array(
     array('360000', '블로그자동화', G5_ADMIN_URL . '/blog/project_list.php', 'blog'),
     array('360100', '광고주관리', G5_ADMIN_URL . '/blog/advertiser_list.php', 'blog_advertiser'),
+    array('361100', '광고주 계정관리', G5_ADMIN_URL . '/blog/advertiser_account_list.php', 'blog_advertiser_account'),
     array('360200', '발행사이트관리', G5_ADMIN_URL . '/blog/site_list.php', 'blog_site'),
     array('360300', 'AI 공급자설정', G5_ADMIN_URL . '/blog/ai_provider_list.php', 'blog_ai_provider'),
     array('360400', '콘텐츠 프로젝트', G5_ADMIN_URL . '/blog/project_list.php', 'blog_project'),
