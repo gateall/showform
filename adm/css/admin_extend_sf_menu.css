@@ -414,3 +414,88 @@ body {
     }
 }
 
+
+/* ========================================================
+   Sitemap Compression & Title Clipping Fix
+======================================================== */
+.sf-sitemap-breadcrumb {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    white-space: normal;
+    word-break: break-all;
+}
+
+.sf-sitemap-current-path {
+    font-weight: 400;
+    color: #666;
+    margin-left: 4px;
+    font-size: 13px;
+}
+
+.sf-sitemap-url {
+    display: none; /* URL hidden by default */
+}
+
+/* 7.1. Accessibility for skip link (#to_content) */
+#to_content {
+    position: relative;
+    z-index: 10000;
+}
+
+#to_content a {
+    position: fixed;
+    left: 12px;
+    top: -100px;
+    min-height: 44px;
+    padding: 10px 16px;
+    line-height: 1.4;
+    white-space: nowrap;
+    background: #000;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: top 0.2s;
+}
+
+#to_content a:focus {
+    top: 8px;
+}
+
+/* 7.2. Fix Title Clipping (#container_title) */
+#container_title {
+    position: static !important;
+    height: auto !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    font-size: 18px !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    width: auto !important;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Fix #container excessive gap on PC/Mobile */
+#container {
+    margin-top: 0 !important;
+    padding-left: 0 !important; /* Managed by body padding-left on PC */
+}
+
+@media (min-width: 769px) {
+    .sf-sitemap-breadcrumb {
+        font-size: 15px;
+    }
+    .sf-sitemap-current-path {
+        font-size: 14px;
+    }
+    #container_title {
+        padding: 12px 16px !important;
+        font-size: 20px !important;
+    }
+}
