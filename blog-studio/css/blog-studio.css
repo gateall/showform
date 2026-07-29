@@ -320,6 +320,16 @@ body {
     z-index: 1000;
 }
 
+/* Focus Mode */
+body.focus-mode .studio-quick-tools {
+    display: none !important;
+}
+body.focus-mode .blog-studio-layout {
+    grid-template-columns: 1fr;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .blog-studio-layout {

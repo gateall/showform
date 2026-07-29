@@ -182,8 +182,20 @@ function completePost() {
     window.location.href = window.G5_URL + '/adm/blog/project_list.php';
 }
 
+function returnAdmin() {
+    saveAll();
+    // Return to the project detail page
+    window.location.href = window.G5_URL + '/adm/blog/project_form.php?w=u&id=' + window.StudioState.basic.project_id;
+}
+
 function previewPost() {
     alert("미리보기 화면 (개발 예정)");
+}
+
+function toggleFocusMode() {
+    document.body.classList.toggle('focus-mode');
+    const isFocus = document.body.classList.contains('focus-mode');
+    alert(isFocus ? "집중 모드가 켜졌습니다. 우측 퀵 도구가 숨겨집니다." : "집중 모드가 해제되었습니다.");
 }
 
 function toggleMobileTools() {

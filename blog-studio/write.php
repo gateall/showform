@@ -4,6 +4,7 @@ include_once('./_common.php');
 if (!$is_admin) {
     alert('관리자만 접근 가능합니다.', G5_BBS_URL.'/login.php?url='.urlencode($_SERVER['REQUEST_URI']));
 }
+auth_check_menu($auth, '360000', 'w');
 
 $post_id = isset($_GET['post_id']) ? (int)$_GET['post_id'] : 0;
 if (!$post_id) {
@@ -58,10 +59,11 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/blog-studio/css/blog-stu
         </div>
         <div class="topbar-right">
             <span class="ai-status">AI: 1순위 지정 안됨</span>
+            <button type="button" class="studio-btn btn-outline" onclick="toggleFocusMode()">집중 모드</button>
             <button type="button" class="studio-btn btn-outline" onclick="previewPost()">미리보기</button>
             <button type="button" class="studio-btn btn-primary" onclick="saveAll()">전체 저장</button>
             <button type="button" class="studio-btn btn-success" onclick="completePost()">작성 완료</button>
-            <a href="<?php echo G5_ADMIN_URL; ?>/blog/blog_dashboard.php" class="studio-btn btn-dark">대시보드로 이동</a>
+            <a href="javascript:void(0);" onclick="returnAdmin()" class="studio-btn btn-dark">관리자로 이동</a>
         </div>
     </header>
 
