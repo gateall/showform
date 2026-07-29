@@ -114,7 +114,7 @@ function bp_install_get_versions(string $table_prefix): array
         5 => array(
             'label' => '포스트', 'desc' => '포스트 소프트 삭제 컬럼',
             'file' => $sql_dir . '/blog_automation_v5.sql',
-            'installed' => bp_install_column_exists($table_prefix, 'posts', 'deleted_at'),
+            'installed' => bp_install_column_exists($table_prefix, 'content_projects', 'deleted_at'),
         ),
         6 => array(
             'label' => '예약 발행', 'desc' => '예약 발행 관련 컬럼',
