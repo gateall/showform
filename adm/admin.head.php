@@ -385,9 +385,7 @@ jQuery(function($) {
 
     <div id="container" class="<?php echo $adm_menu_cookie['container']; ?>">
 
-</div>
-
-        <h1 id="container_title"><?php echo $g5['title'] ?></h1>
+<h1 id="container_title"><?php echo $g5['title'] ?></h1>
 
 <nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="관리자 전체 메뉴">
     <div class="sf-sitemap-bar">
