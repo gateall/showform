@@ -266,6 +266,27 @@ if ($mode === 'publish') {
     alert('워드프레스에 초안(draft)으로 발행되었습니다. URL: ' . $result['published_url'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
 }
 
+if ($mode === 'optimize_images') {
+    if (!in_array($project['status'], array('draft', 'pending_approval'), true)) {
+        alert("'{$project['status']}' 상태에서는 이미지를 최적화할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    
+    include_once(G5_ADMIN_PATH . '/blog/lib/blog_image.lib.php');
+    $result = bp_replace_post_images((int)$post['id']);
+    
+    if (!$result['ok']) {
+        alert('이미지 최적화 실패: ' . $result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    
+    bp_log_activity($id, 'images_optimized', $actor, $result['count'] . '개의 이미지를 다운로드 및 변환했습니다.');
+    
+    // 타겟 본문도 동기화
+    $updated_post = sql_fetch(" select title, body from {$posts_table} where id = '" . (int)$post['id'] . "' ");
+    bp_sync_post_targets_title_body($targets_table, (int) $post['id'], $updated_post['title'], $updated_post['body']);
+    
+    alert($result['count'] . '개의 이미지가 WebP로 변환되고 본문에 반영되었습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+}
+
 if ($mode === 'retry') {
     $post_target_id = isset($_POST['post_target_id']) ? (int) $_POST['post_target_id'] : 0;
     $result = bp_retry_publish_job($post_target_id, $actor);

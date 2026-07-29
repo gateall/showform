@@ -106,15 +106,21 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </form>
     <form method="post" action="./project_action.php" style="display:inline;">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+        <input type="hidden" name="mode" value="optimize_images">
+        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+        <button type="submit" class="btn btn_02" <?php echo !($project['status'] === 'draft' && $post && $post['body']) ? 'disabled' : ''; ?>>③ 이미지 최적화</button>
+    </form>
+    <form method="post" action="./project_action.php" style="display:inline;">
+        <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="request_review">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn btn_02" <?php echo !($project['status'] === 'draft' && $post && $post['body']) ? 'disabled' : ''; ?>>③ 검수 요청</button>
+        <button type="submit" class="btn btn_02" <?php echo !($project['status'] === 'draft' && $post && $post['body']) ? 'disabled' : ''; ?>>④ 검수 요청</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;" onsubmit="return !<?php echo $has_blocking_quality_failure ? 'true' : 'false'; ?> || confirm('품질 검사 실패 항목이 있어 승인이 차단됩니다. 계속하시겠습니까?');">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="approve">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn btn_01" <?php echo ($project['status'] !== 'pending_approval' || $has_blocking_quality_failure) ? 'disabled' : ''; ?>>④ 관리자 승인</button>
+        <button type="submit" class="btn btn_01" <?php echo ($project['status'] !== 'pending_approval' || $has_blocking_quality_failure) ? 'disabled' : ''; ?>>⑤ 관리자 승인</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
