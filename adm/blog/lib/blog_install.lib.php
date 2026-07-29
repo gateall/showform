@@ -47,7 +47,7 @@ function bp_install_run_sql_file(string $path, string $prefix): array
         if ($stmt === '') {
             continue;
         }
-        sql_query($stmt, true);
+        sql_query($stmt, false);
         if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
             $created[] = $m[1];
         }
