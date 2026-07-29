@@ -5,8 +5,21 @@
    신규 업무(쇼폼/블로그 자동화/랜딩페이지) 전용 상단 전환 메뉴만 별도로 스타일한다.
 ======================================================== */
 
+/* 0. 원본 admin.css의 #gnb .on .gnb_oparea{position:absolute; height:100%;}가
+   현재 선택된 1차 메뉴 패널을 뷰포트 전체 높이만큼 흰 배경으로 늘려서, 그 아래
+   실제 페이지 콘텐츠(신규 상단 전환 메뉴 포함)를 가려버리는 문제가 있었다.
+   원본 파일은 손대지 않고 이 확장 CSS에서만 높이를 패널 내용만큼으로 되돌린다. */
+#gnb .gnb_oparea {
+    height: auto !important;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 10;
+}
+
 /* 1. 신규 업무 상단 전환 메뉴 (.sf-vswitch) */
 .sf-vswitch {
+    position: relative;
+    z-index: 5;
     background: #f7f8fa;
     border-bottom: 1px solid #e5e5e5;
 }

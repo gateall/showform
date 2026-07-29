@@ -220,11 +220,12 @@ $sf_current_vertical = bp_sf_resolve_current_vertical($sf_menu_all, isset($sub_m
     });
 </script>
 
-<?php require __DIR__ . '/inc/admin_content_switch.php'; ?>
 
 <div id="wrapper">
 
     <div id="container" class="<?php echo $adm_menu_cookie['container']; ?>">
+
+        <?php require __DIR__ . '/inc/admin_content_switch.php'; ?>
 
         <h1 id="container_title"><?php echo $g5['title'] ?></h1>
         <div class="container_wr">
