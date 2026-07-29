@@ -201,6 +201,24 @@ function bp_get_publisher(string $platform): BlogPublisherInterface
     return new BlogMockPublisher();
 }
 
+// 승인 취소(approved -> pending_approval) 가드 — 이 프로젝트의 발행 대상 중 하나라도
+// 진행 중인(pending/claimed/processing) 발행 작업이 있으면 취소를 막는다. 발행 파이프라인
+// 자체는 이번 단계 범위가 아니므로 이 함수만 새로 추가하고 기존 발행 로직은 건드리지 않는다.
+function bp_has_active_publish_job(int $projectId): bool
+{
+    $jobs_table = bp_table('publish_jobs');
+    $targets_table = bp_table('post_targets');
+    $posts_table = bp_table('posts');
+
+    $row = sql_fetch(" select count(*) as cnt
+                        from {$jobs_table} j
+                        inner join {$targets_table} t on t.id = j.post_target_id
+                        inner join {$posts_table} p on p.id = t.post_id
+                        where p.project_id = '{$projectId}'
+                          and j.status in ('pending','claimed','processing') ");
+    return $row && (int) $row['cnt'] > 0;
+}
+
 // 대상(post_target)에 활성 발행 작업이 있으면 재사용하고, 없으면 새로 만든다.
 // active_lock_key 유니크 제약이 최종 방어선이며, 이 함수는 그 전에 애플리케이션 레벨에서 먼저 확인한다.
 function bp_get_or_create_publish_job(int $post_target_id): ?array

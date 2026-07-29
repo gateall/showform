@@ -11,6 +11,7 @@ $targets_table = bp_table('post_targets');
 $sites_table = bp_table('sites');
 $logs_table = bp_table('content_activity_logs');
 $candidates_table = bp_table('content_title_candidates');
+$gen_logs_table = bp_table('content_generation_logs');
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $project = sql_fetch(" select p.*, a.name as advertiser_name, a.phone, a.consult_url
@@ -49,12 +50,14 @@ $quality_status_label = array('pass' => '정상', 'warn' => '조건부', 'fail' 
 $has_blocking_quality_failure = bp_quality_check_has_blocking_failure($quality_checks);
 
 $logs = sql_query(" select * from {$logs_table} where project_id = '{$id}' order by id desc limit 20 ");
+$gen_logs = sql_query(" select * from {$gen_logs_table} where project_id = '{$id}' order by id desc limit 10 ");
 
 $status_label = array(
-    'draft' => '초안', 'generated' => 'AI생성완료', 'review_required' => '검수대기',
-    'approved' => '승인됨', 'publish_pending' => '발행대기', 'publishing' => '발행중',
-    'published' => '발행완료', 'failed' => '발행실패',
+    'draft' => '초안', 'pending_approval' => '승인대기', 'approved' => '승인됨',
+    'publish_pending' => '발행대기', 'publishing' => '발행중', 'published' => '발행완료', 'failed' => '발행실패',
 );
+$action_label = array('titles' => '제목 생성', 'body' => '본문 생성');
+$gen_status_label = array('success' => '성공', 'fail' => '실패');
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -82,35 +85,41 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="generate_titles">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn_submit btn" <?php echo !in_array($project['status'], array('draft'), true) ? 'disabled' : ''; ?>>① 제목 후보 생성</button>
+        <button type="submit" class="btn_submit btn" <?php echo $project['status'] !== 'draft' ? 'disabled' : ''; ?>>① 제목 후보 생성</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="generate_body">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn_submit btn" <?php echo !($project['status'] === 'generated' && $has_selected_candidate) ? 'disabled' : ''; ?>>② 본문 생성</button>
+        <button type="submit" class="btn_submit btn" <?php echo !($project['status'] === 'draft' && $has_selected_candidate) ? 'disabled' : ''; ?>>② 본문 생성</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="request_review">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn btn_02" <?php echo !($project['status'] === 'generated' && $post && $post['body']) ? 'disabled' : ''; ?>>③ 검수 요청</button>
+        <button type="submit" class="btn btn_02" <?php echo !($project['status'] === 'draft' && $post && $post['body']) ? 'disabled' : ''; ?>>③ 검수 요청</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;" onsubmit="return !<?php echo $has_blocking_quality_failure ? 'true' : 'false'; ?> || confirm('품질 검사 실패 항목이 있어 승인이 차단됩니다. 계속하시겠습니까?');">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="approve">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn btn_01" <?php echo ($project['status'] !== 'review_required' || $has_blocking_quality_failure) ? 'disabled' : ''; ?>>④ 관리자 승인</button>
+        <button type="submit" class="btn btn_01" <?php echo ($project['status'] !== 'pending_approval' || $has_blocking_quality_failure) ? 'disabled' : ''; ?>>④ 관리자 승인</button>
     </form>
     <form method="post" action="./project_action.php" style="display:inline;">
         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
         <input type="hidden" name="mode" value="reject">
         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-        <button type="submit" class="btn btn_02" <?php echo $project['status'] !== 'review_required' ? 'disabled' : ''; ?> onclick="return confirm('초안으로 반려하시겠습니까?');">반려(재작성)</button>
+        <button type="submit" class="btn btn_02" <?php echo $project['status'] !== 'pending_approval' ? 'disabled' : ''; ?> onclick="return confirm('초안으로 반려하시겠습니까?');">반려(재작성)</button>
+    </form>
+    <form method="post" action="./project_action.php" style="display:inline;">
+        <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+        <input type="hidden" name="mode" value="cancel_approval">
+        <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+        <button type="submit" class="btn btn_02" <?php echo $project['status'] !== 'approved' ? 'disabled' : ''; ?> onclick="return confirm('승인을 취소하시겠습니까?');">승인 취소</button>
     </form>
 </div>
 
-<?php if ($project['status'] === 'generated' || !empty($candidate_rows)) { ?>
+<?php if ($project['status'] === 'draft' || !empty($candidate_rows)) { ?>
 <div class="tbl_head01 tbl_wrap" style="margin-top:20px;">
     <table>
         <caption>제목 후보</caption>
@@ -125,7 +134,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                                 <input type="hidden" name="mode" value="select_title">
                                 <input type="hidden" name="title_candidate_id" value="<?php echo (int)$c['id']; ?>">
                                 <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-                                <button type="submit" class="btn btn_02" <?php echo ($project['status'] !== 'generated' || $c['is_selected'] === 'Y') ? 'disabled' : ''; ?>><?php echo $c['is_selected'] === 'Y' ? '● 선택됨' : '○ 선택'; ?></button>
+                                <button type="submit" class="btn btn_02" <?php echo ($project['status'] !== 'draft' || $c['is_selected'] === 'Y') ? 'disabled' : ''; ?>><?php echo $c['is_selected'] === 'Y' ? '● 선택됨' : '○ 선택'; ?></button>
                             </form>
                         </td>
                         <td style="text-align:left;"><?php echo get_text($c['title']); ?></td>
@@ -139,7 +148,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         </tbody>
     </table>
 </div>
-<?php if ($project['status'] === 'generated') { ?>
+<?php if ($project['status'] === 'draft') { ?>
 <form method="post" action="./project_action.php" style="margin-top:10px;">
     <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
     <input type="hidden" name="mode" value="select_title">
@@ -166,8 +175,8 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
                         <input type="hidden" name="mode" value="edit_title">
                         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-                        <input type="text" name="title" class="frm_input" maxlength="255" style="width:60%;" value="<?php echo $post ? get_text($post['title']) : ''; ?>" <?php echo !in_array($project['status'], array('generated', 'review_required'), true) ? 'disabled' : ''; ?>>
-                        <button type="submit" class="btn btn_02" <?php echo !in_array($project['status'], array('generated', 'review_required'), true) ? 'disabled' : ''; ?>>제목 수정 저장</button>
+                        <input type="text" name="title" class="frm_input" maxlength="255" style="width:60%;" value="<?php echo $post ? get_text($post['title']) : ''; ?>" <?php echo !in_array($project['status'], array('draft', 'pending_approval'), true) ? 'disabled' : ''; ?>>
+                        <button type="submit" class="btn btn_02" <?php echo !in_array($project['status'], array('draft', 'pending_approval'), true) ? 'disabled' : ''; ?>>제목 수정 저장</button>
                     </form>
                 </td></tr>
             <tr><th scope="row">본문(현재)</th>
@@ -176,12 +185,14 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                         <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
                         <input type="hidden" name="mode" value="edit_body">
                         <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
-                        <textarea name="body" rows="14" style="width:100%;" <?php echo !in_array($project['status'], array('generated', 'review_required'), true) ? 'disabled' : ''; ?>><?php echo $post && $post['body'] ? get_text($post['body']) : ''; ?></textarea>
+                        <textarea name="body" rows="14" style="width:100%;" <?php echo !in_array($project['status'], array('draft', 'pending_approval'), true) ? 'disabled' : ''; ?>><?php echo $post && $post['body'] ? get_text($post['body']) : ''; ?></textarea>
                         <div class="btn_confirm01 btn_confirm">
-                            <button type="submit" class="btn btn_submit btn" <?php echo !in_array($project['status'], array('generated', 'review_required'), true) ? 'disabled' : ''; ?>>본문 수정 저장(품질 재검사)</button>
+                            <button type="submit" class="btn btn_submit btn" <?php echo !in_array($project['status'], array('draft', 'pending_approval'), true) ? 'disabled' : ''; ?>>본문 수정 저장(품질 재검사)</button>
                         </div>
                     </form>
                 </td></tr>
+            <tr><th scope="row">해시태그</th>
+                <td><?php echo $post && !empty($post['hashtags']) ? get_text($post['hashtags']) : '<span style="color:#999;">아직 생성되지 않음</span>'; ?></td></tr>
             <?php if ($post && !empty($post['previous_body'])) { ?>
             <tr><th scope="row">본문(직전 버전)</th>
                 <td><pre style="white-space:pre-wrap;font-family:inherit;max-height:300px;overflow:auto;color:#666;"><?php echo get_text($post['previous_body']); ?></pre></td></tr>
@@ -205,6 +216,32 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 <?php } ?>
             <?php } else { ?>
                 <tr><td colspan="3" class="empty_table">아직 품질 검사가 실행되지 않았습니다(본문 생성 시 자동 실행).</td></tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+
+<div class="tbl_head01 tbl_wrap" style="margin-top:20px;">
+    <table>
+        <caption>AI 생성 로그(최근 10건 — 토큰·비용은 추정치)</caption>
+        <thead><tr><th scope="col">시각</th><th scope="col">종류</th><th scope="col">공급자/모델</th><th scope="col">토큰(프롬프트/응답)</th><th scope="col">비용 추정</th><th scope="col">결과</th></tr></thead>
+        <tbody>
+            <?php if ($gen_logs && sql_num_rows($gen_logs) > 0) { ?>
+                <?php while ($gl = sql_fetch_array($gen_logs)) { ?>
+                    <tr>
+                        <td><?php echo get_text($gl['created_at']); ?></td>
+                        <td><?php echo isset($action_label[$gl['action']]) ? $action_label[$gl['action']] : get_text($gl['action']); ?></td>
+                        <td><?php echo get_text($gl['provider']) . ($gl['model'] ? ' / ' . get_text($gl['model']) : ''); ?></td>
+                        <td><?php echo $gl['tokens_prompt'] !== null ? (int)$gl['tokens_prompt'] . ' / ' . (int)$gl['tokens_completion'] : '-'; ?></td>
+                        <td><?php echo $gl['cost_estimate'] !== null ? '$' . number_format((float)$gl['cost_estimate'], 4) : '-'; ?></td>
+                        <td style="color:<?php echo $gl['status'] === 'fail' ? '#c00' : '#0a0'; ?>;">
+                            <?php echo isset($gen_status_label[$gl['status']]) ? $gen_status_label[$gl['status']] : get_text($gl['status']); ?>
+                            <?php echo $gl['error_message'] ? '<div style="font-size:12px;">' . get_text($gl['error_message']) . '</div>' : ''; ?>
+                        </td>
+                    </tr>
+                <?php } ?>
+            <?php } else { ?>
+                <tr><td colspan="6" class="empty_table">아직 생성 로그가 없습니다.</td></tr>
             <?php } ?>
         </tbody>
     </table>

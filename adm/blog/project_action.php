@@ -40,6 +40,8 @@ function bp_sync_post_targets_title_body(string $targets_table, int $post_id, st
                     where post_id = '{$post_id}' ");
 }
 
+// 제목·본문 생성은 별도 "생성 완료" 상태를 두지 않고 draft 상태에서 이루어진다 — 진행
+// 단계는 제목 후보 존재 여부·선택 여부로 판단한다(select_title/generate_body 참조).
 if ($mode === 'generate_titles') {
     if ($project['status'] !== 'draft') {
         alert("'{$project['status']}' 상태에서는 제목을 생성할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
@@ -53,7 +55,10 @@ if ($mode === 'generate_titles') {
         'service_region' => $advertiser['service_region'],
     );
 
+    $provider_meta = bp_ai_get_provider_meta();
     $result = bp_ai_generate_titles($params, 5);
+    bp_log_generation_attempt($id, 'titles', $provider_meta['provider'], $provider_meta['model'], $result);
+
     if (!$result['ok']) {
         // 실패 시 기존 후보·초안을 그대로 둔다 — 아무것도 쓰지 않고 오류만 안내.
         alert('제목 생성 실패: ' . $result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
@@ -70,12 +75,12 @@ if ($mode === 'generate_titles') {
                             created_at = '" . G5_TIME_YMDHIS . "' ");
     }
 
-    bp_transition_project($id, 'generated', $actor, '제목 후보 ' . count($result['titles']) . '개 생성');
+    bp_log_activity($id, 'titles_generated', $actor, count($result['titles']) . '개 생성 (' . $provider_meta['provider'] . ')');
     alert('제목 후보가 생성되었습니다. 마음에 드는 제목을 선택하거나 직접 입력해 주세요.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
 }
 
 if ($mode === 'select_title') {
-    if ($project['status'] !== 'generated') {
+    if ($project['status'] !== 'draft') {
         alert("'{$project['status']}' 상태에서는 제목을 선택할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
 
@@ -112,7 +117,7 @@ if ($mode === 'select_title') {
 }
 
 if ($mode === 'generate_body') {
-    if ($project['status'] !== 'generated') {
+    if ($project['status'] !== 'draft') {
         alert("'{$project['status']}' 상태에서는 본문을 생성할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
 
@@ -130,20 +135,25 @@ if ($mode === 'generate_body') {
         'company_name' => $advertiser['name'],
     );
 
+    $provider_meta = bp_ai_get_provider_meta();
     $result = bp_ai_generate_body($params);
+    bp_log_generation_attempt($id, 'body', $provider_meta['provider'], $provider_meta['model'], $result);
+
     if (!$result['ok']) {
         // 실패 시 기존 본문을 그대로 둔다.
         alert('본문 생성 실패: ' . $result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
 
     $final_body = bp_apply_business_placeholders($result['body'], $advertiser);
+    $hashtags = isset($result['hashtags']) ? $result['hashtags'] : '';
     $previous_body_sql = $post['body'] !== '' && $post['body'] !== null
         ? ", previous_body = '" . sql_real_escape_string($post['body']) . "'"
         : '';
 
     sql_query(" update {$posts_table}
                     set title = '" . sql_real_escape_string($selected['title']) . "',
-                        body = '" . sql_real_escape_string($final_body) . "'
+                        body = '" . sql_real_escape_string($final_body) . "',
+                        hashtags = '" . sql_real_escape_string($hashtags) . "'
                         {$previous_body_sql},
                         version = version + 1,
                         updated_at = '" . G5_TIME_YMDHIS . "'
@@ -153,12 +163,12 @@ if ($mode === 'generate_body') {
     $updated_post = sql_fetch(" select * from {$posts_table} where id = '" . (int)$post['id'] . "' ");
     bp_run_and_save_quality_check($id, (int) $post['id'], $updated_post, $advertiser, $project);
 
-    bp_log_activity($id, 'body_generated', $actor, '버전 ' . $updated_post['version']);
+    bp_log_activity($id, 'body_generated', $actor, '버전 ' . $updated_post['version'] . ' (' . $provider_meta['provider'] . ')');
     alert('본문이 생성되고 품질 검사가 실행되었습니다. 검수 요청 전에 결과를 확인해 주세요.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
 }
 
 if ($mode === 'edit_title' || $mode === 'edit_body') {
-    if (!in_array($project['status'], array('generated', 'review_required'), true)) {
+    if (!in_array($project['status'], array('draft', 'pending_approval'), true)) {
         alert("'{$project['status']}' 상태에서는 직접 수정할 수 없습니다.", G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
 
@@ -198,7 +208,7 @@ if ($mode === 'request_review') {
     if (trim((string) $post['body']) === '') {
         alert('본문이 없습니다. 먼저 본문을 생성하거나 입력해 주세요.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
-    $result = bp_transition_project($id, 'review_required', $actor, '검수 요청');
+    $result = bp_transition_project($id, 'pending_approval', $actor, '검수 요청');
     if (!$result['ok']) {
         alert($result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
@@ -221,7 +231,18 @@ if ($mode === 'approve') {
     if (!$result['ok']) {
         alert($result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
     }
-    alert('승인되었습니다. 이제 발행이 가능합니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    alert('승인되었습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+}
+
+if ($mode === 'cancel_approval') {
+    if (bp_has_active_publish_job($id)) {
+        alert('진행 중인 발행 작업이 있어 승인을 취소할 수 없습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    $result = bp_transition_project($id, 'pending_approval', $actor, '승인 취소');
+    if (!$result['ok']) {
+        alert($result['error'], G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
+    }
+    alert('승인이 취소되었습니다.', G5_ADMIN_URL . '/blog/project_view.php?id=' . $id);
 }
 
 if ($mode === 'reject') {

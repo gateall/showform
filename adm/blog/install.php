@@ -8,11 +8,15 @@ if ($is_admin != 'super') {
 
 $sql_file_v1 = __DIR__ . '/sql/blog_automation_v1.sql';
 $sql_file_v2 = __DIR__ . '/sql/blog_automation_v2.sql';
+$sql_file_v3 = __DIR__ . '/sql/blog_automation_v3.sql';
 if (!is_file($sql_file_v1)) {
     alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v1);
 }
 if (!is_file($sql_file_v2)) {
     alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v2);
+}
+if (!is_file($sql_file_v3)) {
+    alert('SQL 파일을 찾을 수 없습니다: ' . $sql_file_v3);
 }
 
 global $g5;
@@ -96,34 +100,38 @@ $table_prefix = G5_TABLE_PREFIX;
 $v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
 $v2_installed = bp_install_table_exists($table_prefix, 'content_title_candidates')
     && bp_install_table_exists($table_prefix, 'content_quality_checks');
+$v3_installed = bp_install_table_exists($table_prefix, 'content_generation_logs');
 $diagnostics = bp_install_diagnostics();
 
 $did_install = false;
 $created = array();
 
-if ((!$v1_installed || !$v2_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ((!$v1_installed || !$v2_installed || !$v3_installed) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     check_admin_token();
 
     if (!$v1_installed) {
         $created = array_merge($created, bp_install_run_sql_file($sql_file_v1, $table_prefix));
     }
-    // v2는 항상 실행한다 — 신설 테이블은 CREATE TABLE IF NOT EXISTS, 컬럼 추가는
-    // ADD COLUMN IF NOT EXISTS라 v1만 있던 기존 설치 위에서도 안전하게 재실행된다.
+    // v2·v3는 항상 실행한다 — 신설 테이블은 CREATE TABLE IF NOT EXISTS, 컬럼 추가는
+    // ADD COLUMN IF NOT EXISTS라 이전 버전만 있던 기존 설치 위에서도 안전하게 재실행된다.
     $created = array_merge($created, bp_install_run_sql_file($sql_file_v2, $table_prefix));
+    $created = array_merge($created, bp_install_run_sql_file($sql_file_v3, $table_prefix));
 
     $did_install = true;
     $v1_installed = bp_install_table_exists($table_prefix, 'advertisers');
     $v2_installed = bp_install_table_exists($table_prefix, 'content_title_candidates')
         && bp_install_table_exists($table_prefix, 'content_quality_checks');
+    $v3_installed = bp_install_table_exists($table_prefix, 'content_generation_logs');
 }
-$already_installed = $v1_installed && $v2_installed;
+$already_installed = $v1_installed && $v2_installed && $v3_installed;
 
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
     <h2>블로그 자동화 MVP — 테이블 설치</h2>
     <p>Phase 1(광고주/사이트/발행 파이프라인 11개 테이블): <?php echo $v1_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
-    &nbsp;&nbsp;Phase 2(제목 후보/품질 검사 등): <?php echo $v2_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
+    &nbsp;&nbsp;Phase 2(제목 후보/품질 검사 등): <?php echo $v2_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?>
+    &nbsp;&nbsp;콘텐츠 파이프라인(해시태그/생성 로그): <?php echo $v3_installed ? '설치됨' : '<span style="color:#c00;">미설치</span>'; ?></p>
 </div>
 
 <div class="tbl_frm01 tbl_wrap">
@@ -147,12 +155,12 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
 <?php if ($already_installed && !$did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>이미 설치되어 있습니다(Phase 1·Phase 2 테이블 모두 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
+        <p>이미 설치되어 있습니다(Phase 1·Phase 2·콘텐츠 파이프라인 테이블 모두 확인됨). 안전을 위해 재설치를 실행하지 않았습니다.</p>
         <p><a href="./project_list.php" class="btn btn_submit btn">콘텐츠 프로젝트 목록으로 이동</a></p>
     </div>
 <?php } elseif ($did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code>, <code>adm/blog/sql/blog_automation_v2.sql</code></p>
+        <p>다음 테이블을 생성했습니다(이미 존재하면 건너뜁니다). 원본 DDL: <code>adm/blog/sql/blog_automation_v1.sql</code>, <code>adm/blog/sql/blog_automation_v2.sql</code>, <code>adm/blog/sql/blog_automation_v3.sql</code></p>
         <ul>
             <?php foreach ($created as $t) { ?>
                 <li><?php echo get_text($t); ?></li>
@@ -162,7 +170,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </div>
 <?php } else { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">
-        <p><?php echo (!$v1_installed) ? 'Phase 1과 Phase 2를 함께 설치합니다.' : 'Phase 1은 이미 설치되어 있습니다 — Phase 2만 추가로 설치합니다.'; ?>
+        <p><?php echo (!$v1_installed) ? 'Phase 1·Phase 2·콘텐츠 파이프라인을 함께 설치합니다.' : '기존 설치 위에 누락된 부분만 추가로 설치합니다.'; ?>
         설치는 <code>CREATE TABLE IF NOT EXISTS</code> / <code>ADD COLUMN IF NOT EXISTS</code>만 실행하며 기존 데이터를 삭제하지 않습니다.
         운영 DB에 적용하기 전에는 반드시 백업을 먼저 받아 두세요.</p>
     </div>

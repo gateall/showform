@@ -9,9 +9,9 @@ require_once G5_LIB_PATH . '/showform_ai.lib.php';
 // 보고한다 — 호출부(project_action.php)가 실패 시 기존 초안을 그대로 보존할 수 있어야 하기 때문이다.
 interface BlogAiProvider
 {
-    // 반환: array('ok'=>bool, 'titles'=>string[], 'error'=>string)
+    // 반환: array('ok'=>bool, 'titles'=>string[], 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
     public function generateTitles(array $params, int $count): array;
-    // 반환: array('ok'=>bool, 'body'=>string, 'error'=>string)
+    // 반환: array('ok'=>bool, 'body'=>string, 'hashtags'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
     public function generateBody(array $params): array;
 }
 
@@ -41,7 +41,7 @@ class BlogAiTemplateProvider implements BlogAiProvider
         for ($i = 0; $i < $count && $i < count($patterns); $i++) {
             $titles[] = mb_substr($patterns[$i], 0, 60);
         }
-        return array('ok' => true, 'titles' => $titles, 'error' => '');
+        return array('ok' => true, 'titles' => $titles, 'error' => '', 'tokens_prompt' => 0, 'tokens_completion' => 0);
     }
 
     public function generateBody(array $params): array
@@ -59,7 +59,33 @@ class BlogAiTemplateProvider implements BlogAiProvider
         $sections[] = "\n[FAQ]\n" . generate_faq_text($industry, $company_name, $region, $intro);
         $sections[] = "\n[CTA]\n" . generate_cta_text($industry, $company_name, $region, $intro) . " {{phone}} / {{consult_url}}";
 
-        return array('ok' => true, 'body' => implode("\n", $sections), 'error' => '');
+        return array(
+            'ok' => true,
+            'body' => implode("\n", $sections),
+            'hashtags' => $this->buildHashtags($params),
+            'error' => '',
+            'tokens_prompt' => 0,
+            'tokens_completion' => 0,
+        );
+    }
+
+    // 키워드·지역 기반 결정적 해시태그 생성 — 외부 호출 없이 항상 동작한다.
+    private function buildHashtags(array $params): string
+    {
+        $keyword = isset($params['primary_keyword']) ? trim($params['primary_keyword']) : '';
+        $region = isset($params['service_region']) ? trim($params['service_region']) : '';
+
+        $tags = array();
+        if ($keyword !== '') {
+            $tags[] = '#' . str_replace(' ', '', $keyword);
+        }
+        if ($region !== '') {
+            $tags[] = '#' . str_replace(' ', '', $region);
+        }
+        $tags[] = '#정보';
+        $tags[] = '#후기';
+
+        return implode(' ', $tags);
     }
 }
 
@@ -96,12 +122,12 @@ class BlogOpenAiProvider implements BlogAiProvider
 
         $result = $this->callChatCompletion($system_prompt, '제목 후보 JSON을 생성해줘.');
         if (!$result['ok']) {
-            return array('ok' => false, 'titles' => array(), 'error' => $result['error']);
+            return array('ok' => false, 'titles' => array(), 'error' => $result['error'], 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
         }
 
         $parsed = json_decode($result['content'], true);
         if (!is_array($parsed) || !isset($parsed['titles']) || !is_array($parsed['titles']) || empty($parsed['titles'])) {
-            return array('ok' => false, 'titles' => array(), 'error' => 'AI가 올바른 제목 JSON 형식을 반환하지 않았습니다.');
+            return array('ok' => false, 'titles' => array(), 'error' => 'AI가 올바른 제목 JSON 형식을 반환하지 않았습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
         }
 
         $titles = array();
@@ -111,10 +137,10 @@ class BlogOpenAiProvider implements BlogAiProvider
             }
         }
         if (empty($titles)) {
-            return array('ok' => false, 'titles' => array(), 'error' => 'AI 응답에 유효한 제목이 없습니다.');
+            return array('ok' => false, 'titles' => array(), 'error' => 'AI 응답에 유효한 제목이 없습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
         }
 
-        return array('ok' => true, 'titles' => array_slice($titles, 0, $count), 'error' => '');
+        return array('ok' => true, 'titles' => array_slice($titles, 0, $count), 'error' => '', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
     }
 
     public function generateBody(array $params): array
@@ -132,16 +158,16 @@ class BlogOpenAiProvider implements BlogAiProvider
             . "[정보]\n제목: {$title}\n주제: {$topic}\n대표 키워드: {$keyword}\n지역: " . ($region !== '' ? $region : '전국')
             . "\n글 유형: {$content_type}\n\n"
             . "반드시 아래 JSON 형식만 출력해라: "
-            . "{\"subtitle\": \"소제목\", \"body\": \"도입부와 본문\", \"faq\": \"FAQ 섹션\", \"cta\": \"CTA 문구\"}";
+            . "{\"subtitle\": \"소제목\", \"body\": \"도입부와 본문\", \"faq\": \"FAQ 섹션\", \"cta\": \"CTA 문구\", \"hashtags\": [\"#태그1\", \"#태그2\"]}";
 
         $result = $this->callChatCompletion($system_prompt, '본문 JSON을 생성해줘.');
         if (!$result['ok']) {
-            return array('ok' => false, 'body' => '', 'error' => $result['error']);
+            return array('ok' => false, 'body' => '', 'hashtags' => '', 'error' => $result['error'], 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
         }
 
         $parsed = json_decode($result['content'], true);
         if (!is_array($parsed) || !isset($parsed['body']) || trim((string) $parsed['body']) === '') {
-            return array('ok' => false, 'body' => '', 'error' => 'AI가 올바른 본문 JSON 형식을 반환하지 않았습니다.');
+            return array('ok' => false, 'body' => '', 'hashtags' => '', 'error' => 'AI가 올바른 본문 JSON 형식을 반환하지 않았습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
         }
 
         $sections = array();
@@ -156,18 +182,37 @@ class BlogOpenAiProvider implements BlogAiProvider
             $sections[] = "\n[CTA]\n" . $parsed['cta'];
         }
 
-        return array('ok' => true, 'body' => implode("\n", $sections), 'error' => '');
+        $hashtags = '';
+        if (!empty($parsed['hashtags']) && is_array($parsed['hashtags'])) {
+            $tags = array();
+            foreach ($parsed['hashtags'] as $tag) {
+                if (is_string($tag) && trim($tag) !== '') {
+                    $tags[] = trim($tag);
+                }
+            }
+            $hashtags = implode(' ', array_slice($tags, 0, 10));
+        }
+
+        return array(
+            'ok' => true,
+            'body' => implode("\n", $sections),
+            'hashtags' => $hashtags,
+            'error' => '',
+            'tokens_prompt' => $result['tokens_prompt'],
+            'tokens_completion' => $result['tokens_completion'],
+        );
     }
 
-    // 반환: array('ok'=>bool, 'content'=>string, 'error'=>string) — content는 모델이 반환한 JSON 문자열 그대로.
+    // 반환: array('ok'=>bool, 'content'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
+    // content는 모델이 반환한 JSON 문자열 그대로.
     // 이 함수 밖으로는 $this->apiKeyPlain 값이 절대 전달되지 않는다(오류 메시지에도 포함 금지).
     private function callChatCompletion(string $systemPrompt, string $userPrompt): array
     {
         if ($this->apiKeyPlain === '') {
-            return array('ok' => false, 'content' => '', 'error' => 'AI API 키가 설정되지 않았습니다.');
+            return array('ok' => false, 'content' => '', 'error' => 'AI API 키가 설정되지 않았습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
         }
         if (!function_exists('curl_init')) {
-            return array('ok' => false, 'content' => '', 'error' => '서버에 curl 확장이 설치되어 있지 않습니다.');
+            return array('ok' => false, 'content' => '', 'error' => '서버에 curl 확장이 설치되어 있지 않습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
         }
 
         $payload = array(
@@ -199,17 +244,35 @@ class BlogOpenAiProvider implements BlogAiProvider
         curl_close($ch);
 
         if ($curl_err) {
-            return array('ok' => false, 'content' => '', 'error' => 'AI 호출 오류: ' . $curl_err);
+            return array('ok' => false, 'content' => '', 'error' => 'AI 호출 오류: ' . $curl_err, 'tokens_prompt' => 0, 'tokens_completion' => 0);
         }
 
         $res_data = json_decode((string) $response, true);
+        $tokens_prompt = isset($res_data['usage']['prompt_tokens']) ? (int) $res_data['usage']['prompt_tokens'] : 0;
+        $tokens_completion = isset($res_data['usage']['completion_tokens']) ? (int) $res_data['usage']['completion_tokens'] : 0;
+
         if (!isset($res_data['choices'][0]['message']['content'])) {
             $msg = isset($res_data['error']['message']) ? $res_data['error']['message'] : 'AI 응답 파싱 실패';
-            return array('ok' => false, 'content' => '', 'error' => $msg);
+            return array('ok' => false, 'content' => '', 'error' => $msg, 'tokens_prompt' => $tokens_prompt, 'tokens_completion' => $tokens_completion);
         }
 
-        return array('ok' => true, 'content' => $res_data['choices'][0]['message']['content'], 'error' => '');
+        return array('ok' => true, 'content' => $res_data['choices'][0]['message']['content'], 'error' => '', 'tokens_prompt' => $tokens_prompt, 'tokens_completion' => $tokens_completion);
     }
+}
+
+// 모델별 1K 토큰당 USD 단가 추정 — 실제 청구서와 다를 수 있는 참고용 수치이며, 정확한
+// 비용은 OpenAI 대시보드에서 확인해야 한다. 등록되지 않은 모델은 보수적인 기본 단가를 쓴다.
+function bp_estimate_openai_cost(string $model, int $tokensPrompt, int $tokensCompletion): float
+{
+    $rates = array(
+        'gpt-4o'      => array('prompt' => 0.0025,  'completion' => 0.0100),
+        'gpt-4o-mini' => array('prompt' => 0.00015, 'completion' => 0.0006),
+        'gpt-4-turbo' => array('prompt' => 0.0100,  'completion' => 0.0300),
+    );
+    $rate = isset($rates[$model]) ? $rates[$model] : array('prompt' => 0.0050, 'completion' => 0.0150);
+
+    $cost = ($tokensPrompt / 1000 * $rate['prompt']) + ($tokensCompletion / 1000 * $rate['completion']);
+    return round($cost, 4);
 }
 
 function bp_ai_get_active_provider(): ?array
@@ -240,6 +303,21 @@ function bp_ai_get_provider(): BlogAiProvider
         isset($active['max_tokens']) ? (int) $active['max_tokens'] : 2000,
         isset($active['temperature']) ? (float) $active['temperature'] : 0.7
     );
+}
+
+// bp_ai_get_provider()와 동일한 판단 로직으로, 어떤 공급자/모델이 실제로 쓰였는지만
+// 반환한다(생성 로그 기록용 — project_action.php가 bp_log_generation_attempt()에 넘긴다).
+function bp_ai_get_provider_meta(): array
+{
+    $active = bp_ai_get_active_provider();
+    if (!$active || empty($active['api_key_enc'])) {
+        return array('provider' => 'template', 'model' => '');
+    }
+    $api_key = bp_decrypt_secret($active['api_key_enc']);
+    if ($api_key === '') {
+        return array('provider' => 'template', 'model' => '');
+    }
+    return array('provider' => 'openai', 'model' => isset($active['default_model']) && $active['default_model'] !== '' ? $active['default_model'] : 'gpt-4o');
 }
 
 function bp_ai_generate_titles(array $params, int $count = 5): array

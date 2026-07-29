@@ -14,6 +14,7 @@ function bp_table(string $name): string
         'content_projects', 'content_keywords', 'posts', 'post_targets',
         'publish_jobs', 'publish_attempts', 'content_activity_logs',
         'content_title_candidates', 'content_quality_checks',
+        'content_generation_logs',
     );
     if (!in_array($name, $allowed, true)) {
         alert('잘못된 테이블 요청입니다.');
@@ -96,4 +97,39 @@ function bp_scrub_secrets(string $text): string
     $text = preg_replace('/Basic\s+[A-Za-z0-9+\/=]+/', 'Basic [REDACTED]', $text);
     $text = preg_replace('/\b([a-zA-Z0-9]{4}\s){5}[a-zA-Z0-9]{4}\b/', '[REDACTED]', $text);
     return $text;
+}
+
+// 제목/본문 생성 시도(성공·실패 모두)를 content_generation_logs에 기록한다.
+// $result는 bp_ai_generate_titles()/bp_ai_generate_body()의 반환값 그대로 받는다.
+// 비용 추정치는 provider='openai'이고 실제 토큰 사용량이 있을 때만 계산한다
+// (템플릿 폴백은 외부 호출이 없으므로 비용이 발생하지 않는다).
+function bp_log_generation_attempt(int $projectId, string $action, string $provider, string $model, array $result): void
+{
+    $table = bp_table('content_generation_logs');
+    $status = !empty($result['ok']) ? 'success' : 'fail';
+    $tokens_prompt = isset($result['tokens_prompt']) ? (int) $result['tokens_prompt'] : null;
+    $tokens_completion = isset($result['tokens_completion']) ? (int) $result['tokens_completion'] : null;
+
+    $cost_estimate = null;
+    if ($provider === 'openai' && ($tokens_prompt > 0 || $tokens_completion > 0) && function_exists('bp_estimate_openai_cost')) {
+        $cost_estimate = bp_estimate_openai_cost($model, (int) $tokens_prompt, (int) $tokens_completion);
+    }
+
+    $error_message = isset($result['error']) ? bp_scrub_secrets(mb_substr((string) $result['error'], 0, 500)) : '';
+
+    $tokens_prompt_sql = $tokens_prompt !== null ? "'{$tokens_prompt}'" : 'NULL';
+    $tokens_completion_sql = $tokens_completion !== null ? "'{$tokens_completion}'" : 'NULL';
+    $cost_sql = $cost_estimate !== null ? "'{$cost_estimate}'" : 'NULL';
+
+    sql_query(" insert into {$table}
+                    set project_id = '{$projectId}',
+                        action = '" . sql_real_escape_string($action) . "',
+                        provider = '" . sql_real_escape_string($provider) . "',
+                        model = '" . sql_real_escape_string($model) . "',
+                        status = '{$status}',
+                        tokens_prompt = {$tokens_prompt_sql},
+                        tokens_completion = {$tokens_completion_sql},
+                        cost_estimate = {$cost_sql},
+                        error_message = '" . sql_real_escape_string($error_message) . "',
+                        created_at = '" . G5_TIME_YMDHIS . "' ");
 }
