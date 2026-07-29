@@ -206,7 +206,7 @@ body {
     font-weight: 600;
 }
 
-/* 4b. Top Sitemap Bar (Mobile First) */
+/* 4b. Top Sitemap Bar (Mobile First) — collapsed by default, no fixed height when closed */
 .sf-admin-sitemap {
     position: sticky;
     top: 56px;
@@ -215,12 +215,62 @@ body {
     border-bottom: 1px solid #e5e5e5;
 }
 
-.sf-sitemap-inner {
-    padding: 8px 0;
+.sf-sitemap-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    max-height: 60px;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.sf-sitemap-bar-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+.sf-sitemap-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 4px;
+    background: none;
+    border: none;
+    color: #0046cc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sf-sitemap-toggle i {
+    transition: transform 0.2s;
+    font-size: 12px;
+}
+
+.sf-sitemap-toggle[aria-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+/* Collapsed state must take zero layout space — [hidden] alone can lose to
+   a later class rule (e.g. display:grid on a descendant) without !important. */
+.sf-admin-sitemap-body[hidden] {
+    display: none !important;
+}
+
+.sf-admin-sitemap-grid {
+    padding: 4px 16px 12px;
 }
 
 .sf-sitemap-group {
-    padding: 6px 16px;
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+}
+
+.sf-sitemap-group:first-child {
+    border-top: none;
 }
 
 .sf-sitemap-group-title {
@@ -230,35 +280,25 @@ body {
     color: #888;
 }
 
-.sf-sitemap-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+.sf-sitemap-links {
     display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 8px;
-    -webkit-overflow-scrolling: touch;
-}
-
-.sf-sitemap-list li {
-    flex: 0 0 auto;
-    margin: 0;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .sf-sitemap-link {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    padding: 0 12px;
-    min-height: 36px;
+    padding: 6px 10px;
+    min-height: 48px; /* mobile touch target */
+    box-sizing: border-box;
     background: #fff;
     border: 1px solid #e5e5e5;
-    border-radius: 18px;
+    border-radius: 16px;
     color: #555;
     text-decoration: none;
     font-size: 13px;
-    box-sizing: border-box;
 }
 
 .sf-sitemap-link:hover {
@@ -271,6 +311,64 @@ body {
     color: #0046cc;
     border-color: #0046cc;
     font-weight: 600;
+}
+
+.sf-sitemap-link-disabled {
+    color: #bbb;
+    background: #f5f5f5;
+    cursor: default;
+}
+
+.sf-sitemap-link-disabled em {
+    margin-left: 6px;
+    font-style: normal;
+    font-size: 11px;
+    color: #ccc;
+}
+
+/* 769px~1023px: 2 columns */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .sf-admin-sitemap-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0 24px;
+        align-items: start;
+    }
+
+    .sf-sitemap-group {
+        border-top: none;
+        padding: 8px 0;
+    }
+}
+
+/* 1024px~1439px: 3 columns */
+@media (min-width: 1024px) and (max-width: 1439px) {
+    .sf-admin-sitemap-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0 24px;
+        align-items: start;
+    }
+
+    .sf-sitemap-group {
+        border-top: none;
+        padding: 8px 0;
+    }
+}
+
+/* 1440px and above: 5 columns (one per top-level category) */
+@media (min-width: 1440px) {
+    .sf-admin-sitemap-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0 24px;
+        align-items: start;
+    }
+
+    .sf-sitemap-group {
+        border-top: none;
+        padding: 8px 0;
+    }
 }
 
 /* 5. PC Extension (769px and above) */
@@ -308,51 +406,11 @@ body {
         padding-left: 260px;
     }
 
-    /* Top Sitemap Bar (PC grid) */
-    .sf-sitemap-inner {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0;
-        padding: 14px 12px;
-        align-items: start;
-    }
-
-    .sf-sitemap-group {
-        padding: 0 12px;
-        border-left: 1px solid #eee;
-    }
-
-    .sf-sitemap-group:first-child {
-        border-left: none;
-    }
-
-    .sf-sitemap-list {
-        flex-wrap: wrap;
-        overflow-x: visible;
-    }
-
-    .sf-sitemap-list li {
-        flex: 0 0 100%;
-    }
-
+    /* Mouse-driven breakpoints can use a more compact chip height than the
+       48px mobile touch target, keeping expanded height within ~180-260px. */
     .sf-sitemap-link {
-        border: none;
-        border-radius: 0;
-        background: transparent;
-        padding: 2px 0;
-        min-height: 30px;
+        min-height: 36px;
         font-size: 14px;
-    }
-
-    .sf-sitemap-link:hover {
-        background: transparent;
-        color: #0046cc;
-    }
-
-    .sf-sitemap-link.active {
-        background: transparent;
-        border: none;
-        color: #0046cc;
     }
 }
 

@@ -250,18 +250,31 @@ foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
     </ul>
 </nav>
 
-<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="전체 메뉴 사이트맵">
-    <div class="sf-sitemap-inner">
-        <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
-        <div class="sf-sitemap-group">
-            <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
-            <ul class="sf-sitemap-list">
-                <?php foreach($filtered_subs as $sub): ?>
-                <li><a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link"><?php echo $sub['title']; ?></a></li>
-                <?php endforeach; ?>
-            </ul>
+<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="관리자 전체 메뉴">
+    <div class="sf-sitemap-bar">
+        <span class="sf-sitemap-bar-title">관리자 전체 메뉴</span>
+        <button type="button" class="sf-sitemap-toggle" id="sf-admin-sitemap-toggle" aria-expanded="false" aria-controls="sf-admin-sitemap-body">
+            <span class="sf-sitemap-toggle-text">전체 메뉴 펼치기</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="sf-admin-sitemap-body" id="sf-admin-sitemap-body" hidden>
+        <div class="sf-admin-sitemap-grid">
+            <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
+            <div class="sf-sitemap-group">
+                <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
+                <div class="sf-sitemap-links">
+                    <?php foreach($filtered_subs as $sub): ?>
+                        <?php if ($sub['href'] === '#' || $sub['href'] === '') { ?>
+                        <span class="sf-sitemap-link sf-sitemap-link-disabled" aria-disabled="true"><?php echo $sub['title']; ?><em>준비 중</em></span>
+                        <?php } else { ?>
+                        <a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link"><?php echo $sub['title']; ?></a>
+                        <?php } ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
-        <?php endforeach; ?>
     </div>
 </nav>
 
@@ -317,8 +330,48 @@ jQuery(function($) {
         $sub.slideToggle(300);
     });
 
-    // Active Menu Highlighting
+    // Top Sitemap: single expand/collapse toggle (no per-category accordion)
+    var SF_SITEMAP_STORAGE_KEY = 'sf_admin_sitemap_expanded';
+    var $sitemapToggle = $('#sf-admin-sitemap-toggle');
+    var $sitemapBody = $('#sf-admin-sitemap-body');
+
+    function setSitemapExpanded(expanded) {
+        if (expanded) {
+            $sitemapBody.removeAttr('hidden');
+            $sitemapToggle.attr('aria-expanded', 'true');
+            $sitemapToggle.find('.sf-sitemap-toggle-text').text('전체 메뉴 닫기');
+        } else {
+            $sitemapBody.attr('hidden', 'hidden');
+            $sitemapToggle.attr('aria-expanded', 'false');
+            $sitemapToggle.find('.sf-sitemap-toggle-text').text('전체 메뉴 펼치기');
+        }
+        try {
+            sessionStorage.setItem(SF_SITEMAP_STORAGE_KEY, expanded ? '1' : '0');
+        } catch (e) { /* sessionStorage unavailable (private mode etc.) — state just won't persist */ }
+    }
+
+    var sfSitemapInitialExpanded = false;
+    try {
+        sfSitemapInitialExpanded = sessionStorage.getItem(SF_SITEMAP_STORAGE_KEY) === '1';
+    } catch (e) { /* default to collapsed */ }
+    setSitemapExpanded(sfSitemapInitialExpanded);
+
+    $sitemapToggle.on('click', function() {
+        setSitemapExpanded($sitemapToggle.attr('aria-expanded') !== 'true');
+    });
+
+    $(document).keyup(function(e) {
+        if (e.key === 'Escape' && $sitemapToggle.attr('aria-expanded') === 'true') {
+            setSitemapExpanded(false);
+            $sitemapToggle.focus();
+        }
+    });
+
+    // Active Menu Highlighting — uses the anchor element's own (browser-normalized)
+    // pathname/search so it works regardless of how each href was authored, and so
+    // query-string filter links (e.g. project_list.php?status=draft) compare correctly.
     var currentPath = window.location.pathname;
+    var currentSearch = window.location.search;
     var isForm = currentPath.indexOf('_form.php') !== -1;
     var listPath = currentPath.replace('_form.php', '_list.php');
 
@@ -326,9 +379,14 @@ jQuery(function($) {
         var href = $(this).attr('href');
         if (!href || href === '#') return;
 
-        var hrefPath = href.split('?')[0];
+        var linkPath = this.pathname;
+        var linkSearch = this.search;
 
-        if (hrefPath === currentPath || (isForm && hrefPath === listPath)) {
+        var isMatch = linkSearch
+            ? (linkPath === currentPath && linkSearch === currentSearch)
+            : (linkPath === currentPath || (isForm && linkPath === listPath));
+
+        if (isMatch) {
             $(this).addClass('active').attr('aria-current', 'page');
             var $group = $(this).closest('.sf-menu-group');
             $group.addClass('active');
