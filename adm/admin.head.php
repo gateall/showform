@@ -185,6 +185,25 @@ $sf_menus = array(
         array('title' => '공통 설정', 'href' => G5_ADMIN_URL.'/config_form.php'),
     )
 );
+
+// Single shared permission filter, reused by both the left sidebar and the top sitemap bar.
+$sf_menus_filtered = array();
+foreach ($sf_menus as $sf_group_title => $sf_sub_menus) {
+    $sf_filtered_subs = array();
+    foreach ($sf_sub_menus as $sf_sub) {
+        if ($sf_sub['href'] === '#') {
+            if ($is_admin === 'super') $sf_filtered_subs[] = $sf_sub;
+            continue;
+        }
+        $sf_auth_key = get_sf_auth_key_by_url($sf_sub['href']);
+        if ($is_admin === 'super' || ($sf_auth_key && isset($auth[$sf_auth_key]) && strpos($auth[$sf_auth_key], 'r') !== false)) {
+            $sf_filtered_subs[] = $sf_sub;
+        }
+    }
+    if (count($sf_filtered_subs) > 0) {
+        $sf_menus_filtered[$sf_group_title] = $sf_filtered_subs;
+    }
+}
 ?>
 <header class="sf-admin-header">
     <div class="sf-header-left">
@@ -210,21 +229,9 @@ $sf_menus = array(
         </button>
     </div>
     <ul class="sf-menu-list">
-        <?php 
+        <?php
         $sf_group_id = 0;
-        foreach($sf_menus as $group_title => $sub_menus): 
-            $filtered_subs = array();
-            foreach($sub_menus as $sub) {
-                if ($sub['href'] === '#') {
-                    if ($is_admin === 'super') $filtered_subs[] = $sub;
-                    continue;
-                }
-                $auth_key = get_sf_auth_key_by_url($sub['href']);
-                if ($is_admin === 'super' || ($auth_key && isset($auth[$auth_key]) && strpos($auth[$auth_key], 'r') !== false)) {
-                    $filtered_subs[] = $sub;
-                }
-            }
-            if (count($filtered_subs) === 0) continue;
+        foreach($sf_menus_filtered as $group_title => $filtered_subs):
             $sf_group_id++;
             $group_html_id = 'sf-menu-group-' . $sf_group_id;
         ?>
@@ -241,6 +248,21 @@ $sf_menus = array(
         </li>
         <?php endforeach; ?>
     </ul>
+</nav>
+
+<nav class="sf-admin-sitemap" id="sf-admin-sitemap" aria-label="전체 메뉴 사이트맵">
+    <div class="sf-sitemap-inner">
+        <?php foreach($sf_menus_filtered as $group_title => $filtered_subs): ?>
+        <div class="sf-sitemap-group">
+            <h3 class="sf-sitemap-group-title"><?php echo $group_title; ?></h3>
+            <ul class="sf-sitemap-list">
+                <?php foreach($filtered_subs as $sub): ?>
+                <li><a href="<?php echo $sub['href']; ?>" class="sf-sitemap-link"><?php echo $sub['title']; ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endforeach; ?>
+    </div>
 </nav>
 
 <script>
@@ -300,10 +322,10 @@ jQuery(function($) {
     var isForm = currentPath.indexOf('_form.php') !== -1;
     var listPath = currentPath.replace('_form.php', '_list.php');
 
-    $('.sf-menu-link').each(function() {
+    $('.sf-menu-link, .sf-sitemap-link').each(function() {
         var href = $(this).attr('href');
         if (!href || href === '#') return;
-        
+
         var hrefPath = href.split('?')[0];
 
         if (hrefPath === currentPath || (isForm && hrefPath === listPath)) {

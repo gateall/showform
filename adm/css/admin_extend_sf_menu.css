@@ -206,6 +206,73 @@ body {
     font-weight: 600;
 }
 
+/* 4b. Top Sitemap Bar (Mobile First) */
+.sf-admin-sitemap {
+    position: sticky;
+    top: 56px;
+    z-index: 900;
+    background: #fbfbfb;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.sf-sitemap-inner {
+    padding: 8px 0;
+}
+
+.sf-sitemap-group {
+    padding: 6px 16px;
+}
+
+.sf-sitemap-group-title {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #888;
+}
+
+.sf-sitemap-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sf-sitemap-list li {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.sf-sitemap-link {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0 12px;
+    min-height: 36px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 18px;
+    color: #555;
+    text-decoration: none;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.sf-sitemap-link:hover {
+    background: #f5f5f5;
+    color: #111;
+}
+
+.sf-sitemap-link.active {
+    background: #eef2fa;
+    color: #0046cc;
+    border-color: #0046cc;
+    font-weight: 600;
+}
+
 /* 5. PC Extension (769px and above) */
 @media (min-width: 769px) {
     .sf-admin-header {
@@ -239,6 +306,53 @@ body {
 
     body {
         padding-left: 260px;
+    }
+
+    /* Top Sitemap Bar (PC grid) */
+    .sf-sitemap-inner {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0;
+        padding: 14px 12px;
+        align-items: start;
+    }
+
+    .sf-sitemap-group {
+        padding: 0 12px;
+        border-left: 1px solid #eee;
+    }
+
+    .sf-sitemap-group:first-child {
+        border-left: none;
+    }
+
+    .sf-sitemap-list {
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+
+    .sf-sitemap-list li {
+        flex: 0 0 100%;
+    }
+
+    .sf-sitemap-link {
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        padding: 2px 0;
+        min-height: 30px;
+        font-size: 14px;
+    }
+
+    .sf-sitemap-link:hover {
+        background: transparent;
+        color: #0046cc;
+    }
+
+    .sf-sitemap-link.active {
+        background: transparent;
+        border: none;
+        color: #0046cc;
     }
 }
 
