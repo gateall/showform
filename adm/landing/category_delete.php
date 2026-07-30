@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 include_once('./_common.php');
 
-$sub_menu = '990053';
+$sub_menu = '990050';
 auth_check_menu($auth, $sub_menu, 'd');
 
 $table = G5_TABLE_PREFIX . 'landing_category';
