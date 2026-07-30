@@ -7,6 +7,17 @@ check_admin_token();
 $table = G5_TABLE_PREFIX . 'sf_portfolio';
 $actor = isset($member['mb_id']) ? $member['mb_id'] : '';
 
+// /manager/의 신규 화면에서 넘어온 요청이면 저장 후 그쪽으로 돌려보낸다(기존 /adm/
+// 화면 동작은 파라미터가 없으면 그대로 유지 - 하위호환).
+$return = isset($_POST['return']) ? trim($_POST['return']) : '';
+function sf_portfolio_back_url($return, $id)
+{
+    if ($return === 'manager') {
+        return G5_URL . '/manager/showform/form.php?id=' . $id;
+    }
+    return G5_ADMIN_URL . '/showform/portfolio_form.php?id=' . $id;
+}
+
 $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 $title = isset($_POST['title']) ? trim($_POST['title']) : '';
 $slug = isset($_POST['slug']) ? trim($_POST['slug']) : '';
@@ -67,7 +78,7 @@ if ($id > 0) {
                         updated_at = '" . G5_TIME_YMDHIS . "'
                     where id = '{$id}' ");
 
-    alert('제작 사례가 저장되었습니다.', G5_ADMIN_URL . '/showform/portfolio_form.php?id=' . $id);
+    alert('제작 사례가 저장되었습니다.', sf_portfolio_back_url($return, $id));
 }
 
 // ---- 신규 등록 ----
@@ -94,4 +105,4 @@ sql_query(" insert into {$table}
                     updated_at = '" . G5_TIME_YMDHIS . "' ");
 $new_id = (int) sql_insert_id();
 
-alert('제작 사례가 등록되었습니다.', G5_ADMIN_URL . '/showform/portfolio_form.php?id=' . $new_id);
+alert('제작 사례가 등록되었습니다.', sf_portfolio_back_url($return, $new_id));
