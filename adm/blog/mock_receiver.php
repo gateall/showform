@@ -8,14 +8,18 @@
 // 발행 플랫폼이 이 엔드포인트를 호출하게 된다면 관리자 세션이 아니라
 // site_credentials의 API Secret으로 계산한 진짜 HMAC 서명 + 타임스탬프 유효시간 +
 // 재전송 방지 nonce로 바꿔야 한다(외부 시스템은 관리자 세션을 가질 수 없다).
-header('Content-Type: application/json; charset=utf-8');
-
+// 인증을 먼저 수행한 뒤 응답 형식을 정한다 - header()를 먼저 보내고 _common.php를
+// include하면 인증 실패 시에도 이미 응답 헤더가 나가버린 상태로 alert() 계열 HTML이
+// 섞여 나올 수 있어, 이 파일은 항상 403 + 순수 JSON으로 직접 종료한다.
 include_once('./_common.php');
 if ($is_admin !== 'super') {
     http_response_code(403);
-    echo json_encode(array('success' => false, 'error_code' => 'FORBIDDEN', 'message' => '접근 권한이 없습니다.'));
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array('success' => false, 'message' => 'Forbidden'), JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+header('Content-Type: application/json; charset=utf-8');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method !== 'POST') {

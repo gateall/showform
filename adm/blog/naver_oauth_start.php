@@ -3,7 +3,8 @@
 // state에 site_id를 실어 보내고, 세션에도 동일 state를 저장해 콜백에서 대조(CSRF 방지 + 위조 site_id 방지)한다.
 include_once('./_common.php');
 
-$sub_menu = '360200';
+// 사이트 연결의 하위 액션이라 발행사이트관리(site_list.php)와 같은 코드를 쓴다.
+$sub_menu = '360300';
 auth_check_menu($auth, $sub_menu, 'w');
 check_admin_token();
 
