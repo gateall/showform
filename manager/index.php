@@ -38,11 +38,11 @@ include __DIR__ . '/layout/header.php';
     <h2 style="margin:0 0 .75rem;font-size:1rem;">빠른 작업</h2>
     <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
         <a class="mgr-btn mgr-btn-primary" href="<?php echo SF_MANAGER_URL ?>/showform/form.php">쇼폼 등록</a>
-        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/landing/landing_form.php">랜딩페이지 등록</a>
-        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/blog/post_builder.php">포스팅 제작</a>
-        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/blog/advertiser_form.php">광고주 등록</a>
-        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/blog/ai_provider_list.php">AI API 설정</a>
-        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/landing/inquiry_list.php">문의 확인</a>
+        <a class="mgr-btn" href="<?php echo SF_MANAGER_URL ?>/landing/landing_form.php">랜딩페이지 등록</a>
+        <a class="mgr-btn" href="<?php echo SF_MANAGER_URL ?>/blog/post_builder.php">포스팅 제작</a>
+        <a class="mgr-btn" href="<?php echo SF_MANAGER_URL ?>/blog/advertiser_form.php">광고주 등록</a>
+        <a class="mgr-btn" href="<?php echo SF_MANAGER_URL ?>/blog/ai_provider_list.php">AI API 설정</a>
+        <a class="mgr-btn" href="<?php echo SF_MANAGER_URL ?>/landing/inquiry_list.php">문의 확인</a>
     </div>
 </div>
 
@@ -63,7 +63,7 @@ include __DIR__ . '/layout/header.php';
                     'phone' => htmlspecialchars($row['phone']),
                     'created_at' => htmlspecialchars($row['created_at']),
                     'status' => mgr_status_badge($row['status'], $status_tone),
-                    'action' => '<a href="' . G5_ADMIN_URL . '/landing/inquiry_list.php" class="mgr-btn">상세보기</a>',
+                    'action' => '<a href="' . SF_MANAGER_URL . '/landing/inquiry_list.php" class="mgr-btn">상세보기</a>',
                 );
             }
             echo mgr_data_table(
@@ -98,7 +98,7 @@ include __DIR__ . '/layout/header.php';
                     'status' => mgr_status_badge(isset($status_labels[$status]) ? $status_labels[$status] : $status, $tone),
                     'scheduled_at' => htmlspecialchars($row['scheduled_at'] ? $row['scheduled_at'] : '-'),
                     'updated_at' => htmlspecialchars($row['updated_at']),
-                    'action' => '<a href="' . G5_ADMIN_URL . '/blog/project_view.php?id=' . (int) $row['project_id'] . '" class="mgr-btn">상세보기</a>',
+                    'action' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['project_id'] . '" class="mgr-btn">상세보기</a>',
                 );
             }
             echo mgr_data_table(
@@ -130,7 +130,7 @@ include __DIR__ . '/layout/header.php';
                     'site' => htmlspecialchars($row['site_name'] ? $row['site_name'] : '-'),
                     'updated_at' => htmlspecialchars($row['updated_at']),
                     'error' => htmlspecialchars($error_summary),
-                    'action' => '<a href="' . G5_ADMIN_URL . '/blog/project_view.php?id=' . (int) $row['project_id'] . '" class="mgr-btn">상세보기</a>',
+                    'action' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['project_id'] . '" class="mgr-btn">상세보기</a>',
                 );
             }
             echo mgr_data_table(
