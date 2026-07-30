@@ -146,6 +146,7 @@ $sf_current_vertical = bp_sf_resolve_current_vertical($sf_menu_all, isset($sub_m
 
         <div id="tnb">
             <ul>
+                <li class="tnb_li"><a href="<?php echo G5_URL ?>/manager/" class="tnb_manager" target="_blank" title="쇼폼 통합관리(신규 관리자)">쇼폼 통합관리</a></li>
                 <?php if (defined('G5_USE_SHOP') && G5_USE_SHOP) { ?>
                     <li class="tnb_li"><a href="<?php echo G5_SHOP_URL ?>/" class="tnb_shop" target="_blank" title="쇼핑몰 바로가기">쇼핑몰 바로가기</a></li>
                 <?php } ?>

@@ -5,6 +5,15 @@
 // 이 방식으로 /adm/ 로그인 세션을 그대로 재사용해 재로그인이 발생하지 않는다.
 $g5_path = '..';
 include_once(__DIR__ . '/../common.php');
+
+// admin.lib.php 자체 로그인 체크는 미로그인 시 항상 /adm/ 로그인 화면으로 돌려보낸다
+// (알림 후 G5_ADMIN_URL로 리다이렉트). 관리자의 평소 진입점은 /adm/가 아니라 /manager/
+// 이므로, admin.lib.php를 불러오기 전에 먼저 이 자리에서 검사해 /manager/login.php로
+// 보내야 로그인 후 원래 열려던 /manager/ 화면으로 정확히 돌아온다.
+if (!$member['mb_id']) {
+    goto_url(G5_URL . '/manager/login.php?url=' . urlencode($_SERVER['REQUEST_URI']));
+}
+
 require_once G5_ADMIN_PATH . '/admin.lib.php';
 
 define('SF_MANAGER_URL', G5_URL . '/manager');

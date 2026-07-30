@@ -22,6 +22,7 @@
     z-index: 5;
     background: #f7f8fa;
     border-bottom: 1px solid #e5e5e5;
+    margin-top: 12px;
 }
 
 .sf-vswitch-tabs {
@@ -29,7 +30,7 @@
     display: flex;
     flex-wrap: wrap;
     margin: 0;
-    padding: 0 12px;
+    padding: 4px 12px;
 }
 
 .sf-vswitch-tab-item {
@@ -179,4 +180,19 @@
 #container_title {
     word-break: keep-all;
     overflow-wrap: anywhere;
+}
+
+/* 2. 상단 tnb 바로가기 목록 맨 앞의 "쇼폼 통합관리" - 신규 /manager/ 로 이동하는
+   링크라 기존 쇼핑몰/커뮤니티 바로가기와 구분되도록 배지 형태로 강조한다. */
+.tnb_manager {
+    display: inline-flex;
+    align-items: center;
+    background: #2563eb;
+    color: #fff !important;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+.tnb_manager:hover {
+    background: #1d4ed8;
 }
