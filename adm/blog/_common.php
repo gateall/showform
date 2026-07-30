@@ -2,6 +2,9 @@
 define('G5_IS_ADMIN', true);
 require_once '../../common.php';
 require_once G5_ADMIN_PATH . '/admin.lib.php';
+if (!defined('SF_MANAGER_URL')) {
+    define('SF_MANAGER_URL', G5_URL . '/manager');
+}
 require_once __DIR__ . '/lib/blog_common.lib.php';
 require_once __DIR__ . '/lib/blog_crypto.lib.php';
 require_once __DIR__ . '/lib/blog_state_machine.lib.php';

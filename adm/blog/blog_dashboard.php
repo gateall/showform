@@ -6,6 +6,9 @@ $g5['title'] = '블로그 통합 대시보드';
 include_once(G5_ADMIN_PATH.'/admin.head.php');
 
 // 탭 구성
+// /adm/는 /manager/와 독립적으로 유지한다 - 이 탭의 iframe 대상을 /manager/blog/로
+// 바꾸면 그누보드 네이티브 화면(admin.head.php) 안에 Manager 전체 레이아웃(헤더+사이드바)이
+// 또 중첩되어 나온다. 원래대로 /adm/blog/ 자체 화면을 가리키게 되돌린다.
 $tabs = [
     ['id' => 'tab-proj', 'title' => '포스팅 프로젝트 관리', 'url' => './project_list.php'],
     ['id' => 'tab-adv', 'title' => '광고주 관리', 'url' => './advertiser_list.php'],
