@@ -34,7 +34,7 @@ $data = array(
 );
 
 if ($data['company_name'] === '') {
-    alert('???? ?????.', './landing_form.php' . ($id ? '?id=' . $id : ''));
+    alert('???? ?????.', SF_MANAGER_URL . '/landing/landing_form.php' . ($id ? '?id=' . $id : ''));
 }
 
 $main_image = '';
@@ -55,7 +55,7 @@ if (!empty($_FILES['main_image_file']['name'])) {
     $ext = strtolower(pathinfo($_FILES['main_image_file']['name'], PATHINFO_EXTENSION));
     $allow = array('jpg', 'jpeg', 'png', 'gif', 'webp');
     if (!in_array($ext, $allow, true)) {
-        alert('??? ??? ??? ?????.', './landing_form.php' . ($id ? '?id=' . $id : ''));
+        alert('??? ??? ??? ?????.', SF_MANAGER_URL . '/landing/landing_form.php' . ($id ? '?id=' . $id : ''));
     }
     $filename = 'landing_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
     $dest = $upload_dir . '/' . $filename;
@@ -119,11 +119,11 @@ if ($id) {
         $short_url = '/s/' . (int)$id;
     }
     sql_query(" update {$table} set {$set_sql}, short_url = '" . sql_real_escape_string($short_url) . "' where id = '{$id}' ");
-    alert('?????? ??????.', './landing_form.php?id=' . $id);
+    alert('정상적으로 처리되었습니다.', SF_MANAGER_URL . '/landing/landing_form.php?id=' . $id);
 }
 
 sql_query(" insert into {$table} set {$set_sql}, short_alias = '', short_url = '', created_at = '" . G5_TIME_YMDHIS . "' ");
 $new_id = sql_insert_id();
 $short_url = '/s/' . (int)$new_id;
 sql_query(" update {$table} set short_url = '" . sql_real_escape_string($short_url) . "' where id = '{$new_id}' ");
-alert('?????? ??????.', './landing_form.php?id=' . $new_id);
+alert('정상적으로 처리되었습니다.', SF_MANAGER_URL . '/landing/landing_form.php?id=' . $new_id);

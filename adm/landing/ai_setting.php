@@ -1,7 +1,7 @@
 <?php
 $sub_menu = "900300"; // AI 환경설정
 include_once('./_common.php');
-include_once('./ai_crypto.php');
+include_once(SF_MANAGER_URL . '/landing/ai_crypto.php');
 
 if ($is_admin != 'super') {
     alert('최고관리자만 접근 가능합니다.');
@@ -214,7 +214,7 @@ $('#btn_api_test').on('click', function(){
     
     $(this).text('테스트 중...').prop('disabled', true);
     
-    $.post('./ai_api_test.php', { endpoint: endpoint, api_key: key }, function(res){
+    $.post(SF_MANAGER_URL . '/landing/ai_api_test.php', { endpoint: endpoint, api_key: key }, function(res){
         $('#btn_api_test').text('연동 테스트').prop('disabled', false);
         if(res.success) {
             alert('🎉 연동 테스트 성공!\n모델 리스트를 정상적으로 불러왔습니다.');

@@ -16,7 +16,7 @@ $table = G5_TABLE_PREFIX . 'landing_page';
 
 $chk = isset($_POST['chk']) && is_array($_POST['chk']) ? $_POST['chk'] : array();
 if (!count($chk)) {
-    alert('선택된 항목이 없습니다.', './landing_list.php');
+    alert('선택된 항목이 없습니다.', SF_MANAGER_URL . '/landing/landing_list.php');
 }
 
 if ($mode === 'delete') {

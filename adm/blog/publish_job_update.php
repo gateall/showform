@@ -168,7 +168,7 @@ if ($w == '') {
     }
     
     sql_query("COMMIT");
-    alert('정상적으로 예약되었습니다.', './publish_job_list.php');
+    alert('정상적으로 예약되었습니다.', SF_MANAGER_URL . '/blog/publish_job_list.php');
 } 
 else if ($w == 'u') {
     // 수정
@@ -228,7 +228,7 @@ else if ($w == 'u') {
     log_publish_activity($id, $row['post_target_id'], 'job_updated', "예약 발행 작업 수정 (ID: {$id})");
     sql_query("COMMIT");
     
-    alert('수정되었습니다.', './publish_job_form.php?id='.$id.'&w=u');
+    alert('수정되었습니다.', SF_MANAGER_URL . '/blog/publish_job_form.php?id='.$id.'&w=u');
 }
 else if ($w == 'cancel') {
     // 취소
@@ -256,7 +256,7 @@ else if ($w == 'cancel') {
     log_publish_activity($id, $row['post_target_id'], 'job_cancelled', "작업 취소됨 (ID: {$id})");
     sql_query("COMMIT");
     
-    alert('작업이 취소되었습니다.', './publish_job_list.php');
+    alert('작업이 취소되었습니다.', SF_MANAGER_URL . '/blog/publish_job_list.php');
 }
 else if ($w == 'retry') {
     // 재시도
@@ -288,7 +288,7 @@ else if ($w == 'retry') {
     log_publish_activity($id, $row['post_target_id'], 'job_retried', "작업 재시도 요청 (ID: {$id}, 횟수 증가됨)");
     sql_query("COMMIT");
     
-    alert('작업 상태가 재시도(대기중)로 변경되었습니다.', './publish_job_list.php');
+    alert('작업 상태가 재시도(대기중)로 변경되었습니다.', SF_MANAGER_URL . '/blog/publish_job_list.php');
 }
 else {
     alert('잘못된 요청입니다.');

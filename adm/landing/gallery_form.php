@@ -11,7 +11,7 @@ $row = array();
 if ($id) {
     $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
     if (!$row) {
-        alert('갤러리를 찾을 수 없습니다.', './gallery_list.php');
+        alert('갤러리를 찾을 수 없습니다.', SF_MANAGER_URL . '/landing/gallery_list.php');
     }
 }
 

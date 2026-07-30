@@ -99,7 +99,7 @@ $(function() {
         $result.hide().html('');
         
         $.ajax({
-            url: './ai_provider_test.php',
+            url: SF_MANAGER_URL . '/blog/ai_provider_test.php',
             type: 'POST',
             dataType: 'json',
             data: {

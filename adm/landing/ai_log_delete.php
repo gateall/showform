@@ -18,5 +18,5 @@ if (count($chk) > 0) {
     sql_query(" delete from {$table} where id in ({$in_str}) ");
 }
 
-alert('선택한 로그가 삭제되었습니다.', './ai_log.php?'.$qstr);
+alert('선택한 로그가 삭제되었습니다.', SF_MANAGER_URL . '/landing/ai_log.php?'.$qstr);
 ?>

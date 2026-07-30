@@ -114,7 +114,7 @@ if (isset($_FILES['upload_file']) && is_uploaded_file($_FILES['upload_file']['tm
                  created_at = '{$created_at}' ";
     sql_query($sql);
 
-    goto_url('./image_list.php');
+    goto_url(SF_MANAGER_URL . '/blog/image_list.php');
 } else {
     alert('업로드된 파일이 없습니다.');
 }

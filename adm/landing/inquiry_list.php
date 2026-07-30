@@ -134,7 +134,7 @@ $(function() {
     $('.sf-status-select').on('change', function() {
         var id = $(this).data('id');
         var status = $(this).val();
-        $.post('./inquiry_status_update.php', { id: id, status: status }, function(res) {
+        $.post(SF_MANAGER_URL . '/landing/inquiry_status_update.php', { id: id, status: status }, function(res) {
             if (res && res.success) {
                 return;
             }

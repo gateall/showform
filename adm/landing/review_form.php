@@ -11,7 +11,7 @@ $row = array();
 if ($id) {
     $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
     if (!$row) {
-        alert('후기를 찾을 수 없습니다.', './review_list.php');
+        alert('후기를 찾을 수 없습니다.', SF_MANAGER_URL . '/landing/review_list.php');
     }
 }
 

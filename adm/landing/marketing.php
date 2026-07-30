@@ -6,13 +6,13 @@ auth_check_menu($auth, '900100', 'r');
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id < 1) {
-    alert('Invalid access.', './landing_list.php');
+    alert('Invalid access.', SF_MANAGER_URL . '/landing/landing_list.php');
 }
 
 $table = G5_TABLE_PREFIX . 'landing_pages';
 $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
 if (!$row) {
-    alert('Landing page not found.', './landing_list.php');
+    alert('Landing page not found.', SF_MANAGER_URL . '/landing/landing_list.php');
 }
 
 $landing_url = G5_URL . '/page/landing.php?id=' . (int)$row['id'];

@@ -104,7 +104,7 @@ if ($w === '' || $w === 'u') {
     if ($post_exists || $log_exists) {
         // 참조가 있으므로 삭제 차단하고 비활성화 유도
         write_activity_log($old['project_id'], 'keyword_delete_blocked', "키워드 삭제 차단 (ID: {$id}, 참조 데이터 존재)");
-        alert('이 키워드와 관련된 활동 이력이나 생성된 포스트가 존재하여 삭제할 수 없습니다. 대신 [수정]에서 사용 상태를 비활성(N)으로 변경해 주세요.', './keyword_list.php?' . ltrim($qstr, '&amp;'));
+        alert('이 키워드와 관련된 활동 이력이나 생성된 포스트가 존재하여 삭제할 수 없습니다. 대신 [수정]에서 사용 상태를 비활성(N)으로 변경해 주세요.', SF_MANAGER_URL . '/blog/keyword_list.php?' . ltrim($qstr, '&amp;'));
     } else {
         // 실제 삭제
         sql_query(" delete from {$keywords_table} where id = '{$id}' ");

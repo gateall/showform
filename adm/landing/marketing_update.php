@@ -5,13 +5,13 @@ auth_check_menu($auth, '900100', 'w');
 
 $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 if ($id < 1) {
-    alert('Invalid access.', './landing_list.php');
+    alert('Invalid access.', SF_MANAGER_URL . '/landing/landing_list.php');
 }
 
 $table = G5_TABLE_PREFIX . 'landing_pages';
 $row = sql_fetch(" select id from {$table} where id = '{$id}' limit 1 ");
 if (!$row) {
-    alert('Landing page not found.', './landing_list.php');
+    alert('Landing page not found.', SF_MANAGER_URL . '/landing/landing_list.php');
 }
 
 $short_alias = isset($_POST['short_alias']) ? trim($_POST['short_alias']) : '';
@@ -40,4 +40,4 @@ sql_query(" update {$table} set
     updated_at = '" . G5_TIME_YMDHIS . "'
     where id = '{$id}' ");
 
-alert('Saved.', './marketing.php?id=' . $id);
+alert('Saved.', SF_MANAGER_URL . '/landing/marketing.php?id=' . $id);

@@ -3,7 +3,7 @@ $sub_menu = "900100"; // 랜딩관리 서브메뉴
 include_once('./_common.php');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if (!$id) alert('잘못된 접근입니다. 랜딩페이지 ID가 필요합니다.', './landing_list.php');
+if (!$id) alert('잘못된 접근입니다. 랜딩페이지 ID가 필요합니다.', SF_MANAGER_URL . '/landing/landing_list.php');
 
 $table = G5_TABLE_PREFIX . 'landing_page';
 
@@ -15,7 +15,7 @@ if (!sql_fetch($sql_check)) {
 }
 
 $row = sql_fetch(" select * from {$table} where id = '{$id}' ");
-if (!$row) alert('존재하지 않는 랜딩페이지입니다.', './landing_list.php');
+if (!$row) alert('존재하지 않는 랜딩페이지입니다.', SF_MANAGER_URL . '/landing/landing_list.php');
 
 $g5['title'] = '랜딩페이지 비주얼 에디터 - ' . get_text($row['subject']);
 
@@ -153,7 +153,7 @@ $g5['title'] = '랜딩페이지 비주얼 에디터 - ' . get_text($row['subject
         
         $(this).text('저장 중...').prop('disabled', true);
         
-        $.post('./template_save.php', {
+        $.post(SF_MANAGER_URL . '/landing/template_save.php', {
             id: <?php echo $id; ?>,
             html: html,
             css: css
@@ -199,7 +199,7 @@ $g5['title'] = '랜딩페이지 비주얼 에디터 - ' . get_text($row['subject
 
         $('#ai_loading').css('display', 'flex');
 
-        $.post('./ai_copywriter.php', {
+        $.post(SF_MANAGER_URL . '/landing/ai_copywriter.php', {
             original_text: cleanText,
             tone: tone
         }, function(res) {

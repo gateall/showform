@@ -1,7 +1,7 @@
 <?php
 $sub_menu = "900300";
 include_once('./_common.php');
-include_once('./ai_crypto.php');
+include_once(SF_MANAGER_URL . '/landing/ai_crypto.php');
 
 if ($is_admin != 'super') {
     alert('최고관리자만 접근 가능합니다.');
@@ -43,5 +43,5 @@ if (isset($_POST['openai_api_key'])) {
     sql_query($sql);
 }
 
-alert('AI 환경설정이 성공적으로 변경되었습니다.', './ai_setting.php');
+alert('AI 환경설정이 성공적으로 변경되었습니다.', SF_MANAGER_URL . '/landing/ai_setting.php');
 ?>

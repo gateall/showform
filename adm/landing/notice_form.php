@@ -11,7 +11,7 @@ $row = array();
 if ($id) {
     $row = sql_fetch(" select * from {$table} where id = '{$id}' limit 1 ");
     if (!$row) {
-        alert('공지 항목을 찾을 수 없습니다.', './notice_list.php');
+        alert('공지 항목을 찾을 수 없습니다.', SF_MANAGER_URL . '/landing/notice_list.php');
     }
 }
 

@@ -253,7 +253,7 @@ $(function() {
     
     function post_action(action, id) {
         var $form = $('<form></form>');
-        $form.attr('action', './publish_job_update.php');
+        $form.attr('action', SF_MANAGER_URL . '/blog/publish_job_update.php');
         $form.attr('method', 'post');
         $form.append('<input type="hidden" name="w" value="'+action+'">');
         $form.append('<input type="hidden" name="id" value="'+id+'">');

@@ -167,10 +167,10 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 <script>
 function createLivePage(id) {
     if (confirm('이 마스터 템플릿의 레이아웃을 가져와서 실제 마케팅용 [라이브 페이지]를 생성하시겠습니까?')) {
-        $.post('./template_create_live.php', { id: id }, function(res) {
+        $.post(SF_MANAGER_URL . '/landing/template_create_live.php', { id: id }, function(res) {
             if (res.success) {
                 alert('페이지가 성공적으로 생성되었습니다. 라이브 페이지 목록으로 이동합니다.');
-                location.href = './landing_list.php';
+                location.href = SF_MANAGER_URL . '/landing/landing_list.php';
             } else {
                 alert('생성 실패: ' + res.error);
             }
@@ -185,7 +185,7 @@ function deleteTemplate(id, derived_cnt) {
         return;
     }
     if (confirm('이 템플릿을 정말 삭제하시겠습니까? (복구 불가)')) {
-        $.post('./template_delete.php', { id: id }, function(res) {
+        $.post(SF_MANAGER_URL . '/landing/template_delete.php', { id: id }, function(res) {
             if (res.success) {
                 $('#card_' + id).fadeOut(300, function(){ $(this).remove(); });
             } else {

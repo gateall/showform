@@ -11,10 +11,10 @@ $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
 $is_active = isset($_POST['is_active']) ? trim($_POST['is_active']) : 'Y';
 
 if ($landing_id < 1) {
-    alert('랜딩을 선택하세요.', './gallery_form.php' . ($id ? '?id=' . $id : ''));
+    alert('랜딩을 선택하세요.', SF_MANAGER_URL . '/landing/gallery_form.php' . ($id ? '?id=' . $id : ''));
 }
 if ($title === '') {
-    alert('제목을 입력하세요.', './gallery_form.php' . ($id ? '?id=' . $id : ''));
+    alert('제목을 입력하세요.', SF_MANAGER_URL . '/landing/gallery_form.php' . ($id ? '?id=' . $id : ''));
 }
 if ($is_active !== 'N') {
     $is_active = 'Y';
@@ -40,7 +40,7 @@ if (isset($_FILES['image_file']) && isset($_FILES['image_file']['name']) && $_FI
     $ext = strtolower(pathinfo($_FILES['image_file']['name'], PATHINFO_EXTENSION));
     $allow = array('jpg', 'jpeg', 'png', 'webp');
     if (!in_array($ext, $allow, true)) {
-        alert('이미지 파일은 jpg, jpeg, png, webp만 업로드 가능합니다.', './gallery_form.php' . ($id ? '?id=' . $id : ''));
+        alert('이미지 파일은 jpg, jpeg, png, webp만 업로드 가능합니다.', SF_MANAGER_URL . '/landing/gallery_form.php' . ($id ? '?id=' . $id : ''));
     }
 
     $filename = 'gallery_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
@@ -58,9 +58,9 @@ $set_sql = " landing_id = '" . (int)$landing_id . "', title = '" . sql_real_esca
 
 if ($id) {
     sql_query(" update {$table} set {$set_sql} where id = '{$id}' ");
-    alert('갤러리를 수정했습니다.', './gallery_form.php?id=' . $id);
+    alert('갤러리를 수정했습니다.', SF_MANAGER_URL . '/landing/gallery_form.php?id=' . $id);
 }
 
 sql_query(" insert into {$table} set {$set_sql}, created_at = '" . G5_TIME_YMDHIS . "' ");
 $new_id = sql_insert_id();
-alert('갤러리를 등록했습니다.', './gallery_form.php?id=' . $new_id);
+alert('갤러리를 등록했습니다.', SF_MANAGER_URL . '/landing/gallery_form.php?id=' . $new_id);

@@ -1,6 +1,6 @@
 <?php
 include_once('./_common.php');
-include_once('./ai_crypto.php');
+include_once(SF_MANAGER_URL . '/landing/ai_crypto.php');
 
 header('Content-Type: application/json; charset=utf-8');
 

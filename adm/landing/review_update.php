@@ -12,13 +12,13 @@ $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
 $is_active = isset($_POST['is_active']) ? trim($_POST['is_active']) : 'Y';
 
 if ($landing_id < 1) {
-    alert('랜딩을 선택하세요.', './review_form.php' . ($id ? '?id=' . $id : ''));
+    alert('랜딩을 선택하세요.', SF_MANAGER_URL . '/landing/review_form.php' . ($id ? '?id=' . $id : ''));
 }
 if ($customer_name === '') {
-    alert('고객명을 입력하세요.', './review_form.php' . ($id ? '?id=' . $id : ''));
+    alert('고객명을 입력하세요.', SF_MANAGER_URL . '/landing/review_form.php' . ($id ? '?id=' . $id : ''));
 }
 if ($content === '') {
-    alert('후기내용을 입력하세요.', './review_form.php' . ($id ? '?id=' . $id : ''));
+    alert('후기내용을 입력하세요.', SF_MANAGER_URL . '/landing/review_form.php' . ($id ? '?id=' . $id : ''));
 }
 if ($rating < 1 || $rating > 5) {
     $rating = 5;
@@ -32,9 +32,9 @@ $data = " landing_id = '" . (int)$landing_id . "', customer_name = '" . sql_real
 
 if ($id) {
     sql_query(" update {$table} set {$data} where id = '{$id}' ");
-    alert('후기를 수정했습니다.', './review_form.php?id=' . $id);
+    alert('후기를 수정했습니다.', SF_MANAGER_URL . '/landing/review_form.php?id=' . $id);
 }
 
 sql_query(" insert into {$table} set {$data}, created_at = '" . G5_TIME_YMDHIS . "' ");
 $new_id = sql_insert_id();
-alert('후기를 등록했습니다.', './review_form.php?id=' . $new_id);
+alert('후기를 등록했습니다.', SF_MANAGER_URL . '/landing/review_form.php?id=' . $new_id);

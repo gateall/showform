@@ -213,7 +213,7 @@ function delete_image(id) {
         var token = g5_admin_csrf_token_key; 
         
         $.ajax({
-            url: './image_delete.php',
+            url: SF_MANAGER_URL . '/blog/image_delete.php',
             type: 'POST',
             data: { id: id, token: token },
             dataType: 'json',

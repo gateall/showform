@@ -181,7 +181,7 @@ function load_targets(post_id) {
     }
     
     // 타겟 로딩을 위한 ajax 호출 (간단히 자기 자신 호출 후 json 반환 구조 대신 별도 endpoint 구성이 좋으나, 여기선 간단히 ajax_targets)
-    $.post('./publish_job_update.php', { w: 'ajax_targets', post_id: post_id }, function(data) {
+    $.post(SF_MANAGER_URL . '/blog/publish_job_update.php', { w: 'ajax_targets', post_id: post_id }, function(data) {
         if (data.error) {
             $('#target_checkboxes').html('<span style="color:red;">'+data.error+'</span>');
         } else {

@@ -3,7 +3,7 @@ include_once('./_common.php');
 
 auth_check_menu($auth, '900100', 'r');
 
-$g5['title'] = '랜딩 생성/수정';
+$g5['title'] = '?? ??/??';
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $table = G5_TABLE_PREFIX . 'landing_pages';
@@ -14,7 +14,7 @@ if ($id) {
     if (!$row) {
         alert('?????? ?? ? ????.', './landing_list.php');
     }
-    $g5['title'] = '랜딩 수정';
+    $g5['title'] = '?? ??';
 }
 
 $defaults = array(
@@ -65,7 +65,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 @media (max-width: 768px) { .sf-form-grid { grid-template-columns:1fr; } .sf-sticky-actions { justify-content:stretch; } .sf-sticky-actions .btn, .sf-sticky-actions .btn_submit { flex:1; } }
 </style>
 
-<form name="flandingform" method="post" action="./landing_update.php" enctype="multipart/form-data">
+<form name="flandingform" method="post" action="SF_MANAGER_URL/landing/landing_update.php" enctype="multipart/form-data">
 <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
 <div class="sf-form-layout">
     <section class="sf-form-section">
@@ -202,7 +202,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 
     <div class="sf-sticky-actions">
         <input type="submit" value="??" class="btn_submit btn">
-        <a href="./landing_list.php" class="btn btn_02">??</a>
+        <a href="SF_MANAGER_URL/landing/landing_list.php" class="btn btn_02">??</a>
     </div>
 </div>
 </form>
