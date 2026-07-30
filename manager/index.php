@@ -37,7 +37,7 @@ include __DIR__ . '/layout/header.php';
 <div class="mgr-card" style="padding:1.25rem;margin-bottom:1.5rem;">
     <h2 style="margin:0 0 .75rem;font-size:1rem;">빠른 작업</h2>
     <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-        <a class="mgr-btn mgr-btn-primary" href="<?php echo G5_ADMIN_URL ?>/showform/portfolio_form.php">쇼폼 등록</a>
+        <a class="mgr-btn mgr-btn-primary" href="<?php echo SF_MANAGER_URL ?>/showform/form.php">쇼폼 등록</a>
         <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/landing/landing_form.php">랜딩페이지 등록</a>
         <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/blog/post_builder.php">포스팅 제작</a>
         <a class="mgr-btn" href="<?php echo G5_ADMIN_URL ?>/blog/advertiser_form.php">광고주 등록</a>

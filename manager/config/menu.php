@@ -21,8 +21,8 @@ $manager_menu = array(
         'title' => '쇼폼 관리',
         'icon' => 'showform',
         'items' => array(
-            array('title' => '쇼폼 목록', 'url' => G5_ADMIN_URL . '/showform/portfolio_list.php', 'permission' => '700100'),
-            array('title' => '쇼폼 신규 등록', 'url' => G5_ADMIN_URL . '/showform/portfolio_form.php', 'permission' => '700100'),
+            array('title' => '쇼폼 목록', 'url' => SF_MANAGER_URL . '/showform/list.php', 'permission' => '700100'),
+            array('title' => '쇼폼 신규 등록', 'url' => SF_MANAGER_URL . '/showform/form.php', 'permission' => '700100'),
         ),
     ),
     array(
