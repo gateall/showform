@@ -20,6 +20,7 @@ function bp_sf_admin_area_map(): array
         'menu900' => 'content', // 랜딩관리
         'menu910' => 'content', // 문의관리
         'menu920' => 'content', // 랜딩 AI관리
+        'menu370' => 'content', // 쇼폼 통합관리(/manager/) 권한 코드 전용 — vertical_map에 없어 vswitch에도 노출 안 됨
     );
 }
 
