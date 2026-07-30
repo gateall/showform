@@ -4,28 +4,45 @@ auth_check_menu($auth, '370100', 'r');
 require_once __DIR__ . '/../lib/dashboard.lib.php';
 require_once __DIR__ . '/../components/status_badge.php';
 require_once __DIR__ . '/../components/data_table.php';
+require_once __DIR__ . '/../components/modal.php';
+
+// 서비스 단위로 묶는다(테이블 여러 개가 한 서비스에 속할 수 있음) - 화면에는 서비스명만
+// 1차로 보여주고, 실제 테이블명은 "시스템 상세 보기" 모달에서만 노출한다.
+$services = array(
+    array('label' => '쇼폼 관리', 'tables' => array(G5_TABLE_PREFIX . 'sf_portfolio'), 'install_url' => G5_ADMIN_URL . '/showform/install_form.php'),
+    array('label' => '랜딩페이지', 'tables' => array(G5_TABLE_PREFIX . 'landing_pages'), 'install_url' => null),
+    array('label' => '랜딩 문의', 'tables' => array(G5_TABLE_PREFIX . 'landing_inquiries'), 'install_url' => null),
+    array('label' => '블로그 자동화', 'tables' => array(G5_TABLE_PREFIX . 'blog_content_projects'), 'install_url' => G5_ADMIN_URL . '/blog/install_form.php'),
+    array('label' => '발행 시스템', 'tables' => array(G5_TABLE_PREFIX . 'blog_post_targets', G5_TABLE_PREFIX . 'blog_publish_jobs'), 'install_url' => G5_ADMIN_URL . '/blog/install_form.php'),
+);
+
+$service_rows = array();
+$detail_rows = array();
+foreach ($services as $svc) {
+    $all_installed = true;
+    foreach ($svc['tables'] as $t) {
+        if (!mgr_table_exists($t)) {
+            $all_installed = false;
+        }
+        $detail_rows[] = array(
+            'label' => htmlspecialchars($svc['label']),
+            'table' => '<code>' . htmlspecialchars($t) . '</code>',
+            'status' => mgr_table_exists($t) ? mgr_status_badge('설치됨', 'success') : mgr_status_badge('미설치', 'muted'),
+        );
+    }
+    $action = '';
+    if (!$all_installed && $svc['install_url']) {
+        $action = '<a href="' . $svc['install_url'] . '" class="mgr-btn">설치 확인</a>';
+    }
+    $service_rows[] = array(
+        'service' => htmlspecialchars($svc['label']),
+        'status' => $all_installed ? mgr_status_badge('정상', 'success') : mgr_status_badge('설정 필요', 'warning'),
+        'action' => $action,
+    );
+}
 
 $page_title = '운영 상태';
 include __DIR__ . '/../layout/header.php';
-
-$tables_to_check = array(
-    '쇼폼(제작 사례)' => G5_TABLE_PREFIX . 'sf_portfolio',
-    '랜딩페이지' => G5_TABLE_PREFIX . 'landing_pages',
-    '랜딩 문의' => G5_TABLE_PREFIX . 'landing_inquiries',
-    '블로그 콘텐츠 프로젝트' => G5_TABLE_PREFIX . 'blog_content_projects',
-    '블로그 발행 대상' => G5_TABLE_PREFIX . 'blog_post_targets',
-    '블로그 발행 작업' => G5_TABLE_PREFIX . 'blog_publish_jobs',
-);
-
-$rows = array();
-foreach ($tables_to_check as $label => $table) {
-    $installed = mgr_table_exists($table);
-    $rows[] = array(
-        'label' => htmlspecialchars($label),
-        'table' => '<code>' . htmlspecialchars($table) . '</code>',
-        'status' => $installed ? mgr_status_badge('설치됨', 'success') : mgr_status_badge('미설치', 'muted'),
-    );
-}
 ?>
 
 <div class="mgr-card" style="padding:1.25rem;margin-bottom:1rem;">
@@ -38,16 +55,33 @@ foreach ($tables_to_check as $label => $table) {
     </table>
 </div>
 
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+    <h2 style="margin:0;font-size:1rem;">서비스 상태</h2>
+    <button type="button" class="mgr-btn" data-mgr-modal-open="sysDetailModal">시스템 상세 보기</button>
+</div>
+
 <?php
 echo mgr_data_table(
     array(
-        array('key' => 'label', 'label' => '기능'),
-        array('key' => 'table', 'label' => '테이블'),
-        array('key' => 'status', 'label' => '설치 상태'),
+        array('key' => 'service', 'label' => '서비스'),
+        array('key' => 'status', 'label' => '상태'),
+        array('key' => 'action', 'label' => '조치'),
     ),
-    $rows,
-    array('empty_title' => '확인할 테이블이 없습니다')
+    $service_rows,
+    array('empty_title' => '확인할 서비스가 없습니다')
 );
-?>
 
-<?php include __DIR__ . '/../layout/footer.php'; ?>
+echo mgr_modal(
+    'sysDetailModal',
+    '시스템 상세 보기',
+    mgr_data_table(
+        array(
+            array('key' => 'label', 'label' => '서비스'),
+            array('key' => 'table', 'label' => '테이블'),
+            array('key' => 'status', 'label' => '설치 상태'),
+        ),
+        $detail_rows
+    )
+);
+
+include __DIR__ . '/../layout/footer.php';
