@@ -13,6 +13,9 @@ interface BlogAiProvider
     public function generateTitles(array $params, int $count): array;
     // 반환: array('ok'=>bool, 'body'=>string, 'hashtags'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
     public function generateBody(array $params): array;
+    // 자유 형식 단일 프롬프트 채팅(포스팅 제작 화면의 "방향/제목/도입부/본문블록/글감분석" 등
+    // 정형화되지 않은 짧은 생성에 공용으로 쓴다). 반환: array('ok'=>bool, 'message'=>string, 'error'=>string)
+    public function chatRequest(string $prompt, string $systemPrompt): array;
 }
 
 // 템플릿 기반 폴백 공급자 — 키 없이 항상 동작하며 절대 실패하지 않는다(ok는 항상 true).
@@ -67,6 +70,14 @@ class BlogAiTemplateProvider implements BlogAiProvider
             'tokens_prompt' => 0,
             'tokens_completion' => 0,
         );
+    }
+
+    // 템플릿 모드는 정해진 틀(제목/본문) 밖의 자유형 프롬프트(방향 추천, 글감 분석 등)를
+    // 의미 있게 흉내낼 방법이 없다 — 아무 문장이나 만들어 "생성 성공"으로 위장하는 대신
+    // 명확한 실패로 보고한다(호출부가 이미 ok=false 처리를 하고 있어 안전하게 전파된다).
+    public function chatRequest(string $prompt, string $systemPrompt): array
+    {
+        return array('ok' => false, 'message' => '', 'error' => 'AI 공급자가 설정되지 않아 이 기능은 템플릿 모드에서 지원되지 않습니다. AI 공급자 설정에서 API 키를 등록해 주세요.');
     }
 
     // 키워드·지역 기반 결정적 해시태그 생성 — 외부 호출 없이 항상 동작한다.
@@ -203,10 +214,26 @@ class BlogOpenAiProvider implements BlogAiProvider
         );
     }
 
+    // generateTitles/generateBody처럼 고정 JSON 스키마를 강제하지 않는 자유형 프롬프트용 —
+    // 포스팅 제작 화면의 방향추천/제목/도입부/본문블록/글감분석이 전부 이 메서드를 공유한다.
+    public function chatRequest(string $prompt, string $systemPrompt): array
+    {
+        // analyze_material(글감분석)만 JSON 스키마를 요구하고, 방향/제목/도입부/본문블록은
+        // 일반 문장을 기대한다 - system prompt에 "JSON"이 언급된 경우에만 json_object 모드를
+        // 켠다(OpenAI는 프롬프트에 "json" 문구가 없으면 이 모드에서 오류를 반환하므로, 반대로
+        // 일반 문장 요청에 강제로 켜면 기대와 다른 응답이 나온다).
+        $jsonMode = (stripos($systemPrompt, 'json') !== false || stripos($prompt, 'json') !== false);
+        $result = $this->callChatCompletion($systemPrompt, $prompt, $jsonMode);
+        if (!$result['ok']) {
+            return array('ok' => false, 'message' => '', 'error' => $result['error']);
+        }
+        return array('ok' => true, 'message' => $result['content'], 'error' => '');
+    }
+
     // 반환: array('ok'=>bool, 'content'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
-    // content는 모델이 반환한 JSON 문자열 그대로.
+    // $jsonMode=true면 content는 모델이 반환한 JSON 문자열, false면 일반 텍스트 그대로.
     // 이 함수 밖으로는 $this->apiKeyPlain 값이 절대 전달되지 않는다(오류 메시지에도 포함 금지).
-    private function callChatCompletion(string $systemPrompt, string $userPrompt): array
+    private function callChatCompletion(string $systemPrompt, string $userPrompt, bool $jsonMode = true): array
     {
         if ($this->apiKeyPlain === '') {
             return array('ok' => false, 'content' => '', 'error' => 'AI API 키가 설정되지 않았습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
@@ -217,7 +244,6 @@ class BlogOpenAiProvider implements BlogAiProvider
 
         $payload = array(
             'model' => $this->model,
-            'response_format' => array('type' => 'json_object'),
             'messages' => array(
                 array('role' => 'system', 'content' => $systemPrompt),
                 array('role' => 'user', 'content' => $userPrompt),
@@ -225,6 +251,9 @@ class BlogOpenAiProvider implements BlogAiProvider
             'temperature' => $this->temperature,
             'max_tokens' => $this->maxTokens,
         );
+        if ($jsonMode) {
+            $payload['response_format'] = array('type' => 'json_object');
+        }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->endpoint . '/chat/completions');
@@ -330,4 +359,11 @@ function bp_ai_generate_body(array $params): array
 {
     $provider = bp_ai_get_provider();
     return $provider->generateBody($params);
+}
+
+// 반환: array('ok'=>bool, 'message'=>string, 'error'=>string)
+function bp_ai_chat_request(string $prompt, string $systemPrompt = ''): array
+{
+    $provider = bp_ai_get_provider();
+    return $provider->chatRequest($prompt, $systemPrompt);
 }
