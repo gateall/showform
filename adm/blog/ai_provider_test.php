@@ -1,16 +1,12 @@
 <?php
 $sub_menu = '360400';
 include_once('./_common.php');
+auth_check_menu($auth, '360400', 'w');
 header('Content-Type: application/json; charset=utf-8');
 
 // AJAX 전용으로 설계
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(array('ok' => false, 'error' => 'POST 요청만 허용됩니다.'));
-    exit;
-}
-
-if ($is_admin !== 'super') {
-    echo json_encode(array('ok' => false, 'error' => '최고관리자만 접근 가능합니다.'));
     exit;
 }
 

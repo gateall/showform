@@ -1,14 +1,15 @@
 <?php
 $menu['menu360'] = array(
     array('360000', '블로그', G5_ADMIN_URL . '/blog/blog_dashboard.php', 'blog'),
-    array('360050', '블로그 대시보드 (통합)', G5_ADMIN_URL . '/blog/blog_dashboard.php', 'blog_dashboard'),
-    array('360060', '통합 포스팅 제작', G5_ADMIN_URL . '/blog/post_builder.php', 'blog_post_builder'),
+    array('360000', '블로그 대시보드 (통합)', G5_ADMIN_URL . '/blog/blog_dashboard.php', 'blog_dashboard'),
+    array('360050', '통합 포스팅 제작', G5_ADMIN_URL . '/blog/post_builder.php', 'blog_post_builder'),
     array('360100', '광고주 관리', G5_ADMIN_URL . '/blog/advertiser_list.php', 'blog_advertiser'),
     array('361100', '광고주 계정관리', G5_ADMIN_URL . '/blog/advertiser_account_list.php', 'blog_advertiser_account'),
     array('361110', 'SNS/채널 앱 설정', G5_ADMIN_URL . '/blog/channel_app_list.php', 'blog_channel_app'),
-    array('360200', '발행사이트관리', G5_ADMIN_URL . '/blog/site_list.php', 'blog_site'),
-    array('360300', 'AI 공급자설정', G5_ADMIN_URL . '/blog/ai_provider_list.php', 'blog_ai_provider'),
-    array('360400', '콘텐츠 프로젝트', G5_ADMIN_URL . '/blog/project_list.php', 'blog_project'),
+    array('360300', '발행사이트관리', G5_ADMIN_URL . '/blog/site_list.php', 'blog_site'),
+    array('360400', 'AI 공급자설정', G5_ADMIN_URL . '/blog/ai_provider_list.php', 'blog_ai_provider'),
+    array('360500', '콘텐츠 프로젝트', G5_ADMIN_URL . '/blog/project_list.php', 'blog_project'),
+    array('360600', '키워드 관리', G5_ADMIN_URL . '/blog/keyword_list.php', 'blog_keyword'),
     // 아래 4개는 랜딩 모듈(adm/landing/)의 기존 화면을 그대로 재사용 — 새 코드를 붙이지 않고
     // 각 파일이 자체적으로 검사하는 실제 권한 코드(auth_check_menu 호출값)를 그대로 사용해야
     // 이 메뉴로 들어가도 랜딩 쪽과 동일하게 권한이 적용된다.
