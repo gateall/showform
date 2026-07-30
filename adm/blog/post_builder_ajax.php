@@ -10,10 +10,77 @@ $post_id = isset($_POST['post_id']) ? (int)$_POST['post_id'] : 0;
 $project_table = bp_table('content_projects');
 $post_table = bp_table('posts');
 
+// complete_post와 export_file(html/txt)이 공유하는 HTML 조립 로직 - 한 곳에서만 관리한다.
+function pb_build_post_html(array $state): string
+{
+    $html = "<h1>" . get_text($state['post_title'] ?? '') . "</h1>\n";
+
+    if (!empty($state['intro_text'])) {
+        $html .= "<div class='post-intro'>" . nl2br(get_text($state['intro_text'])) . "</div>\n";
+    }
+
+    if (!empty($state['body_blocks']) && is_array($state['body_blocks'])) {
+        foreach ($state['body_blocks'] as $block) {
+            if (!empty($block['title'])) {
+                $html .= "<h2>" . get_text($block['title']) . "</h2>\n";
+            }
+            if (!empty($block['content'])) {
+                $html .= "<p>" . nl2br(get_text($block['content'])) . "</p>\n";
+            }
+        }
+    }
+
+    if (!empty($state['closing_text'])) {
+        $html .= "<div class='post-closing'>" . nl2br(get_text($state['closing_text'])) . "</div>\n";
+    }
+
+    if (!empty($state['company_name'])) {
+        $html .= "<div class='post-company-info' style='margin-top:20px; padding:15px; background:#f5f5f5;'>";
+        $html .= "<strong>업체정보</strong><br>";
+        $html .= "상호명: " . get_text($state['company_name']) . "<br>";
+        if (!empty($state['company_tel'])) $html .= "전화번호: " . get_text($state['company_tel']) . "<br>";
+        if (!empty($state['company_addr'])) $html .= "주소: " . get_text($state['company_addr']) . "<br>";
+        if (!empty($state['company_link'])) $html .= "링크: <a href='" . get_text($state['company_link']) . "'>" . get_text($state['company_link']) . "</a>";
+        $html .= "</div>\n";
+    }
+
+    return $html;
+}
+
+// 텍스트 다운로드용 - HTML 태그 없이 제목/도입/본문/마무리를 순서대로 이어붙인다.
+function pb_build_post_text(array $state): string
+{
+    $lines = array();
+    $lines[] = (string) ($state['post_title'] ?? '');
+    $lines[] = '';
+    if (!empty($state['intro_text'])) {
+        $lines[] = $state['intro_text'];
+        $lines[] = '';
+    }
+    if (!empty($state['body_blocks']) && is_array($state['body_blocks'])) {
+        foreach ($state['body_blocks'] as $block) {
+            if (!empty($block['title'])) {
+                $lines[] = $block['title'];
+            }
+            if (!empty($block['content'])) {
+                $lines[] = $block['content'];
+            }
+            $lines[] = '';
+        }
+    }
+    if (!empty($state['closing_text'])) {
+        $lines[] = $state['closing_text'];
+    }
+    return implode("\n", $lines);
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
-if ($is_admin != 'super') {
-    die(json_encode(['error' => '권한이 없습니다.']));
+// 이 프로젝트 전체가 쓰는 권한체계(auth_check_menu, 코드 360050)와 통일한다 - super
+// 전용으로 하드코딩되어 있으면 위임받은 제한관리자가 전부 차단된다.
+$pb_auth_msg = auth_check_menu($auth, '360050', 'w', true);
+if ($pb_auth_msg) {
+    die(json_encode(['ok' => false, 'error' => $pb_auth_msg]));
 }
 
 $response = ['ok' => true, 'action' => $action];
@@ -93,39 +160,11 @@ switch($action) {
         }
         $builder_state = isset($_POST['builder_state']) ? $_POST['builder_state'] : '{}';
         $state = json_decode($builder_state, true);
-        
-        // HTML 파싱 (Phase 2 핵심로직)
-        $html = "<h1>" . get_text($state['post_title'] ?? '') . "</h1>\n";
-        
-        if (!empty($state['intro_text'])) {
-            $html .= "<div class='post-intro'>" . nl2br(get_text($state['intro_text'])) . "</div>\n";
+        if (!is_array($state)) {
+            $state = array();
         }
-        
-        if (!empty($state['body_blocks']) && is_array($state['body_blocks'])) {
-            foreach ($state['body_blocks'] as $block) {
-                if (!empty($block['title'])) {
-                    $html .= "<h2>" . get_text($block['title']) . "</h2>\n";
-                }
-                if (!empty($block['content'])) {
-                    $html .= "<p>" . nl2br(get_text($block['content'])) . "</p>\n";
-                }
-            }
-        }
-        
-        if (!empty($state['closing_text'])) {
-            $html .= "<div class='post-closing'>" . nl2br(get_text($state['closing_text'])) . "</div>\n";
-        }
-        
-        // 업체정보 첨부
-        if (!empty($state['company_name'])) {
-            $html .= "<div class='post-company-info' style='margin-top:20px; padding:15px; background:#f5f5f5;'>";
-            $html .= "<strong>업체정보</strong><br>";
-            $html .= "상호명: " . get_text($state['company_name']) . "<br>";
-            if (!empty($state['company_tel'])) $html .= "전화번호: " . get_text($state['company_tel']) . "<br>";
-            if (!empty($state['company_addr'])) $html .= "주소: " . get_text($state['company_addr']) . "<br>";
-            if (!empty($state['company_link'])) $html .= "링크: <a href='".get_text($state['company_link'])."'>".get_text($state['company_link'])."</a>";
-            $html .= "</div>\n";
-        }
+
+        $html = pb_build_post_html($state);
 
         // DB에 저장
         sql_query(" update {$post_table} 
@@ -136,6 +175,7 @@ switch($action) {
                     where project_id = '{$project_id}' ");
                     
         $response['html'] = $html;
+        $response['text'] = pb_build_post_text($state);
         $response['message'] = "포스팅이 성공적으로 완성되었습니다.";
         break;
 
@@ -248,6 +288,45 @@ switch($action) {
         $response['message'] = "발행 대기열(Queue)에 등록되었습니다. 스케줄러가 곧 처리합니다.";
         break;
 
+    case 'analyze_material':
+        // 글감(자유 텍스트)을 분석해 기획 항목을 자동 채움용으로 추출한다.
+        $material = isset($_POST['material']) ? trim($_POST['material']) : '';
+        if ($material === '') {
+            die(json_encode(['ok' => false, 'error' => '분석할 글감을 입력해 주세요.']));
+        }
+        if (!function_exists('bp_ai_chat_request')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+
+        $sys_prompt = "당신은 블로그 포스팅 기획을 돕는 편집자입니다. 반드시 JSON 형식으로만 답하세요.";
+        $prompt = "다음 글감(메모, 상품정보, 참고문장 등)을 분석해서 블로그 포스팅 기획에 필요한 항목을 추출해 주세요.\n\n"
+            . "[글감]\n{$material}\n\n"
+            . "반드시 아래 JSON 형식만 출력하세요(다른 텍스트 없이): "
+            . "{\"topic\": \"핵심 주제\", \"purpose\": \"글의 목적\", \"target_audience\": \"예상 독자\", "
+            . "\"recommended_format\": \"정보형|상품소개형|후기형|FAQ형 중 하나\", \"main_keyword\": \"대표 키워드\", "
+            . "\"sub_keywords\": \"보조 키워드(쉼표 구분)\", \"recommended_length\": \"예상 분량(예: 2000~2500자)\"}";
+
+        $ai_result = bp_ai_chat_request($prompt, $sys_prompt);
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => '글감 분석 실패: ' . $ai_result['error']]));
+        }
+
+        $parsed = json_decode(trim($ai_result['message']), true);
+        if (!is_array($parsed) || empty($parsed['topic'])) {
+            die(json_encode(['ok' => false, 'error' => 'AI가 올바른 분석 결과를 반환하지 않았습니다. 다시 시도해 주세요.']));
+        }
+
+        $response['analysis'] = array(
+            'topic' => isset($parsed['topic']) ? (string) $parsed['topic'] : '',
+            'purpose' => isset($parsed['purpose']) ? (string) $parsed['purpose'] : '',
+            'target_audience' => isset($parsed['target_audience']) ? (string) $parsed['target_audience'] : '',
+            'recommended_format' => isset($parsed['recommended_format']) ? (string) $parsed['recommended_format'] : '',
+            'main_keyword' => isset($parsed['main_keyword']) ? (string) $parsed['main_keyword'] : '',
+            'sub_keywords' => isset($parsed['sub_keywords']) ? (string) $parsed['sub_keywords'] : '',
+            'recommended_length' => isset($parsed['recommended_length']) ? (string) $parsed['recommended_length'] : '',
+        );
+        break;
+
     case 'ai_generate':
         // 통합 AI 호출 처리
         $type = isset($_POST['type']) ? $_POST['type'] : '';
@@ -332,6 +411,32 @@ switch($action) {
         
         $response['html'] = $html;
         break;
+
+    case 'export_file':
+        // 서버에 파일로 남기지 않고 즉시 다운로드만 스트리밍한다.
+        $export_type = isset($_POST['type']) ? $_POST['type'] : 'txt';
+        $export_state = isset($_POST['builder_state']) ? json_decode($_POST['builder_state'], true) : [];
+        if (!is_array($export_state)) {
+            $export_state = array();
+        }
+        $filename_base = 'post-' . date('Ymd-His');
+
+        if ($export_type === 'html') {
+            $content = pb_build_post_html($export_state);
+            header('Content-Type: text/html; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename_base . '.html"');
+        } else if ($export_type === 'json') {
+            $content = json_encode($export_state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename_base . '.json"');
+        } else {
+            $content = pb_build_post_text($export_state);
+            header('Content-Type: text/plain; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename_base . '.txt"');
+        }
+
+        echo $content;
+        exit;
 
     default:
         $response['error'] = 'Unknown action';

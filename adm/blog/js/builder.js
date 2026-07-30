@@ -200,6 +200,87 @@ const Builder = {
         });
     },
 
+    analyzeMaterial: function() {
+        const materialEl = document.getElementById('pb_material_input');
+        const material = materialEl.value.trim();
+        if (!material) {
+            alert('분석할 글감을 입력해 주세요.');
+            return;
+        }
+
+        const btn = document.getElementById('pb_material_btn');
+        const originalLabel = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '분석 중...';
+
+        const payload = new URLSearchParams();
+        payload.append('action', 'analyze_material');
+        payload.append('material', material);
+
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(res => {
+            btn.disabled = false;
+            btn.innerText = originalLabel;
+
+            if (!res.ok) {
+                alert('분석 실패: ' + res.error);
+                return;
+            }
+
+            const a = res.analysis;
+
+            // 기존 필드 재사용 - 새 필드를 만들지 않고 1~3단계 항목에 자동 입력
+            if (a.main_keyword) document.getElementById('pb_main_keyword').value = a.main_keyword;
+            if (a.sub_keywords) document.getElementById('pb_sub_keywords').value = a.sub_keywords;
+            if (a.target_audience) document.getElementById('pb_target_audience').value = a.target_audience;
+
+            const typeMap = {'정보형': 'info', '상품소개형': 'product', '후기형': 'review', 'FAQ형': 'faq'};
+            const postTypeSelect = document.getElementById('pb_post_type');
+            if (a.recommended_format && postTypeSelect) {
+                for (const key in typeMap) {
+                    if (a.recommended_format.indexOf(key) !== -1) {
+                        postTypeSelect.value = typeMap[key];
+                        break;
+                    }
+                }
+            }
+
+            // 사이드바 요약 카드 - AI가 반환한 텍스트이므로 innerHTML이 아닌 텍스트 노드로만 삽입한다
+            const list = document.getElementById('pb_material_summary_list');
+            list.innerHTML = '';
+            const items = [
+                ['주제', a.topic],
+                ['목적', a.purpose],
+                ['예상 독자', a.target_audience],
+                ['추천 형식', a.recommended_format],
+                ['대표 키워드', a.main_keyword],
+                ['보조 키워드', a.sub_keywords],
+                ['예상 분량', a.recommended_length]
+            ];
+            items.forEach(function(pair) {
+                if (!pair[1]) return;
+                const li = document.createElement('li');
+                const strong = document.createElement('strong');
+                strong.textContent = pair[0] + ': ';
+                li.appendChild(strong);
+                li.appendChild(document.createTextNode(pair[1]));
+                list.appendChild(li);
+            });
+            document.getElementById('pb_material_summary_panel').style.display = 'block';
+
+            alert('글감 분석이 완료되어 관련 항목이 자동으로 입력되었습니다. 각 단계에서 자유롭게 수정하세요.');
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = originalLabel;
+            alert('분석 요청 실패: ' + err);
+        });
+    },
+
     generateDirection: function() { this.callAi('direction', '', 'pb_target_audience'); },
     recommendKeywords: function() { this.callAi('titles', '', 'pb_post_title'); }, // 타이틀 생성으로 임시 매핑
     generateTitles: function() { this.callAi('titles', '', 'pb_post_title'); },
@@ -327,14 +408,34 @@ const Builder = {
                 if (res.ok) {
                     alert(res.message);
                     document.getElementById('pb_preview_area').innerHTML = res.html;
+                    document.getElementById('pb_preview_text_area').value = res.text || '';
                     document.getElementById('pb_post_actions').style.display = 'block';
+                    document.getElementById('pb_result_panel').style.display = 'block';
                 } else {
                     alert('완성 실패: ' + res.error);
                 }
             });
         }
     },
-    
+
+    switchPreviewTab: function(tab) {
+        const htmlBox = document.getElementById('pb_preview_area');
+        const textBox = document.getElementById('pb_preview_text_area');
+        const btnHtml = document.getElementById('pb_tab_btn_html');
+        const btnText = document.getElementById('pb_tab_btn_text');
+        if (tab === 'text') {
+            htmlBox.style.display = 'none';
+            textBox.style.display = 'block';
+            btnHtml.classList.remove('active');
+            btnText.classList.add('active');
+        } else {
+            htmlBox.style.display = 'block';
+            textBox.style.display = 'none';
+            btnText.classList.remove('active');
+            btnHtml.classList.add('active');
+        }
+    },
+
     copyHtml: function() {
         const html = document.getElementById('pb_preview_area').innerHTML;
         navigator.clipboard.writeText(html).then(() => {
@@ -343,7 +444,46 @@ const Builder = {
             alert('복사 실패: ' + err);
         });
     },
-    
+
+    copyText: function() {
+        const text = document.getElementById('pb_preview_text_area').value;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('텍스트 내용이 클립보드에 복사되었습니다.');
+        }).catch(err => {
+            alert('복사 실패: ' + err);
+        });
+    },
+
+    exportFile: function(type) {
+        const payload = new URLSearchParams();
+        payload.append('action', 'export_file');
+        payload.append('type', type);
+        payload.append('builder_state', JSON.stringify(this.gatherData()));
+
+        fetch('post_builder_ajax.php', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('서버 응답 오류');
+            return res.blob();
+        })
+        .then(blob => {
+            const ext = (type === 'html' || type === 'json') ? type : 'txt';
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'post.' + ext;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(err => {
+            alert('다운로드 실패: ' + err);
+        });
+    },
+
     showPublishModal: function() {
         if(confirm("선택한 사이트로 바로 발행 대기열에 등록하시겠습니까? (스케줄러가 자동 처리합니다)")) {
             const payload = new URLSearchParams();

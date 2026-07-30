@@ -30,7 +30,19 @@ include_once(__DIR__ . '/../layout/header.php');
     <div class="pb-container">
         <!-- 메인 작성 영역 -->
         <main class="pb-main">
-            
+
+            <!-- 글감 입력: 아래 단계와 별개로 항상 열려있는 시작 지점 -->
+            <section class="pb-material-box" id="pb-material-box">
+                <div class="pb-material-header">
+                    <h3>글감으로 빠르게 시작하기</h3>
+                    <p class="help_txt">메모, 상품 정보, 참고 문장 등을 자유롭게 입력하면 AI가 분석해 아래 단계의 키워드·타겟독자·유형 항목을 자동으로 채워줍니다. 채워진 값은 각 단계에서 자유롭게 수정할 수 있습니다.</p>
+                </div>
+                <textarea id="pb_material_input" class="frm_input" rows="5" style="width:100%;" placeholder="예: 30대 여성 타겟 콜라겐 영양제, 피부 탄력 개선 후기 위주로 작성 예정"></textarea>
+                <div class="pb-step-actions">
+                    <button type="button" class="btn btn_02" id="pb_material_btn" onclick="Builder.analyzeMaterial()">AI 글감 분석 → 자동 입력</button>
+                </div>
+            </section>
+
             <!-- 1단계: 기본정보 -->
             <section class="pb-step active" id="step-1">
                 <div class="pb-step-header" onclick="Builder.toggleStep(1)">
@@ -296,11 +308,28 @@ include_once(__DIR__ . '/../layout/header.php');
                     <span class="pb-step-indicator"></span>
                 </div>
                 <div class="pb-step-body">
+                    <div class="pb-preview-tabs">
+                        <button type="button" class="pb-tab-btn active" id="pb_tab_btn_html" onclick="Builder.switchPreviewTab('html')">HTML 보기</button>
+                        <button type="button" class="pb-tab-btn" id="pb_tab_btn_text" onclick="Builder.switchPreviewTab('text')">텍스트 보기</button>
+                    </div>
                     <div id="pb_preview_area" class="pb-preview-box">
                         미리보기 영역
                     </div>
+                    <textarea id="pb_preview_text_area" class="frm_input pb-preview-box" style="width:100%; display:none;" rows="16" readonly></textarea>
                     <div class="pb-step-actions">
                         <button type="button" class="btn btn_02" onclick="Builder.renderPreview()">미리보기 갱신</button>
+                    </div>
+
+                    <!-- 포스팅 완성하기 실행 후 노출되는 결과 확인/복사/다운로드 패널 -->
+                    <div id="pb_result_panel" class="pb-result-panel" style="display:none;">
+                        <h4>완성된 포스팅 내보내기</h4>
+                        <div class="pb-step-actions" style="justify-content:flex-start;">
+                            <button type="button" class="btn btn_01" onclick="Builder.copyHtml()">HTML 복사</button>
+                            <button type="button" class="btn btn_01" onclick="Builder.copyText()">텍스트 복사</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('txt')">TXT 다운로드</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('html')">HTML 다운로드</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('json')">JSON 다운로드</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -309,6 +338,10 @@ include_once(__DIR__ . '/../layout/header.php');
         
         <!-- 우측 사이드바 (데스크톱용 상태 패널) -->
         <aside class="pb-sidebar">
+            <div class="pb-panel" id="pb_material_summary_panel" style="display:none;">
+                <h3>글감 분석 요약</h3>
+                <ul id="pb_material_summary_list" class="pb-summary-list"></ul>
+            </div>
             <div class="pb-panel">
                 <h3>진행 상태</h3>
                 <ul id="pb_progress_list">
