@@ -1,5 +1,6 @@
 <?php
 include_once('./_common.php');
+auth_check_menu($auth, '900200', 'w');
 
 $inquiry_id = isset($_POST['inquiry_id']) ? (int)$_POST['inquiry_id'] : 0;
 $memo = isset($_POST['memo']) ? trim($_POST['memo']) : '';

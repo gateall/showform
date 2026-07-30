@@ -1,5 +1,6 @@
 <?php
 include_once('./_common.php');
+auth_check_menu($auth, '900200', 'w');
 
 // DB 테이블 자동 생성 (존재하지 않을 경우)
 $table = G5_TABLE_PREFIX . 'landing_inquiry';

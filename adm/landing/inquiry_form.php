@@ -1,6 +1,7 @@
 <?php
 $sub_menu = "900200";
 include_once('./_common.php');
+auth_check_menu($auth, '900200', 'r');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if (!$id) alert('잘못된 접근입니다.');

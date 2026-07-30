@@ -1,8 +1,21 @@
 <?php
 // adm/blog/mock_receiver.php
 // 자체 PHP 블로그 외부 API 연동 테스트를 위한 모의(Mock) 수신 스크립트
-
+//
+// 저장소 전체에서 이 파일을 호출하는 코드가 없음을 확인함 - 운영 발행 흐름에서
+// 쓰이지 않는 테스트 스캐폴드다. 아래 서명검증도 "헤더가 왔는지"만 보는 시뮬레이션일
+// 뿐 실제 HMAC 재계산 검증이 아니므로 무인증으로 열어둘 이유가 없다. 실제 외부
+// 발행 플랫폼이 이 엔드포인트를 호출하게 된다면 관리자 세션이 아니라
+// site_credentials의 API Secret으로 계산한 진짜 HMAC 서명 + 타임스탬프 유효시간 +
+// 재전송 방지 nonce로 바꿔야 한다(외부 시스템은 관리자 세션을 가질 수 없다).
 header('Content-Type: application/json; charset=utf-8');
+
+include_once('./_common.php');
+if ($is_admin !== 'super') {
+    http_response_code(403);
+    echo json_encode(array('success' => false, 'error_code' => 'FORBIDDEN', 'message' => '접근 권한이 없습니다.'));
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method !== 'POST') {

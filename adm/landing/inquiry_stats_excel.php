@@ -1,9 +1,6 @@
 <?php
 include_once('./_common.php');
-
-if ($is_admin != 'super') {
-    alert('권한이 없습니다.');
-}
+auth_check_menu($auth, '910200', 'r');
 
 $fr_date = isset($_GET['fr_date']) ? $_GET['fr_date'] : date('Y-m-d', strtotime('-6 days'));
 $to_date = isset($_GET['to_date']) ? $_GET['to_date'] : date('Y-m-d');

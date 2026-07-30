@@ -1,5 +1,6 @@
 <?php
 include_once('./_common.php');
+auth_check_menu($auth, '900200', 'r');
 
 $table = G5_TABLE_PREFIX . 'landing_inquiry';
 

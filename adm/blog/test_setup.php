@@ -1,5 +1,8 @@
 <?php
 include_once('./_common.php');
+if ($is_admin !== 'super') {
+    alert('최고관리자만 접근할 수 있습니다.');
+}
 include_once(G5_ADMIN_PATH . '/blog/lib/blog_publisher.lib.php');
 
 // 1. Run install to ensure v8 is applied
