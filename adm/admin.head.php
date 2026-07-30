@@ -95,7 +95,20 @@ $sf_menu_all = isset($menu) && is_array($menu) ? $menu : array();
 $sf_auth_all = isset($auth) && is_array($auth) ? $auth : array();
 $sf_amenu_all = isset($amenu) && is_array($amenu) ? $amenu : array();
 
-$sf_core_amenu = bp_sf_filter_core_amenu($sf_amenu_all, bp_sf_admin_area_map());
+$sf_area_map = bp_sf_admin_area_map();
+$sf_core_amenu = bp_sf_filter_core_amenu($sf_amenu_all, $sf_area_map);
+
+// auth_list.php(최고관리자 권한배정 화면)가 신규 업무(쇼폼/랜딩/블로그) 메뉴 코드도
+// 선택할 수 있도록, 화면에는 출력하지 않고 $auth_menu만 채우는 목적으로 content
+// 그룹에 대해서도 print_menu2()를 호출한다. 반환된 HTML은 버리므로 $sf_core_amenu
+// 기반의 네이티브 #gnb 렌더링(아래)이나 .sf-vswitch에는 전혀 영향이 없다.
+foreach ($sf_amenu_all as $sf_key => $sf_file) {
+    $sf_area = isset($sf_area_map['menu' . $sf_key]) ? $sf_area_map['menu' . $sf_key] : 'core';
+    if ($sf_area === 'content' && isset($menu['menu' . $sf_key])) {
+        print_menu2('menu' . $sf_key);
+    }
+}
+
 $sf_content_verticals = bp_sf_build_content_verticals($sf_menu_all, $sf_auth_all, $is_admin);
 $sf_current_vertical = bp_sf_resolve_current_vertical($sf_menu_all, isset($sub_menu) ? $sub_menu : null);
 ?>

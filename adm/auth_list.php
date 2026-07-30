@@ -102,11 +102,10 @@ $colspan = 5;
                         $is_continue = true;
                     }
 
-                    // 메뉴번호가 바뀌는 경우에 현재 없는 저장된 메뉴는 삭제함
-                    if (!isset($auth_menu[$row['au_menu']])) {
-                        sql_query(" delete from {$g5['auth_table']} where au_menu = '{$row['au_menu']}' ");
-                        $is_continue = true;
-                    }
+                    // 메뉴번호가 바뀌는 경우 $auth_menu에 없는 코드는 자동 삭제하지 않는다
+                    // (신규 업무 메뉴 권한이 이 화면을 열 때마다 조용히 지워지는 사고가 있었음).
+                    // 대신 화면에 경고만 표시하고, 정리는 "선택삭제" 버튼으로 명시적으로 한다.
+                    $is_unknown_menu = !isset($auth_menu[$row['au_menu']]);
 
                     if ($is_continue) {
                         continue;
@@ -127,7 +126,11 @@ $colspan = 5;
                         <td class="td_auth_mbnick"><?php echo $mb_nick ?></td>
                         <td class="td_menu">
                             <?php echo $row['au_menu'] ?>
-                            <?php echo $auth_menu[$row['au_menu']] ?>
+                            <?php if ($is_unknown_menu): ?>
+                                <strong style="color:#dc2626;">⚠ 등록되지 않은 메뉴 코드</strong>
+                            <?php else: ?>
+                                <?php echo $auth_menu[$row['au_menu']] ?>
+                            <?php endif; ?>
                         </td>
                         <td class="td_auth"><?php echo $row['au_auth'] ?></td>
                     </tr>
