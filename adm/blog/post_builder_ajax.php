@@ -430,7 +430,9 @@ switch($action) {
             header('Content-Type: application/json; charset=utf-8');
             header('Content-Disposition: attachment; filename="' . $filename_base . '.json"');
         } else {
-            $content = pb_build_post_text($export_state);
+            // 윈도우 메모장이 BOM 없는 UTF-8 한글을 잘못된 인코딩으로 오인하는 경우가 있어 TXT만 BOM을 붙인다.
+            // JSON은 RFC 8259상 BOM 금지, HTML은 Content-Type으로 charset이 전달되므로 불필요.
+            $content = "\xEF\xBB\xBF" . pb_build_post_text($export_state);
             header('Content-Type: text/plain; charset=utf-8');
             header('Content-Disposition: attachment; filename="' . $filename_base . '.txt"');
         }

@@ -326,9 +326,9 @@ include_once(__DIR__ . '/../layout/header.php');
                         <div class="pb-step-actions" style="justify-content:flex-start;">
                             <button type="button" class="btn btn_01" onclick="Builder.copyHtml()">HTML 복사</button>
                             <button type="button" class="btn btn_01" onclick="Builder.copyText()">텍스트 복사</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('txt')">TXT 다운로드</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('html')">HTML 다운로드</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('json')">JSON 다운로드</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('txt', this)">TXT 다운로드</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('html', this)">HTML 다운로드</button>
+                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('json', this)">JSON 다운로드</button>
                         </div>
                     </div>
                 </div>

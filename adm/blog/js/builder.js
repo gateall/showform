@@ -454,7 +454,14 @@ const Builder = {
         });
     },
 
-    exportFile: function(type) {
+    exportFile: function(type, btn) {
+        if (btn) {
+            if (btn.disabled) return; // 중복 클릭 방지
+            btn.disabled = true;
+            var originalLabel = btn.innerText;
+            btn.innerText = '다운로드 준비 중...';
+        }
+
         const payload = new URLSearchParams();
         payload.append('action', 'export_file');
         payload.append('type', type);
@@ -481,6 +488,12 @@ const Builder = {
         })
         .catch(err => {
             alert('다운로드 실패: ' + err);
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = originalLabel;
+            }
         });
     },
 
