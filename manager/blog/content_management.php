@@ -5,6 +5,7 @@ auth_check_menu($auth, $sub_menu, 'r');
 require_once __DIR__ . '/../components/data_table.php';
 require_once __DIR__ . '/../components/pagination.php';
 require_once __DIR__ . '/../components/status_badge.php';
+require_once __DIR__ . '/../components/stat_card.php';
 
 $page_title = '광고주·포스팅 관리';
 $tab = isset($_GET['tab']) ? $_GET['tab'] : 'advertisers';
@@ -267,6 +268,62 @@ if ($tab === 'publishing') {
     while ($pj_row = sql_fetch_array($pj_result)) {
         $pj_list[] = $pj_row;
     }
+}
+
+// ---- 보고서 탭: manager/blog/report_dashboard.php의 집계 로직(bp_report_* 헬퍼)을 그대로
+// 재사용한다 - 그 파일도 이제 이 화면(?tab=reports)으로 리다이렉트만 하는 상태였다.
+// 하위 상세 보고서 6개(report_daily/weekly/monthly_adv/stats/site/performance.php)는
+// manager/blog/에 이미 실제로 존재해서(리다이렉트 아님) 그쪽으로 링크만 건다.
+if ($tab === 'reports') {
+    $rpt_today = bp_report_period_range('today');
+    $rpt_week = bp_report_period_range('this_week');
+    $rpt_month = bp_report_period_range('this_month');
+
+    $rpt_today_attempts = bp_report_attempt_counts($rpt_today['from'], $rpt_today['to']);
+    $rpt_week_jobs = bp_report_job_counts($rpt_week['from'], $rpt_week['to']);
+    $rpt_month_attempts = bp_report_attempt_counts($rpt_month['from'], $rpt_month['to']);
+
+    $rpt_adv_table = bp_table('advertisers');
+    $rpt_sites_table = bp_table('sites');
+    $rpt_active_advertisers = sql_fetch("select count(*) as cnt from {$rpt_adv_table} where status = 'Y'");
+    $rpt_active_sites = sql_fetch("select count(*) as cnt from {$rpt_sites_table} where status = 'Y'");
+
+    $rpt_jobs_table = bp_table('publish_jobs');
+    $rpt_targets_table = bp_table('post_targets');
+    $rpt_posts_table = bp_table('posts');
+    $rpt_projects_table = bp_table('content_projects');
+
+    $rpt_recent_failures = sql_query(" select j.id, j.completed_at, j.last_error, po.title, prj.topic
+        from {$rpt_jobs_table} j
+        inner join {$rpt_targets_table} t on t.id = j.post_target_id
+        inner join {$rpt_posts_table} po on po.id = t.post_id
+        inner join {$rpt_projects_table} prj on prj.id = po.project_id
+        where j.status = 'failed'
+        order by j.completed_at desc limit 10 ");
+
+    $rpt_stale_pending = sql_query(" select j.id, j.status, j.created_at, po.title
+        from {$rpt_jobs_table} j
+        inner join {$rpt_targets_table} t on t.id = j.post_target_id
+        inner join {$rpt_posts_table} po on po.id = t.post_id
+        where j.status in ('pending','claimed','processing')
+          and j.created_at < date_sub(now(), interval 24 hour)
+        order by j.created_at asc limit 10 ");
+
+    $rpt_maxed_out = sql_query(" select j.id, j.attempt_count, j.max_retries, po.title
+        from {$rpt_jobs_table} j
+        inner join {$rpt_targets_table} t on t.id = j.post_target_id
+        inner join {$rpt_posts_table} po on po.id = t.post_id
+        where j.status = 'failed' and j.attempt_count >= j.max_retries
+        order by j.completed_at desc limit 10 ");
+
+    $rpt_missing_url = sql_query(" select j.id, j.completed_at, po.title
+        from {$rpt_jobs_table} j
+        inner join {$rpt_targets_table} t on t.id = j.post_target_id
+        inner join {$rpt_posts_table} po on po.id = t.post_id
+        where j.status = 'published' and (t.published_url is null or t.published_url = '')
+        order by j.completed_at desc limit 10 ");
+
+    bp_log_activity(0, 'report_viewed', bp_current_admin_id(), 'content_management_tab');
 }
 
 include_once(__DIR__ . '/../layout/header.php');
@@ -581,6 +638,104 @@ include_once(__DIR__ . '/../layout/header.php');
         form.submit();
     }
     </script>
+    <?php elseif ($tab === 'reports'): ?>
+    <p style="color:var(--mgr-text-muted);font-size:.875rem;margin:0 0 1rem;">발행 작업·시도 데이터를 기준으로 집계한 요약입니다. 차트 없이 표로 확인할 수 있습니다.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+        <?php
+        echo mgr_stat_card('오늘 발행 시도', number_format((int) $rpt_today_attempts['total']), array('tone' => 'primary'));
+        echo mgr_stat_card('오늘 성공', number_format((int) $rpt_today_attempts['success']), array('tone' => 'success'));
+        echo mgr_stat_card('오늘 실패', number_format((int) $rpt_today_attempts['failed']), array('tone' => 'danger'));
+        echo mgr_stat_card('이번 주 발행(예약+대기+처리중)', number_format((int) ($rpt_week_jobs['scheduled'] + $rpt_week_jobs['pending'] + $rpt_week_jobs['processing'])), array('tone' => 'primary'));
+        echo mgr_stat_card('이번 달 발행 시도', number_format((int) $rpt_month_attempts['total']), array('tone' => 'primary'));
+        echo mgr_stat_card('이번 달 성공률', bp_report_success_rate($rpt_month_attempts['success'], $rpt_month_attempts['total']) . '%', array('tone' => 'success'));
+        echo mgr_stat_card('운영 사이트', number_format((int) $rpt_active_sites['cnt']), array('tone' => 'muted'));
+        echo mgr_stat_card('활성 광고주', number_format((int) $rpt_active_advertisers['cnt']), array('tone' => 'muted'));
+        ?>
+    </div>
+
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_daily.php" class="mgr-btn">일간 발행 보고서</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_weekly.php" class="mgr-btn">주간 운영 보고서</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_monthly_adv.php" class="mgr-btn">월간 광고주 보고서</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_stats.php" class="mgr-btn">성공·실패 통계</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_site.php" class="mgr-btn">사이트별 발행 통계</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/report_performance.php" class="mgr-btn">콘텐츠 성과</a>
+    </div>
+
+    <?php
+    $rpt_fail_rows = array();
+    while ($r = sql_fetch_array($rpt_recent_failures)) {
+        $rpt_fail_rows[] = array(
+            'id' => (int) $r['id'],
+            'completed_at' => $r['completed_at'] ? htmlspecialchars($r['completed_at']) : '-',
+            'project' => htmlspecialchars($r['topic']),
+            'title' => htmlspecialchars($r['title']),
+            'error' => '<span style="color:var(--mgr-danger);">' . htmlspecialchars(mb_substr((string) $r['last_error'], 0, 60)) . '</span>',
+        );
+    }
+    echo '<h3 style="font-size:1rem;margin:0 0 .5rem;">최근 실패한 발행 작업(최대 10건)</h3>';
+    echo mgr_data_table(
+        array(
+            array('key' => 'id', 'label' => '작업 ID'), array('key' => 'completed_at', 'label' => '완료 시각'),
+            array('key' => 'project', 'label' => '프로젝트'), array('key' => 'title', 'label' => '포스트 제목'),
+            array('key' => 'error', 'label' => '오류'),
+        ),
+        $rpt_fail_rows,
+        array('empty_title' => '최근 실패한 작업이 없습니다')
+    );
+
+    $rpt_stale_rows = array();
+    while ($r = sql_fetch_array($rpt_stale_pending)) {
+        $rpt_stale_rows[] = array(
+            'id' => (int) $r['id'], 'status' => htmlspecialchars($r['status']),
+            'created_at' => htmlspecialchars($r['created_at']), 'title' => htmlspecialchars($r['title']),
+        );
+    }
+    echo '<h3 style="font-size:1rem;margin:1.5rem 0 .5rem;">24시간 이상 대기·처리중인 작업(최대 10건)</h3>';
+    echo mgr_data_table(
+        array(
+            array('key' => 'id', 'label' => '작업 ID'), array('key' => 'status', 'label' => '상태'),
+            array('key' => 'created_at', 'label' => '생성일'), array('key' => 'title', 'label' => '포스트 제목'),
+        ),
+        $rpt_stale_rows,
+        array('empty_title' => '장기 대기 작업이 없습니다')
+    );
+
+    $rpt_maxed_rows = array();
+    while ($r = sql_fetch_array($rpt_maxed_out)) {
+        $rpt_maxed_rows[] = array(
+            'id' => (int) $r['id'], 'attempts' => (int) $r['attempt_count'] . ' / ' . (int) $r['max_retries'],
+            'title' => htmlspecialchars($r['title']),
+        );
+    }
+    echo '<h3 style="font-size:1rem;margin:1.5rem 0 .5rem;">최대 재시도 도달 후 실패(최대 10건)</h3>';
+    echo mgr_data_table(
+        array(
+            array('key' => 'id', 'label' => '작업 ID'), array('key' => 'attempts', 'label' => '시도/최대'),
+            array('key' => 'title', 'label' => '포스트 제목'),
+        ),
+        $rpt_maxed_rows,
+        array('empty_title' => '해당 작업이 없습니다')
+    );
+
+    $rpt_missing_rows = array();
+    while ($r = sql_fetch_array($rpt_missing_url)) {
+        $rpt_missing_rows[] = array(
+            'id' => (int) $r['id'], 'completed_at' => htmlspecialchars($r['completed_at']),
+            'title' => htmlspecialchars($r['title']),
+        );
+    }
+    echo '<h3 style="font-size:1rem;margin:1.5rem 0 .5rem;">발행 성공했지만 외부 URL이 누락된 작업(최대 10건)</h3>';
+    echo mgr_data_table(
+        array(
+            array('key' => 'id', 'label' => '작업 ID'), array('key' => 'completed_at', 'label' => '완료 시각'),
+            array('key' => 'title', 'label' => '포스트 제목'),
+        ),
+        $rpt_missing_rows,
+        array('empty_title' => '해당 작업이 없습니다')
+    );
+    ?>
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->
     <div style="padding: 2rem 0; text-align: center; color: var(--mgr-text-muted);">
