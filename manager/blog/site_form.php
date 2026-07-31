@@ -25,6 +25,8 @@ if ($id > 0) {
     if ($found_php) $cred_php = $found_php;
     $g5['title'] = '발행 사이트 수정';
 } else {
+    // 광고주 수정 화면의 "+ 새 채널 등록"에서 넘어온 경우 광고주를 미리 선택해 둔다.
+    $row['advertiser_id'] = isset($_GET['advertiser_id']) ? (int) $_GET['advertiser_id'] : 0;
     $g5['title'] = '발행 사이트 등록';
 }
 
