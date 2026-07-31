@@ -115,8 +115,11 @@ include_once(__DIR__ . '/../layout/header.php');
                     </td></tr>
                 <tr><th scope="row"><label for="api_key">API Key</label></th>
                     <td>
-                        <input type="password" name="api_key" id="api_key" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다">
-                        <span class="help_txt"><?php echo $row['masked_hint'] ? '현재 저장된 값: ' . get_text($row['masked_hint']) : '저장된 값 없음'; ?></span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <input type="password" name="api_key" id="api_key" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다" style="flex:1;">
+                            <button type="button" class="btn btn_02" id="btn_toggle_api_key" onclick="toggleApiKeyVisible()">보기</button>
+                        </div>
+                        <span class="help_txt"><?php echo $row['masked_hint'] ? '현재 저장된 값: ' . get_text($row['masked_hint']) : '저장된 값 없음'; ?> · 붙여넣기가 안 되면 "보기"를 눌러 직접 확인하며 입력해 보세요.</span>
                     </td></tr>
                 <tr><th scope="row">사용 상태</th>
                     <td>
@@ -175,12 +178,14 @@ $(function() {
         $result.hide().html('');
 
         $.ajax({
-            url: '<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_test.php',
+            url: <?php echo json_encode(G5_ADMIN_URL . '/blog/ai_provider_test.php'); ?>,
             type: 'POST',
             dataType: 'json',
             data: {
-                token: '<?php echo get_text($admin_token); ?>',
-                id: <?php echo $id; ?>
+                // 저장 폼이 쓰는 관리자 토큰과는 별개인 테스트 전용 토큰 - 테스트를 실행해도
+                // 저장 버튼이 계속 정상 작동한다(저장용 토큰을 건드리지 않음).
+                test_token: <?php echo json_encode(bp_get_test_token()); ?>,
+                id: <?php echo (int) $id; ?>
             },
             success: function(res) {
                 $result.show();
@@ -293,6 +298,14 @@ function setActive(v) {
     document.getElementById('is_active_hidden').value = v;
     document.querySelectorAll('.ai-toggle-btn.on').forEach(function(el) { el.classList.toggle('active', v === 'Y'); });
     document.querySelectorAll('.ai-toggle-btn.off').forEach(function(el) { el.classList.toggle('active', v === 'N'); });
+}
+
+function toggleApiKeyVisible() {
+    var input = document.getElementById('api_key');
+    var btn = document.getElementById('btn_toggle_api_key');
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.innerText = showing ? '보기' : '숨기기';
 }
 
 document.getElementById('model_mode_list').addEventListener('change', toggleModelMode);

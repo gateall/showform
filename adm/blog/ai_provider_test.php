@@ -10,9 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$token = isset($_POST['token']) ? trim($_POST['token']) : '';
-if (!check_admin_token()) { // check_admin_token 내부에서 $_REQUEST['token']을 검사하지만, 경우에 따라 die() 처리됨
-    // ajax인 경우 g5 함수가 alert 후 die 하므로 여기 도달 안함 (보통)
+// 저장 폼이 쓰는 그누보드 공용 관리자 토큰(check_admin_token, 1회성)을 여기서 쓰면 검사
+// 즉시 세션에서 지워져 - 테스트를 한 번만 실행해도 같은 화면의 저장 버튼이 "새로고침 후
+// 재시도"를 요구하게 된다. 연결 테스트는 상태를 바꾸지 않는 조회 액션이라 완전히 분리된
+// 전용 토큰(bp_check_test_token)을 쓴다.
+if (!bp_check_test_token()) {
+    echo json_encode(array('ok' => false, 'error' => '세션이 만료되었습니다. 화면을 새로고침한 후 다시 시도해 주세요.'));
+    exit;
 }
 
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;

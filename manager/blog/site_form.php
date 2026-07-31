@@ -163,8 +163,10 @@ document.getElementById('btn_wp_test').addEventListener('click', function () {
     btn.textContent = '테스트 중…';
     resultEl.textContent = '';
 
-    $.post('<?php echo G5_ADMIN_URL; ?>/blog/site_test_connection.php', {
-        token: document.getElementsByName('token')[0].value,
+    $.post(<?php echo json_encode(G5_ADMIN_URL . '/blog/site_test_connection.php'); ?>, {
+        // 저장 폼의 관리자 토큰(1회성)과는 분리된 테스트 전용 토큰 - 테스트 실행이
+        // 저장 버튼을 무효화하지 않는다.
+        test_token: <?php echo json_encode(bp_get_test_token()); ?>,
         site_id: document.getElementsByName('id')[0].value,
         base_url: document.getElementById('base_url').value,
         wp_username: document.getElementById('wp_username').value,

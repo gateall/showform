@@ -4,7 +4,12 @@ include_once('./_common.php');
 header('Content-Type: application/json; charset=utf-8');
 
 auth_check_menu($auth, $sub_menu, 'w');
-check_admin_token();
+// 저장 폼의 1회성 관리자 토큰과 분리된 테스트 전용 토큰을 쓴다 - ai_provider_test.php와
+// 동일한 이유(연결 테스트가 저장용 토큰을 소모하면 안 됨).
+if (!bp_check_test_token()) {
+    echo json_encode(array('error' => '세션이 만료되었습니다. 화면을 새로고침한 후 다시 시도해 주세요.'));
+    exit;
+}
 
 $site_id = isset($_POST['site_id']) ? (int) $_POST['site_id'] : 0;
 $base_url_input = isset($_POST['base_url']) ? trim($_POST['base_url']) : '';

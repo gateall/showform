@@ -27,6 +27,29 @@ function bp_table(string $name): string
     return G5_TABLE_PREFIX . 'blog_' . $name;
 }
 
+// "연결 테스트"류 AJAX 액션 전용 CSRF 토큰. 그누보드 공용 get_admin_token()/
+// check_admin_token()과 완전히 분리된 세션 키(bp_test_token)를 쓴다 - 저장 폼과
+// 같은 토큰을 공유하면, 연결 테스트를 한 번 실행하는 순간(그누보드 토큰은 1회성이라
+// 검사 즉시 세션에서 지워짐) 저장 폼에 이미 찍혀 있던 토큰이 무효가 되어 "새로고침 후
+// 저장"을 강제하게 된다. 테스트는 상태를 바꾸지 않는 조회성 액션이라, 그누보드처럼
+// 검사 즉시 폐기하지 않고 같은 세션 안에서는 재사용을 허용한다(여러 번 테스트 가능).
+function bp_get_test_token(): string
+{
+    $token = get_session('bp_test_token');
+    if (!$token) {
+        $token = md5(uniqid((string) mt_rand(), true));
+        set_session('bp_test_token', $token);
+    }
+    return $token;
+}
+
+function bp_check_test_token(): bool
+{
+    $token = get_session('bp_test_token');
+    $given = isset($_REQUEST['test_token']) ? (string) $_REQUEST['test_token'] : '';
+    return $token !== '' && $given !== '' && hash_equals($token, $given);
+}
+
 // 비밀값을 화면에 다시 표시하지 않기 위한 마스킹 힌트 생성 (BLOG_AUTOMATION_SECURITY.md)
 // 원문은 절대 반환하지 않는다 — 앞 2자 + **** + 뒤 4자 형태의 힌트만 만든다.
 function bp_mask_secret(string $plain): string
