@@ -16,10 +16,37 @@ $logs_table = bp_table('content_activity_logs');
 if ($action === 'update_status') {
     $project_id = (int)$_POST['project_id'];
     $status = trim($_POST['status']);
-    
+
     sql_query(" update {$projects_table} set status = '" . sql_real_escape_string($status) . "', updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$project_id}' ");
     sql_query(" insert into {$logs_table} set project_id = '{$project_id}', action = 'status_change', actor = '" . sql_real_escape_string($member['mb_id']) . "', detail = '상태 변경: {$status}', created_at = '" . G5_TIME_YMDHIS . "' ");
-    
+
+    echo json_encode(array('success' => true));
+    exit;
+}
+
+if ($action === 'update_ai_pref') {
+    $project_id = (int) $_POST['project_id'];
+    if ($project_id <= 0) {
+        echo json_encode(array('success' => false, 'error' => '프로젝트가 지정되지 않았습니다.'));
+        exit;
+    }
+    $ai_provider_id = isset($_POST['ai_provider_id']) ? (int) $_POST['ai_provider_id'] : 0;
+    $ai_disabled = isset($_POST['ai_disabled']) && $_POST['ai_disabled'] === 'Y' ? 'Y' : 'N';
+
+    // 선택한 공급자가 실재하는지 확인한다 - 존재하지 않는 id를 저장해두면
+    // bp_ai_get_active_provider()가 조용히 전역 활성 공급자로 폴백해버려 원인 파악이 어려워진다.
+    $provider_value = 'NULL';
+    if ($ai_provider_id > 0) {
+        $providers_table = bp_table('ai_providers');
+        $found = sql_fetch(" select id from {$providers_table} where id = '{$ai_provider_id}' ");
+        if (!$found) {
+            echo json_encode(array('success' => false, 'error' => '선택한 AI 공급자를 찾을 수 없습니다.'));
+            exit;
+        }
+        $provider_value = "'{$ai_provider_id}'";
+    }
+
+    sql_query(" update {$projects_table} set ai_provider_id = {$provider_value}, ai_disabled = '{$ai_disabled}', updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$project_id}' ");
     echo json_encode(array('success' => true));
     exit;
 }

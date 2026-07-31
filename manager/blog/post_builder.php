@@ -261,7 +261,27 @@ include_once(__DIR__ . '/../layout/header.php');
                 <h2 class="pb-step-title">1. 글감 입력</h2>
                 <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">업체 소개, 상품 설명, 메모 등을 자유롭게 붙여 넣으세요. 빈칸을 여러 개 채울 필요 없이 AI가 알아서 분석하여 전체 글을 작성합니다.</p>
                 <textarea id="pb_raw_material" class="frm_input" style="width: 100%; height: 350px; resize: none; font-size:1rem; padding:15px;" placeholder="여기에 내용을 복사해 붙여넣으세요..."></textarea>
-                
+
+                <div style="margin-top:12px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                    <label style="font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                        AI 공급자:
+                        <select id="pb_ai_provider_id" class="frm_input" style="width:auto;" onchange="Builder.saveAiProviderPref()">
+                            <option value="">기본값(전역 활성 공급자)</option>
+                            <?php
+                            $ai_providers_res = sql_query("select id, display_name, provider_code, is_active from ".bp_table('ai_providers')." order by display_name");
+                            while ($ap = sql_fetch_array($ai_providers_res)) {
+                                $ap_label = get_text($ap['display_name']) . ($ap['is_active'] === 'Y' ? ' (전역 활성)' : '');
+                                echo "<option value='" . (int)$ap['id'] . "'>" . $ap_label . "</option>";
+                            }
+                            ?>
+                        </select>
+                    </label>
+                    <label style="font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="pb_ai_disabled" onchange="Builder.saveAiProviderPref()"> 이 프로젝트는 AI 사용 안 함 (직접 작성)
+                    </label>
+                    <span style="font-size:0.8rem; color:#94a3b8;">글감마다 다른 공급자를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다.</span>
+                </div>
+
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
                     <button type="button" class="btn_submit btn" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
                 </div>

@@ -220,5 +220,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v18.sql',
             'installed' => bp_install_column_exists($table_prefix, 'advertisers', 'email'),
         ),
+        19 => array(
+            'label' => '프로젝트별 AI 공급자 선택', 'desc' => 'content_projects ai_provider_id/ai_disabled 컬럼 추가',
+            'file' => $sql_dir . '/blog_automation_v19.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'content_projects', 'ai_provider_id'),
+        ),
     );
 }

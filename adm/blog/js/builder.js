@@ -392,7 +392,34 @@ const Builder = {
             this.postId = 0;
         }
         document.getElementById('pb-status-display').innerText = '진행 중';
+
+        const providerSelect = document.getElementById('pb_ai_provider_id');
+        const disabledChk = document.getElementById('pb_ai_disabled');
+        if (providerSelect) providerSelect.value = project.ai_provider_id || '';
+        if (disabledChk) disabledChk.checked = project.ai_disabled === 'Y';
+
         this.loadState();
+    },
+
+    // 1단계의 "AI 공급자 / AI 사용 안 함"은 프로젝트당 하나씩만 있으면 되므로
+    // 별도 저장 버튼 없이 바꾸는 즉시 저장한다(체크박스/셀렉트 onchange에서 호출).
+    saveAiProviderPref: function() {
+        if (!this.projectId) return;
+        const providerSelect = document.getElementById('pb_ai_provider_id');
+        const disabledChk = document.getElementById('pb_ai_disabled');
+
+        const payload = new URLSearchParams();
+        payload.append('action', 'update_ai_pref');
+        payload.append('project_id', this.projectId);
+        payload.append('ai_provider_id', providerSelect ? providerSelect.value : '');
+        payload.append('ai_disabled', (disabledChk && disabledChk.checked) ? 'Y' : 'N');
+
+        this._postForm('ajax.builder.php', payload)
+        .then(res => {
+            if (res.success) this._toast('AI 설정이 저장되었습니다.', 'success');
+            else alert('저장 실패: ' + res.error);
+        })
+        .catch(err => alert('AI 설정 저장 요청에 실패했습니다.\n' + err.message));
     },
 
     /* ==========================================

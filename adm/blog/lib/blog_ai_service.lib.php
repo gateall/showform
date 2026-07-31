@@ -16,6 +16,9 @@ interface BlogAiProvider
     // 자유 형식 단일 프롬프트 채팅(포스팅 제작 화면의 "방향/제목/도입부/본문블록/글감분석" 등
     // 정형화되지 않은 짧은 생성에 공용으로 쓴다). 반환: array('ok'=>bool, 'message'=>string, 'error'=>string)
     public function chatRequest(string $prompt, string $systemPrompt): array;
+    
+    // 대화 내역(메시지 배열)을 통째로 전달하여 컨텍스트를 유지하는 챗봇용 API
+    public function chatWithHistory(array $messages, bool $jsonMode = true): array;
 }
 
 // 템플릿 기반 폴백 공급자 — 키 없이 항상 동작하며 절대 실패하지 않는다(ok는 항상 true).
@@ -78,6 +81,11 @@ class BlogAiTemplateProvider implements BlogAiProvider
     public function chatRequest(string $prompt, string $systemPrompt): array
     {
         return array('ok' => false, 'message' => '', 'error' => 'AI 공급자가 설정되지 않아 이 기능은 템플릿 모드에서 지원되지 않습니다. AI 공급자 설정에서 API 키를 등록해 주세요.');
+    }
+    
+    public function chatWithHistory(array $messages, bool $jsonMode = true): array
+    {
+        return array('ok' => false, 'content' => '', 'error' => 'AI 공급자가 설정되지 않아 이 기능은 템플릿 모드에서 지원되지 않습니다.');
     }
 
     // 키워드·지역 기반 결정적 해시태그 생성 — 외부 호출 없이 항상 동작한다.
@@ -229,11 +237,25 @@ class BlogOpenAiProvider implements BlogAiProvider
         }
         return array('ok' => true, 'message' => $result['content'], 'error' => '');
     }
+    
+    public function chatWithHistory(array $messages, bool $jsonMode = true): array
+    {
+        return $this->callChatCompletionRaw($messages, $jsonMode);
+    }
 
     // 반환: array('ok'=>bool, 'content'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
     // $jsonMode=true면 content는 모델이 반환한 JSON 문자열, false면 일반 텍스트 그대로.
     // 이 함수 밖으로는 $this->apiKeyPlain 값이 절대 전달되지 않는다(오류 메시지에도 포함 금지).
     private function callChatCompletion(string $systemPrompt, string $userPrompt, bool $jsonMode = true): array
+    {
+        $messages = array(
+            array('role' => 'system', 'content' => $systemPrompt),
+            array('role' => 'user', 'content' => $userPrompt),
+        );
+        return $this->callChatCompletionRaw($messages, $jsonMode);
+    }
+    
+    private function callChatCompletionRaw(array $messages, bool $jsonMode = true): array
     {
         if ($this->apiKeyPlain === '') {
             return array('ok' => false, 'content' => '', 'error' => 'AI API 키가 설정되지 않았습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
@@ -244,10 +266,7 @@ class BlogOpenAiProvider implements BlogAiProvider
 
         $payload = array(
             'model' => $this->model,
-            'messages' => array(
-                array('role' => 'system', 'content' => $systemPrompt),
-                array('role' => 'user', 'content' => $userPrompt),
-            ),
+            'messages' => $messages,
             'temperature' => $this->temperature,
             'max_tokens' => $this->maxTokens,
         );
@@ -313,18 +332,46 @@ function bp_estimate_openai_cost(string $model, int $tokensPrompt, int $tokensCo
     return round($cost, 4);
 }
 
-function bp_ai_get_active_provider(): ?array
+// $projectId가 주어지고 그 프로젝트에 ai_provider_id가 지정돼 있으면 그 공급자를 그대로 쓴다
+// (is_active 여부와 무관하게 - 사용자가 명시적으로 골랐으므로). 지정이 없으면 기존과 동일하게
+// 전역 활성 공급자(is_active='Y')로 폴백한다.
+function bp_ai_get_active_provider(int $projectId = 0): ?array
 {
     $table = bp_table('ai_providers');
+
+    if ($projectId > 0) {
+        $projects_table = bp_table('content_projects');
+        $project = sql_fetch(" select ai_provider_id from {$projects_table} where id = '{$projectId}' ");
+        if ($project && !empty($project['ai_provider_id'])) {
+            $picked = sql_fetch(" select * from {$table} where id = '" . (int) $project['ai_provider_id'] . "' ");
+            if ($picked) {
+                return $picked;
+            }
+        }
+    }
+
     $row = sql_fetch(" select * from {$table} where is_active = 'Y' limit 1 ");
     return $row ? $row : null;
 }
 
+// 프로젝트의 ai_disabled='Y'면 AI 호출 자체를 하지 않는다(수동 작성 전용) - 호출부가
+// bp_ai_get_provider() 등을 부르기 전에 먼저 이 함수로 확인해서 명확한 에러를 돌려줘야 한다.
+// (공급자 미설정 시의 "템플릿 폴백"과는 의도적으로 다른 상태 - 여기서는 아예 시도하지 않는다.)
+function bp_ai_is_disabled_for_project(int $projectId): bool
+{
+    if ($projectId <= 0) {
+        return false;
+    }
+    $table = bp_table('content_projects');
+    $row = sql_fetch(" select ai_disabled from {$table} where id = '{$projectId}' ");
+    return $row && $row['ai_disabled'] === 'Y';
+}
+
 // 활성 공급자(ai_providers.is_active='Y')가 있고 키가 정상 복호화되면 실제 OpenAI 공급자를,
 // 그 외의 모든 경우(비활성·키 없음·복호화 실패)에는 안전한 템플릿 폴백을 반환한다.
-function bp_ai_get_provider(): BlogAiProvider
+function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
 {
-    $active = bp_ai_get_active_provider();
+    $active = bp_ai_get_active_provider($projectId);
     if (!$active || empty($active['api_key_enc'])) {
         return new BlogAiTemplateProvider();
     }
@@ -345,9 +392,9 @@ function bp_ai_get_provider(): BlogAiProvider
 
 // bp_ai_get_provider()와 동일한 판단 로직으로, 어떤 공급자/모델이 실제로 쓰였는지만
 // 반환한다(생성 로그 기록용 — project_action.php가 bp_log_generation_attempt()에 넘긴다).
-function bp_ai_get_provider_meta(): array
+function bp_ai_get_provider_meta(int $projectId = 0): array
 {
-    $active = bp_ai_get_active_provider();
+    $active = bp_ai_get_active_provider($projectId);
     if (!$active || empty($active['api_key_enc'])) {
         return array('provider' => 'template', 'model' => '');
     }
@@ -371,8 +418,16 @@ function bp_ai_generate_body(array $params): array
 }
 
 // 반환: array('ok'=>bool, 'message'=>string, 'error'=>string)
-function bp_ai_chat_request(string $prompt, string $systemPrompt = ''): array
+// $projectId를 넘기면 그 프로젝트에 지정된 AI 공급자를 쓴다(없으면 전역 활성 공급자로 폴백).
+function bp_ai_chat_request(string $prompt, string $systemPrompt = '', int $projectId = 0): array
 {
-    $provider = bp_ai_get_provider();
+    $provider = bp_ai_get_provider($projectId);
     return $provider->chatRequest($prompt, $systemPrompt);
+}
+
+// 히스토리가 포함된 챗봇 프롬프트 통신 (jsonMode 기본 활성화)
+function bp_ai_chat_with_history(array $messages, bool $jsonMode = true, int $projectId = 0): array
+{
+    $provider = bp_ai_get_provider($projectId);
+    return $provider->chatWithHistory($messages, $jsonMode);
 }
