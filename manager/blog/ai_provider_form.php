@@ -25,6 +25,11 @@ if ($id > 0) {
 
 $g5['title'] = $id > 0 ? 'AI 공급자 수정' : 'AI 공급자 등록';
 
+// get_admin_token()은 호출할 때마다 세션 값을 새로 덮어쓴다 - 한 페이지 안에서 두 번
+// 부르면 먼저 화면에 찍힌 값(폼)은 세션과 어긋난 채로 남아 저장 시 "올바른 방법으로
+// 이용해 주십시오" 오류가 난다. 반드시 한 번만 호출해서 재사용해야 한다.
+$admin_token = get_admin_token();
+
 // AI 종류 => [표시 라벨, 실제 호출 지원 여부, 모델 목록]. 모델 목록은 자주 바뀌므로
 // 여기 배열만 고치면 화면에 바로 반영된다. 실제 API 호출은 openai만 지원한다
 // (blog_ai_service.lib.php의 BlogOpenAiProvider) - 나머지는 등록·키 저장은 되지만
@@ -57,7 +62,7 @@ include_once(__DIR__ . '/../layout/header.php');
 </div>
 
 <form name="faiproviderform" method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_update.php">
-    <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
+    <input type="hidden" name="token" value="<?php echo get_text($admin_token); ?>">
     <?php if ($id > 0) { ?>
     <input type="hidden" name="id" value="<?php echo (int) $id; ?>">
     <?php } ?>
@@ -145,7 +150,7 @@ include_once(__DIR__ . '/../layout/header.php');
 
     <div class="btn_confirm01 btn_confirm">
         <input type="submit" value="저장" class="btn_submit btn">
-        <a href="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_delete.php?id=<?php echo (int)$id; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" style="<?php echo $id > 0 ? '' : 'display:none;'; ?>" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+        <a href="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_delete.php?id=<?php echo (int)$id; ?>&amp;token=<?php echo get_text($admin_token); ?>" class="btn btn_01" style="<?php echo $id > 0 ? '' : 'display:none;'; ?>" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
         <a href="./settings.php?tab=ai" class="btn btn_02">목록</a>
     </div>
 </form>
@@ -170,11 +175,11 @@ $(function() {
         $result.hide().html('');
 
         $.ajax({
-            url: SF_MANAGER_URL . '/blog/ai_provider_test.php',
+            url: '<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_test.php',
             type: 'POST',
             dataType: 'json',
             data: {
-                token: '<?php echo get_admin_token(); ?>',
+                token: '<?php echo get_text($admin_token); ?>',
                 id: <?php echo $id; ?>
             },
             success: function(res) {

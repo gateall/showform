@@ -163,7 +163,7 @@ document.getElementById('btn_wp_test').addEventListener('click', function () {
     btn.textContent = '테스트 중…';
     resultEl.textContent = '';
 
-    $.post(SF_MANAGER_URL . '/blog/site_test_connection.php', {
+    $.post('<?php echo G5_ADMIN_URL; ?>/blog/site_test_connection.php', {
         token: document.getElementsByName('token')[0].value,
         site_id: document.getElementsByName('id')[0].value,
         base_url: document.getElementById('base_url').value,
