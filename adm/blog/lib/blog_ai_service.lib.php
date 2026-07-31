@@ -369,10 +369,17 @@ function bp_ai_is_disabled_for_project(int $projectId): bool
 
 // 활성 공급자(ai_providers.is_active='Y')가 있고 키가 정상 복호화되면 실제 OpenAI 공급자를,
 // 그 외의 모든 경우(비활성·키 없음·복호화 실패)에는 안전한 템플릿 폴백을 반환한다.
+// 실제 외부 API 호출은 provider_code가 'openai'인 레코드에서만 지원한다. 이 체크가
+// 빠져있던 이전 버전은 gemini/anthropic/deepseek/xai 등으로 등록한 키를 그대로
+// OpenAI 엔드포인트로 보내버리는 버그가 있었다(다른 서비스 키가 OpenAI 인증에서
+// 그냥 실패하거나, 최악의 경우 우연히 형식이 맞아 엉뚱한 곳에 전송될 수 있었다).
 function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
 {
     $active = bp_ai_get_active_provider($projectId);
     if (!$active || empty($active['api_key_enc'])) {
+        return new BlogAiTemplateProvider();
+    }
+    if ($active['provider_code'] !== 'openai') {
         return new BlogAiTemplateProvider();
     }
 
@@ -381,9 +388,11 @@ function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
         return new BlogAiTemplateProvider();
     }
 
+    $endpoint = !empty($active['api_endpoint']) ? $active['api_endpoint'] : 'https://api.openai.com/v1';
+
     return new BlogOpenAiProvider(
         $api_key,
-        'https://api.openai.com/v1',
+        $endpoint,
         isset($active['default_model']) ? $active['default_model'] : '',
         isset($active['max_tokens']) ? (int) $active['max_tokens'] : 2000,
         isset($active['temperature']) ? (float) $active['temperature'] : 0.7
@@ -395,7 +404,7 @@ function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
 function bp_ai_get_provider_meta(int $projectId = 0): array
 {
     $active = bp_ai_get_active_provider($projectId);
-    if (!$active || empty($active['api_key_enc'])) {
+    if (!$active || empty($active['api_key_enc']) || $active['provider_code'] !== 'openai') {
         return array('provider' => 'template', 'model' => '');
     }
     $api_key = bp_decrypt_secret($active['api_key_enc']);

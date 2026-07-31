@@ -394,25 +394,46 @@ const Builder = {
         document.getElementById('pb-status-display').innerText = '진행 중';
 
         const providerSelect = document.getElementById('pb_ai_provider_id');
-        const disabledChk = document.getElementById('pb_ai_disabled');
         if (providerSelect) providerSelect.value = project.ai_provider_id || '';
-        if (disabledChk) disabledChk.checked = project.ai_disabled === 'Y';
+        this._renderAiToggle(project.ai_disabled === 'Y');
 
         this.loadState();
     },
 
+    _renderAiToggle: function(disabled) {
+        const hidden = document.getElementById('pb_ai_disabled');
+        const onBtn = document.getElementById('pb_ai_toggle_on');
+        const offBtn = document.getElementById('pb_ai_toggle_off');
+        if (hidden) hidden.value = disabled ? 'Y' : 'N';
+        if (onBtn) {
+            onBtn.style.borderColor = disabled ? '#cbd5e1' : '#10b981';
+            onBtn.style.background = disabled ? '#fff' : '#ecfdf5';
+            onBtn.style.color = disabled ? '#334155' : '#047857';
+        }
+        if (offBtn) {
+            offBtn.style.borderColor = disabled ? '#dc2626' : '#cbd5e1';
+            offBtn.style.background = disabled ? '#fef2f2' : '#fff';
+            offBtn.style.color = disabled ? '#b91c1c' : '#334155';
+        }
+    },
+
+    setAiDisabled: function(disabled) {
+        this._renderAiToggle(disabled);
+        this.saveAiProviderPref();
+    },
+
     // 1단계의 "AI 공급자 / AI 사용 안 함"은 프로젝트당 하나씩만 있으면 되므로
-    // 별도 저장 버튼 없이 바꾸는 즉시 저장한다(체크박스/셀렉트 onchange에서 호출).
+    // 별도 저장 버튼 없이 바꾸는 즉시 저장한다(토글 버튼/셀렉트에서 호출).
     saveAiProviderPref: function() {
         if (!this.projectId) return;
         const providerSelect = document.getElementById('pb_ai_provider_id');
-        const disabledChk = document.getElementById('pb_ai_disabled');
+        const disabledHidden = document.getElementById('pb_ai_disabled');
 
         const payload = new URLSearchParams();
         payload.append('action', 'update_ai_pref');
         payload.append('project_id', this.projectId);
         payload.append('ai_provider_id', providerSelect ? providerSelect.value : '');
-        payload.append('ai_disabled', (disabledChk && disabledChk.checked) ? 'Y' : 'N');
+        payload.append('ai_disabled', (disabledHidden && disabledHidden.value === 'Y') ? 'Y' : 'N');
 
         this._postForm('ajax.builder.php', payload)
         .then(res => {

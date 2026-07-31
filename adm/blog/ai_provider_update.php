@@ -19,6 +19,7 @@ $is_active = isset($_POST['is_active']) && $_POST['is_active'] === 'Y' ? 'Y' : '
 $default_model = isset($_POST['default_model']) ? trim($_POST['default_model']) : '';
 $max_tokens = isset($_POST['max_tokens']) ? (int) $_POST['max_tokens'] : 2000;
 $temperature = isset($_POST['temperature']) ? (float) $_POST['temperature'] : 0.70;
+$api_endpoint = isset($_POST['api_endpoint']) ? trim($_POST['api_endpoint']) : '';
 $api_key = isset($_POST['api_key']) ? trim($_POST['api_key']) : '';
 
 if ($display_name === '') {
@@ -41,14 +42,15 @@ if ($id > 0) {
     // provider_code는 폼에서 readonly로 고정 전송되지만, 변조 방지를 위해 서버에서도 기존 값으로 강제 고정
     $provider_code = $existing['provider_code'];
 
-    if ($is_active === 'Y') {
-        sql_query(" update {$table} set is_active = 'N' where id != '{$id}' ");
-    }
+    // 프로젝트별로 공급자를 지정해서 쓰는 구조(v19)이므로, 여러 공급자를 동시에
+    // "사용함"으로 켜둘 수 있어야 한다 - 예전처럼 하나를 켜면 나머지를 자동으로
+    // 끄지 않는다.
 
     sql_query(" update {$table}
                     set display_name = '" . sql_real_escape_string($display_name) . "',
                         is_active = '{$is_active}',
                         default_model = '" . sql_real_escape_string($default_model) . "',
+                        api_endpoint = '" . sql_real_escape_string($api_endpoint) . "',
                         max_tokens = '" . (int) $max_tokens . "',
                         temperature = '" . (float) $temperature . "',
                         updated_by = '" . sql_real_escape_string($actor) . "',
@@ -69,15 +71,12 @@ if ($dup) {
     alert('이미 등록된 공급자 코드입니다.');
 }
 
-if ($is_active === 'Y') {
-    sql_query(" update {$table} set is_active = 'N' ");
-}
-
 sql_query(" insert into {$table}
                 set provider_code = '" . sql_real_escape_string($provider_code) . "',
                     display_name = '" . sql_real_escape_string($display_name) . "',
                     is_active = '{$is_active}',
                     default_model = '" . sql_real_escape_string($default_model) . "',
+                    api_endpoint = '" . sql_real_escape_string($api_endpoint) . "',
                     max_tokens = '" . (int) $max_tokens . "',
                     temperature = '" . (float) $temperature . "',
                     updated_by = '" . sql_real_escape_string($actor) . "',

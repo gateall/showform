@@ -262,24 +262,38 @@ include_once(__DIR__ . '/../layout/header.php');
                 <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">업체 소개, 상품 설명, 메모 등을 자유롭게 붙여 넣으세요. 빈칸을 여러 개 채울 필요 없이 AI가 알아서 분석하여 전체 글을 작성합니다.</p>
                 <textarea id="pb_raw_material" class="frm_input" style="width: 100%; height: 350px; resize: none; font-size:1rem; padding:15px;" placeholder="여기에 내용을 복사해 붙여넣으세요..."></textarea>
 
-                <div style="margin-top:12px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
-                    <label style="font-size:0.9rem; display:flex; align-items:center; gap:6px;">
-                        AI 공급자:
-                        <select id="pb_ai_provider_id" class="frm_input" style="width:auto;" onchange="Builder.saveAiProviderPref()">
-                            <option value="">기본값(전역 활성 공급자)</option>
-                            <?php
-                            $ai_providers_res = sql_query("select id, display_name, provider_code, is_active from ".bp_table('ai_providers')." order by display_name");
-                            while ($ap = sql_fetch_array($ai_providers_res)) {
-                                $ap_label = get_text($ap['display_name']) . ($ap['is_active'] === 'Y' ? ' (전역 활성)' : '');
-                                echo "<option value='" . (int)$ap['id'] . "'>" . $ap_label . "</option>";
-                            }
-                            ?>
-                        </select>
-                    </label>
-                    <label style="font-size:0.9rem; display:flex; align-items:center; gap:6px;">
-                        <input type="checkbox" id="pb_ai_disabled" onchange="Builder.saveAiProviderPref()"> 이 프로젝트는 AI 사용 안 함 (직접 작성)
-                    </label>
-                    <span style="font-size:0.8rem; color:#94a3b8;">글감마다 다른 공급자를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다.</span>
+                <div class="pb-ai-panel" style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                    <div style="font-size:0.85rem; font-weight:bold; color:#475569; margin-bottom:10px;">프로젝트 AI 설정</div>
+                    <div class="pb-ai-panel-row" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                        <div>
+                            <span style="font-size:0.85rem; color:#666; display:block; margin-bottom:4px;">AI 사용</span>
+                            <div class="ai-toggle-grid" style="display:flex; gap:6px;">
+                                <div class="ai-toggle-btn on" id="pb_ai_toggle_on" onclick="Builder.setAiDisabled(false)" style="padding:6px 16px; border:2px solid #cbd5e1; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">사용함</div>
+                                <div class="ai-toggle-btn off" id="pb_ai_toggle_off" onclick="Builder.setAiDisabled(true)" style="padding:6px 16px; border:2px solid #cbd5e1; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold;">사용 안 함</div>
+                            </div>
+                            <input type="hidden" id="pb_ai_disabled" value="N">
+                        </div>
+                        <div style="flex:1; min-width:220px;">
+                            <span style="font-size:0.85rem; color:#666; display:block; margin-bottom:4px;">AI 에이전트</span>
+                            <select id="pb_ai_provider_id" class="frm_input" onchange="Builder.saveAiProviderPref()">
+                                <option value="">기본값(전역 활성 공급자)</option>
+                                <?php
+                                $ai_providers_res = sql_query("select id, display_name, provider_code, default_model, is_active, api_key_enc from ".bp_table('ai_providers')." order by display_name");
+                                while ($ap = sql_fetch_array($ai_providers_res)) {
+                                    $ap_status = empty($ap['api_key_enc']) ? 'API Key 없음' : ($ap['is_active'] === 'Y' ? '사용 중' : '사용 안 함');
+                                    $ap_model = $ap['default_model'] !== '' ? $ap['default_model'] : '기본 모델';
+                                    $ap_label = get_text($ap['display_name']) . ' · ' . get_text($ap_model) . ' · ' . $ap_status;
+                                    echo "<option value='" . (int)$ap['id'] . "'>" . $ap_label . "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div>
+                            <span style="font-size:0.85rem; color:transparent; display:block; margin-bottom:4px;">.</span>
+                            <a href="./settings.php?tab=ai" target="_blank" class="btn btn_02" style="font-size:0.85rem;">AI API 설정 관리</a>
+                        </div>
+                    </div>
+                    <p style="font-size:0.8rem; color:#94a3b8; margin:8px 0 0;">프로젝트마다 다른 AI 에이전트를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다. 변경 즉시 저장됩니다.</p>
                 </div>
 
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
