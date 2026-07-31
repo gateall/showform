@@ -35,6 +35,8 @@ $did_install = is_array($install_result);
 $created = $did_install && isset($install_result['created']) ? $install_result['created'] : array();
 $install_error = $did_install && isset($install_result['error']) ? $install_result['error'] : '';
 
+$install_error_data = $did_install && isset($install_result['error_data']) ? $install_result['error_data'] : null;
+
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
@@ -46,9 +48,18 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     </p>
 </div>
 
-<?php if ($install_error !== '') { ?>
+<?php if ($install_error !== '' || $install_error_data) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px; border:1px solid #c00;">
-        <p style="color:#c00;">설치 중 오류가 발생했습니다: <?php echo get_text($install_error); ?></p>
+        <?php if ($install_error_data) { ?>
+            <p style="color:#c00;"><strong>설치 실패 (<?php echo htmlspecialchars($install_error_data['version'], ENT_QUOTES, 'UTF-8'); ?>)</strong></p>
+            <p><?php echo htmlspecialchars($install_error_data['statement_no'], ENT_QUOTES, 'UTF-8'); ?>번째 SQL 문장에서 오류가 발생했습니다.</p>
+            <p><strong>오류 코드:</strong> <?php echo htmlspecialchars($install_error_data['error_code'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <p><strong>오류 내용:</strong> <?php echo htmlspecialchars($install_error_data['message'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <p><strong>SQL 요약:</strong> <?php echo htmlspecialchars($install_error_data['sql_summary'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <p style="margin-top:10px; color:#555;">일부 이전 문장은 적용되었을 수 있습니다. 오류 수정 후 해당 버전을 다시 실행하십시오.</p>
+        <?php } else { ?>
+            <p style="color:#c00;">설치 중 오류가 발생했습니다: <?php echo htmlspecialchars($install_error, ENT_QUOTES, 'UTF-8'); ?></p>
+        <?php } ?>
     </div>
 <?php } elseif ($did_install) { ?>
     <div class="local_desc01 local_desc" style="margin-top:15px;">

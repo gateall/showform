@@ -32,6 +32,7 @@ if ($mode === 'run_version' && !isset($versions[$version])) {
 
 $created = array();
 $install_error = '';
+$install_error_data = null;
 
 try {
     foreach ($versions as $v => $info) {
@@ -40,18 +41,35 @@ try {
         }
         $should_run = ($mode === 'run_all') ? true : ($v === $version);
         if ($should_run) {
-            $created = array_merge($created, bp_install_run_sql_file($info['file'], $table_prefix));
+            try {
+                $created = array_merge($created, bp_install_run_sql_file($info['file'], $table_prefix));
+            } catch (RuntimeException $e) {
+                // bp_install_run_sql_file()은 SQL 실패 시 구조화된 정보를 JSON으로 담아 throw한다.
+                // install_form.php가 이미 error_data를 파싱해서 보여주는 화면을 갖고 있었지만,
+                // 여기서 채워주지 않아 항상 raw JSON 문자열만 노출되고 있었다.
+                $err = json_decode($e->getMessage(), true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($err)) {
+                    $err['version'] = 'V' . $v;
+                    $err['file'] = basename($info['file']);
+                    $install_error_data = $err;
+                } else {
+                    $install_error = $e->getMessage();
+                }
+                break; // 실패한 버전에서 멈춘다 - 이후 버전은 실행하지 않는다.
+            }
         }
     }
 
-    $blog_img_dir = G5_DATA_PATH . '/blog_images';
-    if (!is_dir($blog_img_dir)) {
-        @mkdir($blog_img_dir, G5_DIR_PERMISSION);
-        @chmod($blog_img_dir, G5_DIR_PERMISSION);
+    if (!$install_error && !$install_error_data) {
+        $blog_img_dir = G5_DATA_PATH . '/blog_images';
+        if (!is_dir($blog_img_dir)) {
+            @mkdir($blog_img_dir, G5_DIR_PERMISSION);
+            @chmod($blog_img_dir, G5_DIR_PERMISSION);
+        }
     }
 } catch (Throwable $e) {
     $install_error = $e->getMessage();
 }
 
-set_session('bp_install_result', array('created' => $created, 'error' => $install_error));
+set_session('bp_install_result', array('created' => $created, 'error' => $install_error, 'error_data' => $install_error_data));
 goto_url($admin_form_url);

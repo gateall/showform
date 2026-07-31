@@ -30,8 +30,23 @@ function bp_install_column_exists(string $prefix, string $table, string $column)
     return $result && sql_num_rows($result) > 0;
 }
 
+function bp_install_index_exists(string $prefix, string $table, string $index): bool
+{
+    $table_name = sql_real_escape_string($prefix . 'blog_' . $table);
+    $index_name = sql_real_escape_string($index);
+    $result = sql_query(" SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table_name}' AND INDEX_NAME = '{$index_name}' LIMIT 1 ", false);
+    return $result && sql_num_rows($result) > 0;
+}
+
+function bp_install_summarize_sql(string $sql): string
+{
+    $sql = preg_replace('/\s+/', ' ', trim($sql));
+    return mb_substr($sql, 0, 300);
+}
+
 function bp_install_run_sql_file(string $path, string $prefix): array
 {
+    global $g5;
     $sql_content = file_get_contents($path);
     $sql_content = str_replace('{prefix}', $prefix, $sql_content);
 
@@ -43,11 +58,32 @@ function bp_install_run_sql_file(string $path, string $prefix): array
     $statements = array_filter(array_map('trim', explode(';', $clean_sql)));
 
     $created = array();
+    $statement_no = 0;
+    
     foreach ($statements as $stmt) {
+        $statement_no++;
         if ($stmt === '') {
             continue;
         }
-        sql_query($stmt, false);
+        
+        $result = sql_query($stmt, false);
+        if ($result === false) {
+            $link = isset($g5['connect_db']) ? $g5['connect_db'] : null;
+            $error_code = $link ? mysqli_errno($link) : 0;
+            $error_msg = $link ? mysqli_error($link) : 'Unknown error';
+            $sqlstate = $link ? mysqli_sqlstate($link) : '';
+            
+            $error_data = array(
+                'statement_no' => $statement_no,
+                'error_code' => $error_code,
+                'sqlstate' => $sqlstate,
+                'message' => $error_msg,
+                'sql_summary' => bp_install_summarize_sql($stmt)
+            );
+            
+            throw new RuntimeException(json_encode($error_data));
+        }
+        
         if (preg_match('/CREATE TABLE IF NOT EXISTS `([a-zA-Z0-9_]+)`/i', $stmt, $m)) {
             $created[] = $m[1];
         }
@@ -139,7 +175,12 @@ function bp_install_get_versions(string $table_prefix): array
         10 => array(
             'label' => 'Image Pipeline', 'desc' => 'image_presets 테이블',
             'file' => $sql_dir . '/blog_automation_v10.sql',
-            'installed' => bp_install_table_exists($table_prefix, 'image_presets'),
+            'installed' => bp_install_table_exists($table_prefix, 'image_presets')
+                && bp_install_column_exists($table_prefix, 'images', 'file_hash')
+                && bp_install_index_exists($table_prefix, 'images', 'idx_file_hash')
+                // v10.sql은 supports_image를 ai_providers에 추가한다(content_projects 아님) -
+                // 잘못된 테이블을 확인하고 있어서 V10을 완벽히 설치해도 항상 미설치로 표시됐다.
+                && bp_install_column_exists($table_prefix, 'ai_providers', 'supports_image'),
         ),
         11 => array(
             'label' => 'Scheduler/Retry', 'desc' => 'publish_jobs 확장(락, 에러코드)',
