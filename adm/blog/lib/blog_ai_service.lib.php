@@ -354,6 +354,17 @@ function bp_ai_get_active_provider(int $projectId = 0): ?array
     return $row ? $row : null;
 }
 
+// 프로젝트별 설정과 별개로, 블로그 자동화 전체에서 AI 호출을 껐는지 확인한다
+// (설정 > AI 설정의 "AI 기능 전체 사용 여부"). 행이 아직 없으면(설치 직후 등) 기본값은
+// 켜짐으로 취급한다 - 이 스위치를 아직 한 번도 안 만졌다고 해서 기존에 잘 쓰던 AI 기능이
+// 갑자기 막히면 안 된다.
+function bp_ai_global_enabled(): bool
+{
+    $table = bp_table('ai_global_settings');
+    $row = sql_fetch(" select is_enabled from {$table} where id = 1 ", false);
+    return !$row || $row['is_enabled'] !== 'N';
+}
+
 // 프로젝트의 ai_disabled='Y'면 AI 호출 자체를 하지 않는다(수동 작성 전용) - 호출부가
 // bp_ai_get_provider() 등을 부르기 전에 먼저 이 함수로 확인해서 명확한 에러를 돌려줘야 한다.
 // (공급자 미설정 시의 "템플릿 폴백"과는 의도적으로 다른 상태 - 여기서는 아예 시도하지 않는다.)

@@ -135,6 +135,9 @@ switch($action) {
         if (!function_exists('bp_ai_chat_request')) {
             die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
         }
+        if (!bp_ai_global_enabled()) {
+            die(json_encode(['ok' => false, 'error' => '관리자가 AI 기능을 전체적으로 꺼두었습니다. 설정 > AI 설정에서 켜주세요.']));
+        }
         if (bp_ai_is_disabled_for_project($project_id)) {
             die(json_encode(['ok' => false, 'error' => '이 프로젝트는 AI 사용이 꺼져 있습니다. 1단계에서 AI 사용 안 함을 해제하거나, 카드를 직접 작성해 주세요.']));
         }
@@ -199,6 +202,9 @@ switch($action) {
     case 'regenerate_card':
         if (!function_exists('bp_ai_chat_request')) {
             die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        if (!bp_ai_global_enabled()) {
+            die(json_encode(['ok' => false, 'error' => '관리자가 AI 기능을 전체적으로 꺼두었습니다. 설정 > AI 설정에서 켜주세요.']));
         }
         if (bp_ai_is_disabled_for_project($project_id)) {
             die(json_encode(['ok' => false, 'error' => '이 프로젝트는 AI 사용이 꺼져 있습니다. 1단계에서 AI 사용 안 함을 해제하거나, 직접 수정해 주세요.']));

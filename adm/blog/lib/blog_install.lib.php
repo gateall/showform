@@ -230,5 +230,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v20.sql',
             'installed' => bp_install_column_exists($table_prefix, 'ai_providers', 'api_endpoint'),
         ),
+        21 => array(
+            'label' => 'AI 전체 사용 여부', 'desc' => 'blog_ai_global_settings 테이블 추가(전역 AI 켜기/끄기)',
+            'file' => $sql_dir . '/blog_automation_v21.sql',
+            'installed' => bp_install_table_exists($table_prefix, 'ai_global_settings'),
+        ),
     );
 }
