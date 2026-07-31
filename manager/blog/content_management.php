@@ -143,6 +143,67 @@ if ($tab === 'posts') {
     }
 }
 
+// ---- 키워드 탭: manager/blog/keyword_list.php의 조회 로직(프로젝트/상태/키워드 검색)을
+// 기반으로 하되, 지시대로 검색 대상을 키워드명/광고주명/프로젝트명 3종 텍스트 검색으로 바꿨다.
+// content_keywords 테이블에 "유형"/"우선순위" 컬럼은 존재하지 않는다(SHOW COLUMNS로 확인) -
+// keyword_group은 코드 전체에서 'primary' 값만 쓰여 사실상 구분 의미가 없어 정보성으로만 표시하고,
+// "우선순위"는 대응 컬럼이 아예 없어 실제 존재하는 is_locked(잠금 상태)로 대체했다.
+if ($tab === 'keywords') {
+    $kw_table = bp_table('content_keywords');
+    $kw_projects_table = bp_table('content_projects');
+    $kw_adv_table = bp_table('advertisers');
+
+    $kw_stx_keyword = isset($_GET['stx_keyword']) ? trim($_GET['stx_keyword']) : '';
+    $kw_stx_advertiser = isset($_GET['stx_advertiser']) ? trim($_GET['stx_advertiser']) : '';
+    $kw_stx_project = isset($_GET['stx_project']) ? trim($_GET['stx_project']) : '';
+    $kw_status = isset($_GET['status']) ? trim($_GET['status']) : '';
+    $kw_locked = isset($_GET['locked']) ? trim($_GET['locked']) : '';
+    $kw_rows_per_page = 20;
+    $kw_page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    if ($kw_page < 1) $kw_page = 1;
+
+    $kw_where = array('1=1');
+    if ($kw_stx_keyword !== '') {
+        $kw_where[] = "k.keyword like '%" . sql_real_escape_string($kw_stx_keyword) . "%'";
+    }
+    if ($kw_stx_advertiser !== '') {
+        $kw_where[] = "a.name like '%" . sql_real_escape_string($kw_stx_advertiser) . "%'";
+    }
+    if ($kw_stx_project !== '') {
+        $kw_where[] = "p.topic like '%" . sql_real_escape_string($kw_stx_project) . "%'";
+    }
+    if ($kw_status === 'Y' || $kw_status === 'N') {
+        $kw_where[] = "k.status = '{$kw_status}'";
+    }
+    if ($kw_locked === 'Y' || $kw_locked === 'N') {
+        $kw_where[] = "k.is_locked = '{$kw_locked}'";
+    }
+    $kw_where_sql = ' where ' . implode(' and ', $kw_where);
+
+    $kw_count_sql = "select count(*) as cnt from {$kw_table} k
+        left join {$kw_projects_table} p on p.id = k.project_id
+        left join {$kw_adv_table} a on a.id = p.advertiser_id
+        {$kw_where_sql}";
+    $kw_total_row = sql_fetch($kw_count_sql);
+    $kw_total_count = isset($kw_total_row['cnt']) ? (int) $kw_total_row['cnt'] : 0;
+    $kw_total_pages = $kw_rows_per_page > 0 ? (int) ceil($kw_total_count / $kw_rows_per_page) : 1;
+    if ($kw_total_pages < 1) $kw_total_pages = 1;
+    if ($kw_page > $kw_total_pages) $kw_page = $kw_total_pages;
+    $kw_from = ($kw_page - 1) * $kw_rows_per_page;
+
+    $kw_result = sql_query("select k.*, p.topic as project_topic, a.name as advertiser_name
+        from {$kw_table} k
+        left join {$kw_projects_table} p on p.id = k.project_id
+        left join {$kw_adv_table} a on a.id = p.advertiser_id
+        {$kw_where_sql}
+        order by k.id desc
+        limit {$kw_from}, {$kw_rows_per_page}");
+    $kw_list = array();
+    while ($kw_row = sql_fetch_array($kw_result)) {
+        $kw_list[] = $kw_row;
+    }
+}
+
 include_once(__DIR__ . '/../layout/header.php');
 ?>
 <div class="mgr-card" style="padding:1.25rem;margin-bottom:1.5rem;">
@@ -286,6 +347,75 @@ include_once(__DIR__ . '/../layout/header.php');
 
     $proj_qs = array('tab' => 'posts', 'stx_title' => $proj_stx_title, 'stx_advertiser' => $proj_stx_advertiser, 'status' => $proj_status, 'job_status' => $proj_job_status);
     echo mgr_pagination($proj_page, $proj_total_pages, '?' . http_build_query($proj_qs) . '&page=');
+    ?>
+    <?php elseif ($tab === 'keywords'): ?>
+    <form method="get" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+        <input type="hidden" name="tab" value="keywords">
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">키워드</label>
+            <input type="text" name="stx_keyword" value="<?php echo htmlspecialchars($kw_stx_keyword, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">광고주</label>
+            <input type="text" name="stx_advertiser" value="<?php echo htmlspecialchars($kw_stx_advertiser, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">프로젝트명</label>
+            <input type="text" name="stx_project" value="<?php echo htmlspecialchars($kw_stx_project, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">사용 상태</label>
+            <select name="status" class="mgr-input">
+                <option value="">전체</option>
+                <option value="Y" <?php echo $kw_status === 'Y' ? 'selected' : ''; ?>>활성</option>
+                <option value="N" <?php echo $kw_status === 'N' ? 'selected' : ''; ?>>비활성</option>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">잠금 상태</label>
+            <select name="locked" class="mgr-input">
+                <option value="">전체</option>
+                <option value="Y" <?php echo $kw_locked === 'Y' ? 'selected' : ''; ?>>잠김</option>
+                <option value="N" <?php echo $kw_locked === 'N' ? 'selected' : ''; ?>>일반</option>
+            </select>
+        </div>
+        <button type="submit" class="mgr-btn mgr-btn-primary">검색</button>
+        <a href="?tab=keywords" class="mgr-btn">초기화</a>
+        <a href="<?php echo G5_ADMIN_URL; ?>/blog/keyword_form.php" class="mgr-btn mgr-btn-primary" style="margin-left:auto;">+ 키워드 신규 등록</a>
+    </form>
+
+    <?php
+    $kw_table_rows = array();
+    foreach ($kw_list as $row) {
+        $kw_table_rows[] = array(
+            'keyword' => '<strong>' . htmlspecialchars($row['keyword']) . '</strong>',
+            'advertiser' => htmlspecialchars($row['advertiser_name'] ? $row['advertiser_name'] : '-'),
+            'project' => htmlspecialchars($row['project_topic'] ? $row['project_topic'] : '-'),
+            'group' => htmlspecialchars($row['keyword_group']),
+            'locked' => $row['is_locked'] === 'Y' ? '잠김' : '일반',
+            'status' => mgr_status_badge($row['status'] === 'Y' ? '활성' : '비활성', $row['status'] === 'Y' ? 'success' : 'muted'),
+            'created_at' => htmlspecialchars($row['created_at']),
+            'manage' => '<a href="' . G5_ADMIN_URL . '/blog/keyword_form.php?w=u&id=' . (int) $row['id'] . '" class="mgr-btn">수정</a> '
+                . '<a href="' . G5_ADMIN_URL . '/blog/keyword_update.php?mode=delete&id=' . (int) $row['id'] . '&token=' . get_admin_token() . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'이 키워드를 삭제하시겠습니까?\');">삭제</a>',
+        );
+    }
+    echo mgr_data_table(
+        array(
+            array('key' => 'keyword', 'label' => '키워드'),
+            array('key' => 'advertiser', 'label' => '광고주'),
+            array('key' => 'project', 'label' => '연결 프로젝트'),
+            array('key' => 'group', 'label' => '유형'),
+            array('key' => 'locked', 'label' => '잠금'),
+            array('key' => 'status', 'label' => '상태'),
+            array('key' => 'created_at', 'label' => '등록일'),
+            array('key' => 'manage', 'label' => '관리'),
+        ),
+        $kw_table_rows,
+        array('empty_title' => '등록된 키워드가 없습니다')
+    );
+
+    $kw_qs = array('tab' => 'keywords', 'stx_keyword' => $kw_stx_keyword, 'stx_advertiser' => $kw_stx_advertiser, 'stx_project' => $kw_stx_project, 'status' => $kw_status, 'locked' => $kw_locked);
+    echo mgr_pagination($kw_page, $kw_total_pages, '?' . http_build_query($kw_qs) . '&page=');
     ?>
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->
