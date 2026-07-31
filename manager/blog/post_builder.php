@@ -70,7 +70,7 @@ include_once(__DIR__ . '/../layout/header.php');
                     필수 항목은 <strong style="color:#dc2626;">광고주(상호)</strong>와 <strong style="color:#dc2626;">핵심 주제</strong> 두 가지뿐입니다. 나머지는 선택 사항이며 비워두면 AI가 알아서 채웁니다.
                 </p>
 
-                <div class="pb-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="pb-form-grid">
                     <div class="pb-form-group">
                         <label>광고주 <span style="color:#dc2626;">*</span></label>
                         <input type="text" id="inline_advertiser_search" class="frm_input" list="advertiser_datalist"
@@ -101,31 +101,49 @@ include_once(__DIR__ . '/../layout/header.php');
 
                         <!-- 새 광고주 등록 서브폼 -->
                         <div id="pb_new_advertiser_form" class="pb-subform">
-                            <div class="pb-form-group"><label>상호명 / 업체명 <span style="color:#dc2626;">*</span></label>
-                                <input type="text" id="new_adv_name" class="frm_input"></div>
-                            <div class="pb-form-group"><label>대표자명</label>
-                                <input type="text" id="new_adv_ceo_name" class="frm_input"></div>
-                            <div class="pb-form-group"><label>업종 (복수 선택 가능)</label>
+                            <div class="pb-subform-section-title">기본 정보</div>
+                            <div class="pb-subform-grid">
+                                <div class="pb-form-group"><label>상호명 / 업체명 <span style="color:#dc2626;">*</span></label>
+                                    <input type="text" id="new_adv_name" class="frm_input"></div>
+                                <div class="pb-form-group"><label>대표자명</label>
+                                    <input type="text" id="new_adv_ceo_name" class="frm_input"></div>
+                            </div>
+                            <div class="pb-form-group"><label>업종 <span style="font-weight:normal; color:#94a3b8; font-size:0.8rem;">(복수 선택 가능)</span></label>
                                 <div class="pb-check-scroll">
                                     <?php foreach (array('홈페이지 제작','광고·마케팅','통신·인터넷','음식점','숙박·펜션','이사·물류','교육·학원','병원·의료','법률·세무','부동산','인테리어','자동차','쇼핑몰','제조업','기업 서비스','기타') as $opt): ?>
                                         <label><input type="checkbox" class="pb-chk-new-adv-industry" value="<?php echo $opt; ?>"> <?php echo $opt; ?></label>
                                     <?php endforeach; ?>
                                 </div>
                                 <input type="text" id="new_adv_industry_detail" class="frm_input" placeholder="세부 업종 / 기타 직접입력" style="margin-top:8px;"></div>
-                            <div class="pb-form-group"><label>홈페이지 주소</label>
-                                <input type="text" id="new_adv_domain" class="frm_input"></div>
-                            <div class="pb-form-group"><label>전화번호</label>
-                                <input type="text" id="new_adv_phone" class="frm_input"></div>
-                            <div class="pb-form-group"><label>주소</label>
-                                <input type="text" id="new_adv_address" class="frm_input"></div>
-                            <div class="pb-form-group"><label>영업지역</label>
-                                <input type="text" id="new_adv_service_region" class="frm_input" placeholder="예: 울산,부산"></div>
-                            <div class="pb-form-group"><label>업체 소개</label>
-                                <textarea id="new_adv_intro_text" class="frm_input" rows="2"></textarea></div>
+
+                            <div class="pb-subform-section-title">연락처</div>
+                            <div class="pb-subform-grid">
+                                <div class="pb-form-group"><label>전화번호</label>
+                                    <input type="text" id="new_adv_phone" class="frm_input" placeholder="대표 전화"></div>
+                                <div class="pb-form-group"><label>보조 전화</label>
+                                    <input type="text" id="new_adv_sub_phone" class="frm_input" placeholder="휴대폰 등"></div>
+                                <div class="pb-form-group"><label>이메일</label>
+                                    <input type="email" id="new_adv_email" class="frm_input"></div>
+                                <div class="pb-form-group"><label>홈페이지 주소</label>
+                                    <input type="text" id="new_adv_domain" class="frm_input"></div>
+                            </div>
+
+                            <div class="pb-subform-section-title">위치·서비스</div>
+                            <div class="pb-subform-grid">
+                                <div class="pb-form-group"><label>주소</label>
+                                    <input type="text" id="new_adv_address" class="frm_input"></div>
+                                <div class="pb-form-group"><label>영업지역</label>
+                                    <input type="text" id="new_adv_service_region" class="frm_input" placeholder="예: 울산,부산"></div>
+                            </div>
                             <div class="pb-form-group"><label>주요 상품·서비스</label>
                                 <input type="text" id="new_adv_core_service" class="frm_input"></div>
+                            <div class="pb-form-group"><label>업체 소개</label>
+                                <textarea id="new_adv_intro_text" class="frm_input" rows="2"></textarea></div>
+
+                            <div class="pb-subform-section-title">기타</div>
                             <div class="pb-form-group"><label>기타 참고사항</label>
                                 <textarea id="new_adv_memo" class="frm_input" rows="2"></textarea></div>
+
                             <div style="text-align:right;">
                                 <button type="button" class="btn btn_01" onclick="Builder.toggleNewAdvertiserForm()">취소</button>
                                 <button type="button" class="btn_submit btn" onclick="Builder.saveInlineAdvertiser()">광고주 등록</button>
@@ -155,7 +173,7 @@ include_once(__DIR__ . '/../layout/header.php');
                     </div>
                 </div>
 
-                <div class="pb-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="pb-form-grid">
                     <div class="pb-form-group">
                         <label>글 목적 <span style="font-weight:normal; color:#94a3b8; font-size:0.8rem;">(복수 선택 가능)</span></label>
                         <div class="pb-check-scroll" id="pb_purpose_checklist">
@@ -185,7 +203,7 @@ include_once(__DIR__ . '/../layout/header.php');
                     </div>
                 </div>
 
-                <div class="pb-form-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:15px;">
+                <div class="pb-form-grid pb-form-grid-4">
                     <div class="pb-form-group">
                         <label>독자 유형</label>
                         <div class="pb-check-scroll">

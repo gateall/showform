@@ -164,6 +164,8 @@ if ($action === 'save_advertiser') {
     $industry = isset($_POST['industry']) ? trim($_POST['industry']) : $field_default('industry');
     $industry_detail = isset($_POST['industry_detail']) ? trim($_POST['industry_detail']) : $field_default('industry_detail');
     $phone = isset($_POST['phone']) ? trim($_POST['phone']) : $field_default('phone');
+    $sub_phone = isset($_POST['sub_phone']) ? trim($_POST['sub_phone']) : $field_default('sub_phone');
+    $email = isset($_POST['email']) ? trim($_POST['email']) : $field_default('email');
     $domain = isset($_POST['domain']) ? trim($_POST['domain']) : $field_default('domain');
     $address = isset($_POST['address']) ? trim($_POST['address']) : $field_default('address');
     $service_region = isset($_POST['service_region']) ? trim($_POST['service_region']) : $field_default('service_region');
@@ -175,12 +177,18 @@ if ($action === 'save_advertiser') {
         echo json_encode(array('success' => false, 'error' => '상호(업체명)를 입력해 주세요.'));
         exit;
     }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(array('success' => false, 'error' => '이메일 형식이 올바르지 않습니다.'));
+        exit;
+    }
 
     $set_sql = " name = '" . sql_real_escape_string($name) . "',
                  ceo_name = '" . sql_real_escape_string($ceo_name) . "',
                  industry = '" . sql_real_escape_string($industry) . "',
                  industry_detail = '" . sql_real_escape_string($industry_detail) . "',
                  phone = '" . sql_real_escape_string($phone) . "',
+                 sub_phone = '" . sql_real_escape_string($sub_phone) . "',
+                 email = '" . sql_real_escape_string($email) . "',
                  domain = '" . sql_real_escape_string($domain) . "',
                  address = '" . sql_real_escape_string($address) . "',
                  service_region = '" . sql_real_escape_string($service_region) . "',

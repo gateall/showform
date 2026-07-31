@@ -143,6 +143,23 @@ const Builder = {
         });
     },
 
+    // 서버가 JSON이 아닌 응답(PHP 에러 페이지, 빈 응답 등)을 돌려줄 때 그냥 "요청 실패"로
+    // 뭉개지 않고 실제 원인을 최대한 보여준다 - 화면 없이는 브라우저 콘솔/네트워크 탭을
+    // 볼 수 없는 상황에서 원인을 추정하려면 이 정보가 꼭 필요하다.
+    _postForm: function(url, payload) {
+        return fetch(url, { method: 'POST', body: payload })
+            .then(res => res.text().then(text => {
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    const preview = text.replace(/\s+/g, ' ').trim().slice(0, 300);
+                    throw new Error('서버가 올바른 응답을 반환하지 않았습니다(HTTP ' + res.status + '). ' + (preview || '(빈 응답)'));
+                }
+                return json;
+            }));
+    },
+
     toggleOther: function(wrapId, checkboxEl) {
         const wrap = document.getElementById(wrapId);
         if (wrap) wrap.classList.toggle('active', checkboxEl.checked);
@@ -253,9 +270,10 @@ const Builder = {
         payload.append('intro_text', document.getElementById('new_adv_intro_text').value);
         payload.append('core_service', document.getElementById('new_adv_core_service').value);
         payload.append('memo', document.getElementById('new_adv_memo').value);
+        payload.append('sub_phone', document.getElementById('new_adv_sub_phone').value);
+        payload.append('email', document.getElementById('new_adv_email').value);
 
-        fetch('ajax.builder.php', { method: 'POST', body: payload })
-        .then(res => res.json())
+        this._postForm('ajax.builder.php', payload)
         .then(res => {
             if (!res.success) { alert('광고주 등록 실패: ' + res.error); return; }
             this._toast('광고주가 등록되었습니다. 현재 프로젝트에 자동 연결됩니다.', 'success');
@@ -278,7 +296,7 @@ const Builder = {
             this.autoGenProjectName();
             this.loadAdvertiserDefaults(res.advertiser_id);
         })
-        .catch(() => alert('광고주 등록 요청에 실패했습니다.'));
+        .catch(err => alert('광고주 등록 요청에 실패했습니다.\n' + err.message));
     },
 
     saveAdvertiserIndustry: function() {
@@ -292,13 +310,12 @@ const Builder = {
         payload.append('industry', industry);
         payload.append('industry_detail', document.getElementById('pb_adv_industry_detail').value);
 
-        fetch('ajax.builder.php', { method: 'POST', body: payload })
-        .then(res => res.json())
+        this._postForm('ajax.builder.php', payload)
         .then(res => {
             if (res.success) this._toast('업종 정보가 저장되었습니다.', 'success');
             else alert('저장 실패: ' + res.error);
         })
-        .catch(() => alert('업종 저장 요청에 실패했습니다.'));
+        .catch(err => alert('업종 저장 요청에 실패했습니다.\n' + err.message));
     },
 
     saveInlineProject: function() {
@@ -341,8 +358,7 @@ const Builder = {
         payload.append('target_audience_detail', document.getElementById('inline_target_audience_detail').value.trim());
         payload.append('project_notes', document.getElementById('inline_project_notes').value.trim());
 
-        fetch('ajax.builder.php', { method: 'POST', body: payload })
-        .then(res => res.json())
+        this._postForm('ajax.builder.php', payload)
         .then(res => {
             if (res.success) {
                 this.projectId = res.project_id;
@@ -360,7 +376,8 @@ const Builder = {
             } else {
                 alert('등록 실패: ' + res.error);
             }
-        });
+        })
+        .catch(err => alert('프로젝트 등록 요청에 실패했습니다.\n' + err.message));
     },
 
     applyProjectData: function(project, advertiser, latestPost) {

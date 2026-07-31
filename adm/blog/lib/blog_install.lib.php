@@ -215,5 +215,10 @@ function bp_install_get_versions(string $table_prefix): array
             'installed' => bp_install_column_exists($table_prefix, 'advertisers', 'industry')
                 && bp_install_column_exists($table_prefix, 'content_projects', 'purpose_tags'),
         ),
+        18 => array(
+            'label' => '광고주 이메일', 'desc' => 'advertisers 이메일 컬럼 추가',
+            'file' => $sql_dir . '/blog_automation_v18.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'advertisers', 'email'),
+        ),
     );
 }

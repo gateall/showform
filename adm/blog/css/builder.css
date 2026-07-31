@@ -407,3 +407,53 @@
     color: #4f46e5;
     font-weight: normal;
 }
+
+/* 새 프로젝트 등록 화면 그리드 - 인라인 스타일 대신 클래스로 통일 */
+.pb-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+    margin-bottom: 18px;
+}
+.pb-form-grid-4 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+#step-0 .pb-form-group {
+    margin-bottom: 14px;
+}
+#step-0 .pb-form-group label {
+    margin-bottom: 6px;
+}
+
+/* 새 광고주 등록 서브폼 - 섹션 구분 + 내부 2단 그리드 */
+.pb-subform-section-title {
+    font-size: 0.78rem;
+    font-weight: bold;
+    color: #64748b;
+    letter-spacing: 0.02em;
+    margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.pb-subform-section-title:first-child {
+    margin-top: 0;
+}
+.pb-subform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 15px;
+}
+
+@media (max-width: 1200px) {
+    .pb-form-grid-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 860px) {
+    .pb-form-grid,
+    .pb-form-grid-4,
+    .pb-subform-grid {
+        grid-template-columns: 1fr;
+    }
+}
