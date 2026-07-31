@@ -64,15 +64,58 @@ const Builder = {
         .then(res => res.json())
         .then(res => {
             if (res.success) {
+                // 프로젝트 연결은 "이전 내용을 불러올지"와 무관하게 항상 확정한다.
+                // (예전엔 confirm에서 취소를 누르면 projectId가 끝내 설정되지 않아
+                //  방금 등록/선택한 프로젝트인데도 "새 프로젝트 등록을 완료해 주세요" 경고가 반복됐다.)
+                this.projectId = res.project.id;
+                this._persistCurrentProject();
+
+                // 상단 광고주/프로젝트 선택창도 함께 맞춰준다 - 새로고침 후 자동 복원되는
+                // 경우 이 함수가 유일한 진입점이라, 여기서 안 맞춰주면 내부 상태는 정상인데
+                // 화면 선택창만 비어있는 상태가 된다.
+                const advSelect = document.getElementById('top_advertiser_id');
+                if (advSelect && res.project.advertiser_id && advSelect.value != res.project.advertiser_id) {
+                    advSelect.value = res.project.advertiser_id;
+                    this.onTopAdvertiserChange(res.project.advertiser_id, res.project.id);
+                } else {
+                    const projSelect = document.getElementById('top_project_id');
+                    if (projSelect) projSelect.value = res.project.id;
+                }
+
                 if (res.latest_post) {
-                    if(!confirm("이전에 작성 중이던 내용이 있습니다. 불러오시겠습니까?")) {
+                    if (!confirm("이전에 작성 중이던 내용이 있습니다. 불러오시겠습니까?")) {
+                        this.applyProjectData(res.project, res.advertiser, null);
                         return;
                     }
                 }
-                this.projectId = res.project.id;
                 this.applyProjectData(res.project, res.advertiser, res.latest_post);
             }
         });
+    },
+
+    // 새로고침/재접속 후에도 마지막 작업 프로젝트를 자동으로 이어서 열 수 있도록 저장한다.
+    _persistCurrentProject: function() {
+        if (this.projectId) {
+            localStorage.setItem('pb_load_project_id', this.projectId);
+        } else {
+            localStorage.removeItem('pb_load_project_id');
+        }
+    },
+
+    // 카드 작업(전체 생성 등) 진입 전 프로젝트 연결 여부를 실제 상태 기준으로 확인한다.
+    // top_project_id 선택창 값 하나만 보지 않고, 화면에 반영이 안 됐더라도 선택창에
+    // 값이 남아있으면 그 값으로 스스로 복구한다.
+    _requireProject: function() {
+        const selectVal = document.getElementById('top_project_id') ? document.getElementById('top_project_id').value : '';
+        if (!this.projectId && selectVal) {
+            this.projectId = selectVal;
+        }
+        if (!this.projectId) {
+            alert('먼저 새 프로젝트를 등록하거나 기존 프로젝트를 선택해 주세요.');
+            this.toggleNewProjectForm();
+            return false;
+        }
+        return true;
     },
 
     toggleNewProjectForm: function() {
@@ -302,8 +345,9 @@ const Builder = {
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                this._toast('프로젝트가 등록되었습니다. 작성 화면에 적용됩니다.', 'success');
                 this.projectId = res.project_id;
+                this._persistCurrentProject();
+                this._toast('새 프로젝트가 등록되었습니다. 이제 글감을 입력해 주세요.', 'success');
                 this.toggleStep(1);
 
                 document.getElementById('top_advertiser_id').value = res.project.advertiser_id;
@@ -445,10 +489,7 @@ const Builder = {
      * 4. AI Generation (Generate All Cards)
      * ========================================== */
     generateAllCards: function() {
-        if (!this.projectId) {
-            alert('기획(1단계) 탭에서 [새 프로젝트 등록]을 완료해 주세요.');
-            return;
-        }
+        if (!this._requireProject()) return;
         const rawMat = document.getElementById('pb_raw_material').value.trim();
         if(!rawMat) {
             alert('글감을 먼저 입력해주세요.');
