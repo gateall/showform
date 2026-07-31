@@ -204,6 +204,71 @@ if ($tab === 'keywords') {
     }
 }
 
+// ---- 발행 관리 탭: manager/blog/publish_job_list.php의 조회 로직(상태/사이트/기간/제목검색)을
+// 기반으로 재사용한다 - 그 파일도 이제 이 화면(?tab=publishing)으로 리다이렉트만 하는 상태였다.
+// 광고주 join과 완료시각(completed_at)은 원본 쿼리에 없어서 추가했다(둘 다 실제 컬럼).
+// 상태값은 원본의 select box(scheduled/pending/processing/succeeded/failed/cancelled)를 그대로
+// 안 쓰고 adm/blog/publish_job_update.php·blog_scheduler.lib.php의 실제 상태 전이를 확인해
+// 'succeeded'를 실제 값인 'published'로 정정했다.
+if ($tab === 'publishing') {
+    $pj_jobs_table = bp_table('publish_jobs');
+    $pj_targets_table = bp_table('post_targets');
+    $pj_posts_table = bp_table('posts');
+    $pj_sites_table = bp_table('sites');
+    $pj_projects_table = bp_table('content_projects');
+    $pj_adv_table = bp_table('advertisers');
+
+    $pj_status_label = array(
+        'scheduled' => '예약됨', 'pending' => '대기중', 'processing' => '처리중',
+        'published' => '완료', 'failed' => '실패', 'cancelled' => '취소',
+    );
+
+    $pj_stx = isset($_GET['stx']) ? trim($_GET['stx']) : '';
+    $pj_status = isset($_GET['sfl_status']) ? trim($_GET['sfl_status']) : '';
+    $pj_sdate = isset($_GET['sdate']) ? trim($_GET['sdate']) : '';
+    $pj_edate = isset($_GET['edate']) ? trim($_GET['edate']) : '';
+    $pj_rows_per_page = 20;
+    $pj_page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    if ($pj_page < 1) $pj_page = 1;
+
+    $pj_where = array('1=1');
+    if ($pj_stx !== '') {
+        $pj_where[] = "p.title like '%" . sql_real_escape_string($pj_stx) . "%'";
+    }
+    if (isset($pj_status_label[$pj_status])) {
+        $pj_where[] = "j.status = '" . sql_real_escape_string($pj_status) . "'";
+    }
+    if ($pj_sdate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $pj_sdate) && $pj_edate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $pj_edate)) {
+        $pj_where[] = "j.scheduled_at between '" . sql_real_escape_string($pj_sdate) . " 00:00:00' and '" . sql_real_escape_string($pj_edate) . " 23:59:59'";
+    }
+    $pj_where_sql = ' where ' . implode(' and ', $pj_where);
+
+    $pj_common_sql = " from {$pj_jobs_table} j
+        join {$pj_targets_table} t on j.post_target_id = t.id
+        join {$pj_posts_table} p on t.post_id = p.id
+        join {$pj_sites_table} s on t.site_id = s.id
+        join {$pj_projects_table} prj on p.project_id = prj.id
+        left join {$pj_adv_table} adv on adv.id = prj.advertiser_id
+        {$pj_where_sql} ";
+
+    $pj_total_row = sql_fetch("select count(*) as cnt {$pj_common_sql}");
+    $pj_total_count = isset($pj_total_row['cnt']) ? (int) $pj_total_row['cnt'] : 0;
+    $pj_total_pages = $pj_rows_per_page > 0 ? (int) ceil($pj_total_count / $pj_rows_per_page) : 1;
+    if ($pj_total_pages < 1) $pj_total_pages = 1;
+    if ($pj_page > $pj_total_pages) $pj_page = $pj_total_pages;
+    $pj_from = ($pj_page - 1) * $pj_rows_per_page;
+
+    $pj_result = sql_query(" select j.*, p.title as post_title, s.name as site_name, prj.topic as project_topic,
+            adv.name as advertiser_name
+        {$pj_common_sql}
+        order by j.id desc
+        limit {$pj_from}, {$pj_rows_per_page} ");
+    $pj_list = array();
+    while ($pj_row = sql_fetch_array($pj_result)) {
+        $pj_list[] = $pj_row;
+    }
+}
+
 include_once(__DIR__ . '/../layout/header.php');
 ?>
 <div class="mgr-card" style="padding:1.25rem;margin-bottom:1.5rem;">
@@ -417,6 +482,105 @@ include_once(__DIR__ . '/../layout/header.php');
     $kw_qs = array('tab' => 'keywords', 'stx_keyword' => $kw_stx_keyword, 'stx_advertiser' => $kw_stx_advertiser, 'stx_project' => $kw_stx_project, 'status' => $kw_status, 'locked' => $kw_locked);
     echo mgr_pagination($kw_page, $kw_total_pages, '?' . http_build_query($kw_qs) . '&page=');
     ?>
+    <?php elseif ($tab === 'publishing'): ?>
+    <form method="get" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+        <input type="hidden" name="tab" value="publishing">
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">포스트 제목 검색</label>
+            <input type="text" name="stx" value="<?php echo htmlspecialchars($pj_stx, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">상태</label>
+            <select name="sfl_status" class="mgr-input">
+                <option value="">전체</option>
+                <?php foreach ($pj_status_label as $code => $label): ?>
+                <option value="<?php echo $code; ?>" <?php echo $pj_status === $code ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">예약일 시작</label>
+            <input type="date" name="sdate" value="<?php echo htmlspecialchars($pj_sdate, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">예약일 종료</label>
+            <input type="date" name="edate" value="<?php echo htmlspecialchars($pj_edate, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <button type="submit" class="mgr-btn mgr-btn-primary">검색</button>
+        <a href="?tab=publishing" class="mgr-btn">초기화</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/publish_job_form.php" class="mgr-btn mgr-btn-primary" style="margin-left:auto;">+ 예약 등록</a>
+    </form>
+
+    <?php
+    $pj_table_rows = array();
+    foreach ($pj_list as $row) {
+        $st = $row['status'];
+        $st_label = isset($pj_status_label[$st]) ? $pj_status_label[$st] : htmlspecialchars($st);
+        $st_tone = $st === 'published' ? 'success' : ($st === 'failed' ? 'danger' : (in_array($st, array('scheduled', 'pending'), true) ? 'primary' : 'muted'));
+        $can_edit = in_array($st, array('scheduled', 'pending'), true);
+        $can_retry = ($st === 'failed');
+
+        $manage = '<a href="' . G5_ADMIN_URL . '/blog/publish_job_view.php?id=' . (int) $row['id'] . '" class="mgr-btn">상세</a> ';
+        if ($can_edit) {
+            $manage .= '<a href="' . SF_MANAGER_URL . '/blog/publish_job_form.php?id=' . (int) $row['id'] . '&w=u" class="mgr-btn">수정</a> ';
+            $manage .= '<button type="button" class="mgr-btn" style="color:var(--mgr-danger);" onclick="mgrPublishJobAction(\'cancel\', ' . (int) $row['id'] . ')">취소</button> ';
+        }
+        if ($can_retry) {
+            $manage .= '<button type="button" class="mgr-btn" onclick="mgrPublishJobAction(\'retry\', ' . (int) $row['id'] . ')">재시도</button>';
+        }
+
+        $pj_table_rows[] = array(
+            'advertiser' => htmlspecialchars($row['advertiser_name'] ? $row['advertiser_name'] : '-'),
+            'post_title' => htmlspecialchars($row['post_title']) . '<br><span style="font-size:.8125rem;color:var(--mgr-text-muted);">' . htmlspecialchars($row['project_topic']) . '</span>',
+            'site' => htmlspecialchars($row['site_name']),
+            'scheduled_at' => $row['scheduled_at'] ? htmlspecialchars($row['scheduled_at']) : '-',
+            'status' => mgr_status_badge($st_label, $st_tone),
+            'attempts' => (int) $row['attempt_count'] . ' / ' . (int) $row['max_retries'],
+            'last_error' => $row['last_error'] ? '<span style="color:var(--mgr-danger);font-size:.8125rem;">' . htmlspecialchars(mb_substr($row['last_error'], 0, 60)) . '</span>' : '-',
+            'completed_at' => $row['completed_at'] ? htmlspecialchars($row['completed_at']) : '-',
+            'manage' => $manage,
+        );
+    }
+    echo mgr_data_table(
+        array(
+            array('key' => 'advertiser', 'label' => '광고주'),
+            array('key' => 'post_title', 'label' => '포스팅 / 프로젝트'),
+            array('key' => 'site', 'label' => '발행 채널'),
+            array('key' => 'scheduled_at', 'label' => '예약 일시'),
+            array('key' => 'status', 'label' => '현재 상태'),
+            array('key' => 'attempts', 'label' => '시도 횟수'),
+            array('key' => 'last_error', 'label' => '최근 오류'),
+            array('key' => 'completed_at', 'label' => '완료 시각'),
+            array('key' => 'manage', 'label' => '관리'),
+        ),
+        $pj_table_rows,
+        array('empty_title' => '조건에 맞는 발행 작업이 없습니다')
+    );
+
+    $pj_qs = array('tab' => 'publishing', 'stx' => $pj_stx, 'sfl_status' => $pj_status, 'sdate' => $pj_sdate, 'edate' => $pj_edate);
+    echo mgr_pagination($pj_page, $pj_total_pages, '?' . http_build_query($pj_qs) . '&page=');
+    ?>
+    <script>
+    // adm/blog/publish_job_update.php가 실제 처리 파일이다 - 원래 SF_MANAGER_URL(manager 쪽,
+    // 대응 파일 없음)로 폼을 만들어 제출하고 있어서 취소/재시도 버튼이 항상 404였다.
+    function mgrPublishJobAction(action, id) {
+        var label = action === 'cancel' ? '이 예약 작업을 취소하시겠습니까?' : '이 실패 작업을 재시도 상태로 변경하시겠습니까?';
+        if (!confirm(label)) return;
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '<?php echo G5_ADMIN_URL; ?>/blog/publish_job_update.php';
+        var fields = { w: action, id: id, token: '<?php echo get_admin_token(); ?>' };
+        for (var key in fields) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+    }
+    </script>
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->
     <div style="padding: 2rem 0; text-align: center; color: var(--mgr-text-muted);">
