@@ -4,6 +4,7 @@ include_once('./_common.php');
 auth_check_menu($auth, $sub_menu, 'r');
 require_once __DIR__ . '/../components/data_table.php';
 require_once __DIR__ . '/../components/pagination.php';
+require_once __DIR__ . '/../components/status_badge.php';
 
 $page_title = '광고주·포스팅 관리';
 $tab = isset($_GET['tab']) ? $_GET['tab'] : 'advertisers';
@@ -51,6 +52,94 @@ if ($tab === 'advertisers') {
     $adv_list = array();
     while ($adv_row = sql_fetch_array($adv_result)) {
         $adv_list[] = $adv_row;
+    }
+}
+
+// ---- 포스팅 탭: manager/blog/project_list.php의 조회 로직(제목/광고주/사이트 검색, 상태필터,
+// AI제공자 필터, 발행상태 GROUP_CONCAT)을 그대로 재사용한다 - 그 파일도 이제 이 화면
+// (?tab=posts)으로 리다이렉트만 하는 상태였다. 페이징만 새로 추가(원본은 flat limit 100).
+if ($tab === 'posts') {
+    $proj_projects_table = bp_table('content_projects');
+    $proj_adv_table = bp_table('advertisers');
+    $proj_sites_table = bp_table('sites');
+    $proj_posts_table = bp_table('posts');
+    $proj_targets_table = bp_table('post_targets');
+    $proj_jobs_table = bp_table('publish_jobs');
+    $proj_gen_logs_table = bp_table('content_generation_logs');
+
+    $proj_status_label = array(
+        'draft' => '초안', 'pending_approval' => '승인대기', 'approved' => '승인됨',
+        'publish_pending' => '발행대기', 'publishing' => '발행중', 'published' => '발행완료', 'failed' => '발행실패',
+    );
+    $proj_job_status_label = array(
+        'pending' => '대기', 'claimed' => '할당됨', 'processing' => '처리중', 'published' => '완료', 'failed' => '실패',
+    );
+    $proj_valid_status = array_keys($proj_status_label);
+    $proj_valid_job_status = array_keys($proj_job_status_label);
+
+    $proj_stx_title = isset($_GET['stx_title']) ? trim($_GET['stx_title']) : '';
+    $proj_stx_advertiser = isset($_GET['stx_advertiser']) ? trim($_GET['stx_advertiser']) : '';
+    $proj_status = isset($_GET['status']) ? trim($_GET['status']) : '';
+    $proj_job_status = isset($_GET['job_status']) ? trim($_GET['job_status']) : '';
+    $proj_rows_per_page = 20;
+    $proj_page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    if ($proj_page < 1) $proj_page = 1;
+
+    $proj_where = array('p.deleted_at is null');
+    if ($proj_stx_title !== '') {
+        $proj_safe_title = sql_real_escape_string($proj_stx_title);
+        $proj_where[] = "(po.title like '%{$proj_safe_title}%' or p.topic like '%{$proj_safe_title}%')";
+    }
+    if ($proj_stx_advertiser !== '') {
+        $proj_where[] = "a.name like '%" . sql_real_escape_string($proj_stx_advertiser) . "%'";
+    }
+    if (in_array($proj_status, $proj_valid_status, true)) {
+        $proj_where[] = "p.status = '" . sql_real_escape_string($proj_status) . "'";
+    }
+    $proj_where_sql = ' where ' . implode(' and ', $proj_where);
+
+    $proj_having_sql = '';
+    if (in_array($proj_job_status, $proj_valid_job_status, true)) {
+        $proj_having_sql = " having find_in_set('" . sql_real_escape_string($proj_job_status) . "', job_statuses) > 0 ";
+    }
+
+    // COUNT는 페이징 계산용 - LEFT JOIN posts로 인한 행 중복을 피하려 DISTINCT p.id를 센다.
+    // HAVING(발행상태 필터)이 걸리면 GROUP_CONCAT 결과 기준으로 걸러야 하므로 서브쿼리로 감싼다.
+    $proj_count_sql = "select count(*) as cnt from (
+            select p.id,
+                (select group_concat(distinct pj.status) from {$proj_targets_table} pt2
+                    join {$proj_jobs_table} pj on pj.post_target_id = pt2.id where pt2.post_id = po.id) as job_statuses
+            from {$proj_projects_table} p
+            left join {$proj_adv_table} a on a.id = p.advertiser_id
+            left join {$proj_posts_table} po on po.project_id = p.id
+            {$proj_where_sql}
+            group by p.id
+            {$proj_having_sql}
+        ) t";
+    $proj_total_row = sql_fetch($proj_count_sql);
+    $proj_total_count = isset($proj_total_row['cnt']) ? (int) $proj_total_row['cnt'] : 0;
+    $proj_total_pages = $proj_rows_per_page > 0 ? (int) ceil($proj_total_count / $proj_rows_per_page) : 1;
+    if ($proj_total_pages < 1) $proj_total_pages = 1;
+    if ($proj_page > $proj_total_pages) $proj_page = $proj_total_pages;
+    $proj_from = ($proj_page - 1) * $proj_rows_per_page;
+
+    $proj_result = sql_query(" select p.*, a.name as advertiser_name, s.name as site_name, po.id as post_id, po.title as post_title,
+                          (select count(*) from {$proj_targets_table} pt where pt.post_id = po.id) as target_count,
+                          (select group_concat(distinct pj.status) from {$proj_targets_table} pt2
+                            join {$proj_jobs_table} pj on pj.post_target_id = pt2.id where pt2.post_id = po.id) as job_statuses,
+                          (select min(pj3.scheduled_at) from {$proj_targets_table} pt3
+                            join {$proj_jobs_table} pj3 on pj3.post_target_id = pt3.id
+                            where pt3.post_id = po.id and pj3.status = 'pending' and pj3.scheduled_at is not null) as next_scheduled_at
+                          from {$proj_projects_table} p
+                          left join {$proj_adv_table} a on a.id = p.advertiser_id
+                          left join {$proj_sites_table} s on s.id = p.primary_site_id
+                          left join {$proj_posts_table} po on po.project_id = p.id
+                          {$proj_where_sql}
+                          {$proj_having_sql}
+                          order by p.id desc limit {$proj_from}, {$proj_rows_per_page} ");
+    $proj_list = array();
+    while ($proj_row = sql_fetch_array($proj_result)) {
+        $proj_list[] = $proj_row;
     }
 }
 
@@ -120,6 +209,83 @@ include_once(__DIR__ . '/../layout/header.php');
 
     $adv_qs = array('tab' => 'advertisers', 'search' => $adv_search, 'status' => $adv_status);
     echo mgr_pagination($adv_page, $adv_total_pages, '?' . http_build_query($adv_qs) . '&page=');
+    ?>
+    <?php elseif ($tab === 'posts'): ?>
+    <form method="get" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+        <input type="hidden" name="tab" value="posts">
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">제목 검색</label>
+            <input type="text" name="stx_title" value="<?php echo htmlspecialchars($proj_stx_title, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">광고주</label>
+            <input type="text" name="stx_advertiser" value="<?php echo htmlspecialchars($proj_stx_advertiser, ENT_QUOTES, 'UTF-8'); ?>" class="mgr-input">
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">작성 상태</label>
+            <select name="status" class="mgr-input">
+                <option value="">전체</option>
+                <?php foreach ($proj_status_label as $code => $label): ?>
+                <option value="<?php echo $code; ?>" <?php echo $proj_status === $code ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:.8125rem;color:var(--mgr-text-muted);margin-bottom:.25rem;">발행 상태</label>
+            <select name="job_status" class="mgr-input">
+                <option value="">전체</option>
+                <?php foreach ($proj_job_status_label as $code => $label): ?>
+                <option value="<?php echo $code; ?>" <?php echo $proj_job_status === $code ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit" class="mgr-btn mgr-btn-primary">검색</button>
+        <a href="?tab=posts" class="mgr-btn">초기화</a>
+        <a href="<?php echo SF_MANAGER_URL; ?>/blog/post_builder.php" class="mgr-btn mgr-btn-primary" style="margin-left:auto;">+ 새 포스팅 작성</a>
+    </form>
+
+    <?php
+    $proj_table_rows = array();
+    foreach ($proj_list as $row) {
+        $st = $row['status'];
+        $st_label = isset($proj_status_label[$st]) ? $proj_status_label[$st] : htmlspecialchars($st);
+        $job_summary = '-';
+        if (!empty($row['job_statuses'])) {
+            $parts = array();
+            foreach (explode(',', $row['job_statuses']) as $js) {
+                $parts[] = isset($proj_job_status_label[$js]) ? $proj_job_status_label[$js] : htmlspecialchars($js);
+            }
+            $job_summary = implode(', ', $parts);
+        }
+        $proj_table_rows[] = array(
+            'title' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['id'] . '">'
+                . htmlspecialchars($row['post_title'] ? $row['post_title'] : $row['topic']) . '</a>',
+            'advertiser' => htmlspecialchars($row['advertiser_name'] ? $row['advertiser_name'] : '-'),
+            'site' => htmlspecialchars($row['site_name'] ? $row['site_name'] : '-'),
+            'status' => mgr_status_badge($st_label, $st === 'published' ? 'success' : ($st === 'failed' ? 'danger' : ($st === 'pending_approval' ? 'warning' : 'muted'))),
+            'job_status' => $job_summary,
+            'scheduled_at' => $row['next_scheduled_at'] ? htmlspecialchars($row['next_scheduled_at']) : '-',
+            'updated_at' => $row['updated_at'] ? htmlspecialchars($row['updated_at']) : htmlspecialchars($row['created_at']),
+            'manage' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['id'] . '" class="mgr-btn">열기</a>',
+        );
+    }
+    echo mgr_data_table(
+        array(
+            array('key' => 'title', 'label' => '프로젝트/포스팅'),
+            array('key' => 'advertiser', 'label' => '광고주'),
+            array('key' => 'site', 'label' => '대상 사이트'),
+            array('key' => 'status', 'label' => '작성 상태'),
+            array('key' => 'job_status', 'label' => '발행 상태'),
+            array('key' => 'scheduled_at', 'label' => '예약 일시'),
+            array('key' => 'updated_at', 'label' => '최근 수정일'),
+            array('key' => 'manage', 'label' => '관리'),
+        ),
+        $proj_table_rows,
+        array('empty_title' => '조건에 맞는 포스팅 프로젝트가 없습니다')
+    );
+
+    $proj_qs = array('tab' => 'posts', 'stx_title' => $proj_stx_title, 'stx_advertiser' => $proj_stx_advertiser, 'status' => $proj_status, 'job_status' => $proj_job_status);
+    echo mgr_pagination($proj_page, $proj_total_pages, '?' . http_build_query($proj_qs) . '&page=');
     ?>
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->
