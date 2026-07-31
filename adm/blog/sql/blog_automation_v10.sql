@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS `{prefix}blog_image_presets` (
 
 -- 중복 제거를 위한 파일 해시 컬럼 추가
 ALTER TABLE `{prefix}blog_images` ADD COLUMN IF NOT EXISTS `file_hash` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '파일 MD5/SHA 해시 (중복 업로드 방지용)' AFTER `file_size`;
-ALTER TABLE `{prefix}blog_images` ADD INDEX `idx_file_hash` (`file_hash`);
+ALTER TABLE `{prefix}blog_images` ADD INDEX IF NOT EXISTS `idx_file_hash` (`file_hash`);
