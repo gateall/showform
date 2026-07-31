@@ -3,371 +3,279 @@ $sub_menu = '360050';
 include_once('./_common.php');
 auth_check_menu($auth, $sub_menu, 'w');
 
-$g5['title'] = '블로그 포스팅 통합 제작';
-add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/blog/css/builder.css?ver='.G5_SERVER_TIME.'">', 0);
-add_javascript('<script src="'.G5_ADMIN_URL.'/blog/js/builder.js?ver='.G5_SERVER_TIME.'"></script>', 0);
+$g5['title'] = '블로그 포스팅 원스톱 챗봇 작성';
 
 include_once(__DIR__ . '/../layout/header.php');
 ?>
+<link rel="stylesheet" href="<?php echo G5_ADMIN_URL; ?>/blog/css/builder.css?ver=<?php echo G5_SERVER_TIME; ?>">
+<script src="<?php echo G5_ADMIN_URL; ?>/blog/js/builder.js?ver=<?php echo G5_SERVER_TIME; ?>"></script>
 
 <div id="post-builder-app">
-    <!-- 상단 상태바 -->
-    <header class="pb-header">
-        <div class="pb-status-info">
-            <h2 id="pb-title-display">새 포스팅 작성 중</h2>
-            <div class="pb-meta">
-                <span id="pb-advertiser-display">광고주 미지정</span> | 
-                <span id="pb-site-display">사이트 미지정</span>
-            </div>
+    <!-- 1. 상단 컨트롤 패널 (Top) -->
+    <header class="pb-header pb-panel-area">
+        <div class="pb-header-left">
+            <select id="top_advertiser_id" class="frm_input" style="width:180px;" onchange="Builder.onTopAdvertiserChange(this.value)">
+                <option value="">광고주 선택 ▼</option>
+                <?php
+                $adv_res = sql_query("select id, name from ".bp_table('advertisers')." order by name");
+                while($row = sql_fetch_array($adv_res)) echo "<option value='{$row['id']}'>".get_text($row['name'])."</option>";
+                ?>
+            </select>
+            <select id="top_project_id" class="frm_input" style="width:220px;" onchange="Builder.onTopProjectChange(this.value)" disabled>
+                <option value="">프로젝트 선택 ▼</option>
+            </select>
+            <button type="button" class="btn btn_03" id="btn_new_project_toggle" onclick="Builder.toggleNewProjectForm()">새 프로젝트 등록</button>
+            <span style="margin-left: 10px; font-size: 0.9rem; color: #666;">상태: <strong id="pb-status-display">작성 전</strong></span>
         </div>
-        <div class="pb-status-actions">
-            <span class="pb-last-saved">마지막 저장: <span id="pb-saved-time">-</span></span>
-            <button type="button" class="btn btn_02" onclick="Builder.saveAll()">전체 임시저장</button>
-            <button type="button" class="btn btn_01" onclick="Builder.loadList()">목록/불러오기</button>
+        <div class="pb-header-right">
+            <span style="font-size: 0.85rem; color: #888;">마지막 저장: <span id="pb-saved-time">-</span></span>
+            <button type="button" class="btn btn_02" onclick="Builder.saveAll()">임시저장</button>
+            <button type="button" class="btn btn_01" onclick="location.href='post_list.php'">작업 목록</button>
         </div>
     </header>
 
-    <div class="pb-container">
-        <!-- 메인 작성 영역 -->
-        <main class="pb-main">
+    <!-- 2. 좌측 메뉴 (Left) - 4단계 워크스페이스 -->
+    <nav class="pb-sidebar-left pb-panel-area">
+        <ul class="pb-nav-list" id="pb_nav_list">
+            <li class="pb-nav-item active" onclick="Builder.toggleStep(1)">1. 기획 및 글감 <span class="nav-status" id="nav-status-1"></span></li>
+            <li class="pb-nav-item" onclick="Builder.toggleStep(2)">2. 본문 작성 <span class="nav-status" id="nav-status-2"></span></li>
+            <li class="pb-nav-item" onclick="Builder.toggleStep(3)">3. 최적화 및 이미지 <span class="nav-status" id="nav-status-3"></span></li>
+            <li class="pb-nav-item" onclick="Builder.toggleStep(4)">4. 검수 및 발행 <span class="nav-status" id="nav-status-4"></span></li>
+        </ul>
+    </nav>
 
-            <!-- 글감 입력: 아래 단계와 별개로 항상 열려있는 시작 지점 -->
-            <section class="pb-material-box" id="pb-material-box">
-                <div class="pb-material-header">
-                    <h3>글감으로 빠르게 시작하기</h3>
-                    <p class="help_txt">메모, 상품 정보, 참고 문장 등을 자유롭게 입력하면 AI가 분석해 아래 단계의 키워드·타겟독자·유형 항목을 자동으로 채워줍니다. 채워진 값은 각 단계에서 자유롭게 수정할 수 있습니다.</p>
-                </div>
-                <textarea id="pb_material_input" class="frm_input" rows="5" style="width:100%;" placeholder="예: 30대 여성 타겟 콜라겐 영양제, 피부 탄력 개선 후기 위주로 작성 예정"></textarea>
-                <div class="pb-step-actions">
-                    <button type="button" class="btn btn_02" id="pb_material_btn" onclick="Builder.analyzeMaterial()">AI 글감 분석 → 자동 입력</button>
-                </div>
-            </section>
-
-            <!-- 1단계: 기본정보 -->
-            <section class="pb-step active" id="step-1">
-                <div class="pb-step-header" onclick="Builder.toggleStep(1)">
-                    <h3>1. 제작 기본정보</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-form-grid">
-                        <div class="pb-form-group">
-                            <label>광고주 선택</label>
-                            <select id="pb_advertiser_id" class="frm_input">
-                                <option value="">선택하세요</option>
-                                <?php
-                                $adv_res = sql_query("select id, name from ".bp_table('advertisers')." order by name");
-                                while($row = sql_fetch_array($adv_res)) echo "<option value='{$row['id']}'>{$row['name']}</option>";
-                                ?>
-                            </select>
-                        </div>
-                        <div class="pb-form-group">
-                            <label>사이트 선택</label>
-                            <select id="pb_site_id" class="frm_input">
-                                <option value="">광고주를 먼저 선택하세요</option>
-                            </select>
-                            <script>
-                                const ADV_SITES = {
-                                    <?php
-                                    $sites_res = sql_query("select id, advertiser_id, name from ".bp_table('sites')." order by name");
-                                    $adv_sites = [];
-                                    while($s = sql_fetch_array($sites_res)) {
-                                        $adv_sites[$s['advertiser_id']][] = $s;
-                                    }
-                                    foreach ($adv_sites as $adv => $sites) {
-                                        echo "'$adv': " . json_encode($sites) . ",\n";
-                                    }
-                                    ?>
-                                };
-                                document.getElementById('pb_advertiser_id').addEventListener('change', function() {
-                                    const adv = this.value;
-                                    const siteSelect = document.getElementById('pb_site_id');
-                                    siteSelect.innerHTML = '<option value="">선택하세요</option>';
-                                    if(ADV_SITES[adv]) {
-                                        ADV_SITES[adv].forEach(s => {
-                                            siteSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-                                        });
-                                    }
-                                });
-                            </script>
-                        </div>
-                        <div class="pb-form-group">
-                            <label>포스팅 유형</label>
-                            <select id="pb_post_type" class="frm_input">
-                                <option value="info">정보 제공형</option>
-                                <option value="product">상품 소개형</option>
-                                <option value="review">후기형</option>
-                                <option value="faq">FAQ형</option>
-                            </select>
-                        </div>
-                        <div class="pb-form-group">
-                            <label>발행 예정일</label>
-                            <input type="date" id="pb_target_date" class="frm_input">
-                        </div>
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(1)">기본정보 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 2단계: 기획 (목적과 방향) -->
-            <section class="pb-step" id="step-2">
-                <div class="pb-step-header" onclick="Builder.toggleStep(2)">
-                    <h3>2. 글의 목적과 방향</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-form-group">
-                        <label>주요 독자 및 목적</label>
-                        <textarea id="pb_target_audience" class="frm_input" rows="3" placeholder="예: 20~30대 직장인, 피로 회복제 홍보"></textarea>
-                    </div>
-                    <div class="pb-form-group">
-                        <label>글의 분위기(말투)</label>
-                        <select id="pb_tone" class="frm_input">
-                            <option value="전문적인 설명">전문적인 설명 (~습니다)</option>
-                            <option value="친근한 상담">친근한 상담 (~해요)</option>
-                            <option value="실제 후기">실제 후기 (~했어요)</option>
-                            <option value="자연스러운 블로그">자연스러운 블로그체</option>
-                        </select>
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateDirection(this)">AI 기획안 추천</button>
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(2)">방향 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 3단계: 키워드 설정 -->
-            <section class="pb-step" id="step-3">
-                <div class="pb-step-header" onclick="Builder.toggleStep(3)">
-                    <h3>3. 키워드 설정</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-form-group">
-                        <label>대표 키워드 (1개)</label>
-                        <input type="text" id="pb_main_keyword" class="frm_input" style="width:100%;">
-                    </div>
-                    <div class="pb-form-group">
-                        <label>보조 키워드 (쉼표 구분)</label>
-                        <input type="text" id="pb_sub_keywords" class="frm_input" style="width:100%;">
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.recommendKeywords(this)">키워드 조합 추천</button>
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(3)">키워드 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 4단계: 제목과 목차 -->
-            <section class="pb-step" id="step-4">
-                <div class="pb-step-header" onclick="Builder.toggleStep(4)">
-                    <h3>4. 제목과 목차</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-form-group">
-                        <label>메인 제목</label>
-                        <input type="text" id="pb_post_title" class="frm_input" style="width:100%;">
-                    </div>
-                    <div class="pb-form-group">
-                        <label>목차 구성</label>
-                        <ul id="pb_toc_list" class="pb-sortable-list">
-                            <li><input type="text" class="frm_input pb-toc-item" value="독자의 문제 또는 관심사"> <button type="button" class="btn_del" onclick="this.parentElement.remove()">X</button></li>
-                            <li><input type="text" class="frm_input pb-toc-item" value="서비스 소개"> <button type="button" class="btn_del" onclick="this.parentElement.remove()">X</button></li>
-                        </ul>
-                        <button type="button" class="btn btn_03" onclick="Builder.addTocItem()">+ 목차 추가</button>
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateTitles(this)">AI 제목 생성</button>
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(4)">저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 5단계: 도입부 -->
-            <section class="pb-step" id="step-5">
-                <div class="pb-step-header" onclick="Builder.toggleStep(5)">
-                    <h3>5. 도입부 작성</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <textarea id="pb_intro_text" class="frm_input" rows="5" style="width:100%;"></textarea>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateIntro(this)">AI 도입부 생성</button>
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(5)">도입부 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 6단계: 본문 구간 작성 (핵심) -->
-            <section class="pb-step" id="step-6">
-                <div class="pb-step-header" onclick="Builder.toggleStep(6)">
-                    <h3>6. 본문 구간 작성</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body" style="background:#f9f9f9; padding:20px; border-radius:8px;">
-                    <p class="help_txt">목차별로 블록을 나누어 작성합니다. 블록 단위로 AI 생성이 가능합니다.</p>
-                    <div id="pb_body_blocks">
-                        <!-- JS Dynamic Blocks -->
-                    </div>
-                    <button type="button" class="btn btn_03" onclick="Builder.addBodyBlock()" style="width:100%; margin-top:10px;">+ 새 본문 블록 추가</button>
-                    
-                    <div class="pb-step-actions" style="margin-top:20px;">
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(6)">전체 본문 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 7단계: 이미지 -->
-            <section class="pb-step" id="step-7">
-                <div class="pb-step-header" onclick="Builder.toggleStep(7)">
-                    <h3>7. 이미지 구성</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <p>본문에 삽입될 이미지를 업로드하고 순서를 정합니다. (이미지는 드래그로 본문 블록에 매핑 가능합니다)</p>
-                    <div id="pb_image_list" class="pb-image-grid"></div>
-                    <div style="margin-top:15px;">
-                        <input type="file" id="pb_image_upload" multiple accept="image/*">
-                        <button type="button" class="btn btn_02" onclick="Builder.uploadImages(this)">업로드</button>
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(7)">저장</button>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- 8단계: 업체 정보 -->
-            <section class="pb-step" id="step-8">
-                <div class="pb-step-header" onclick="Builder.toggleStep(8)">
-                    <h3>8. 업체·상품 정보</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-form-grid">
-                        <div class="pb-form-group">
-                            <label>상호명</label>
-                            <input type="text" id="pb_company_name" class="frm_input">
-                        </div>
-                        <div class="pb-form-group">
-                            <label>전화번호</label>
-                            <input type="text" id="pb_company_tel" class="frm_input">
-                        </div>
-                        <div class="pb-form-group">
-                            <label>주소</label>
-                            <input type="text" id="pb_company_addr" class="frm_input">
-                        </div>
-                        <div class="pb-form-group">
-                            <label>지도/홈페이지 링크</label>
-                            <input type="text" id="pb_company_link" class="frm_input">
-                        </div>
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.loadCompanyInfo()">광고주 정보 불러오기</button>
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(8)">저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 9단계: 마무리 -->
-            <section class="pb-step" id="step-9">
-                <div class="pb-step-header" onclick="Builder.toggleStep(9)">
-                    <h3>9. 마무리와 행동 유도</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <textarea id="pb_closing_text" class="frm_input" rows="4" style="width:100%;" placeholder="문의 안내 및 맺음말"></textarea>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn_submit btn" onclick="Builder.saveStep(9)">마무리 저장</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 10단계: 검색 최적화 -->
-            <section class="pb-step" id="step-10">
-                <div class="pb-step-header" onclick="Builder.toggleStep(10)">
-                    <h3>10. 검색 최적화(SEO)</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div id="pb_seo_results" class="pb-seo-box">
-                        점검을 실행해주세요.
-                    </div>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.runSeoCheck(this)">최적화 점검 실행</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 11단계: 미리보기 -->
-            <section class="pb-step" id="step-11">
-                <div class="pb-step-header" onclick="Builder.toggleStep(11)">
-                    <h3>11. 최종 미리보기</h3>
-                    <span class="pb-step-indicator"></span>
-                </div>
-                <div class="pb-step-body">
-                    <div class="pb-preview-tabs">
-                        <button type="button" class="pb-tab-btn active" id="pb_tab_btn_html" onclick="Builder.switchPreviewTab('html')">HTML 보기</button>
-                        <button type="button" class="pb-tab-btn" id="pb_tab_btn_text" onclick="Builder.switchPreviewTab('text')">텍스트 보기</button>
-                    </div>
-                    <div id="pb_preview_area" class="pb-preview-box">
-                        미리보기 영역
-                    </div>
-                    <textarea id="pb_preview_text_area" class="frm_input pb-preview-box" style="width:100%; display:none;" rows="16" readonly></textarea>
-                    <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.renderPreview()">미리보기 갱신</button>
-                    </div>
-
-                    <!-- 포스팅 완성하기 실행 후 노출되는 결과 확인/복사/다운로드 패널 -->
-                    <div id="pb_result_panel" class="pb-result-panel" style="display:none;">
-                        <h4>완성된 포스팅 내보내기</h4>
-                        <div class="pb-step-actions" style="justify-content:flex-start;">
-                            <button type="button" class="btn btn_01" onclick="Builder.copyHtml()">HTML 복사</button>
-                            <button type="button" class="btn btn_01" onclick="Builder.copyText()">텍스트 복사</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('txt', this)">TXT 다운로드</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('html', this)">HTML 다운로드</button>
-                            <button type="button" class="btn btn_03" onclick="Builder.exportFile('json', this)">JSON 다운로드</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </main>
+    <!-- 3. 중앙 작업 영역 (Center) -->
+    <main class="pb-main pb-panel-area">
         
-        <!-- 우측 사이드바 (데스크톱용 상태 패널) -->
-        <aside class="pb-sidebar">
-            <div class="pb-panel" id="pb_material_summary_panel" style="display:none;">
-                <h3>글감 분석 요약</h3>
-                <ul id="pb_material_summary_list" class="pb-summary-list"></ul>
-            </div>
-            <div class="pb-panel">
-                <h3>진행 상태</h3>
-                <ul id="pb_progress_list">
-                    <!-- JS로 채워짐 -->
-                </ul>
-            </div>
-            <div class="pb-panel">
-                <h3>최종 액션</h3>
-                <button type="button" class="btn_submit btn" style="width:100%; padding:15px; font-size:16px;" onclick="Builder.completePost(this)">포스팅 완성하기</button>
-                
-                <div id="pb_post_actions" style="display:none; margin-top:20px;">
-                    <hr>
-                    <button type="button" class="btn btn_01" style="width:100%; margin-bottom:5px;" onclick="Builder.copyHtml()">HTML 복사</button>
-                    <button type="button" class="btn btn_02" style="width:100%; margin-bottom:5px;" onclick="Builder.showPublishModal(this)">즉시/예약 발행</button>
+        <!-- 0단계: 신규 프로젝트 폼 -->
+        <div id="step-0" class="pb-step-view">
+            <h2 class="pb-step-title">새 프로젝트 등록</h2>
+            <div class="pb-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="pb-form-group">
+                    <label>광고주</label>
+                    <select id="inline_advertiser_id" class="frm_input">
+                        <option value="">선택하세요</option>
+                        <?php
+                        $adv_res = sql_query("select id, name from ".bp_table('advertisers')." order by name");
+                        while($row = sql_fetch_array($adv_res)) echo "<option value='{$row['id']}'>".get_text($row['name'])."</option>";
+                        ?>
+                    </select>
+                </div>
+                <div class="pb-form-group">
+                    <label>핵심 주제 (프로젝트명)</label>
+                    <input type="text" id="inline_topic" class="frm_input" placeholder="예: 여름 펜션 홍보">
+                </div>
+                <div class="pb-form-group">
+                    <label>글 목적</label>
+                    <select id="inline_content_type" class="frm_input">
+                        <option value="info">정보형</option>
+                        <option value="promo">홍보형</option>
+                        <option value="review">후기형</option>
+                    </select>
+                </div>
+                <div class="pb-form-group">
+                    <label>타깃 독자</label>
+                    <input type="text" id="inline_target_audience" class="frm_input">
                 </div>
             </div>
-        </aside>
-    </div>
-</div>
+            <div style="margin-top:20px; text-align:right;">
+                <button type="button" class="btn btn_01" onclick="Builder.toggleStep(1)">취소</button>
+                <button type="button" class="btn_submit btn" onclick="Builder.saveInlineProject()">등록 후 계속 작성</button>
+            </div>
+        </div>
 
-<!-- 하단 고정 바 (Sticky Bar) -->
-<div class="pb-sticky-bar">
-    <button type="button" class="btn btn_01" onclick="Builder.prevStep()">이전 단계</button>
-    <span class="pb-current-step-label">현재: <span id="pb_sticky_step_name">1. 기본정보</span></span>
-    <button type="button" class="btn btn_02" onclick="Builder.saveCurrentStep()">현재 단계 저장</button>
-    <button type="button" class="btn_submit btn" onclick="Builder.nextStep()">다음 단계</button>
+        <!-- 1단계: 기획 및 글감 -->
+        <div id="step-1" class="pb-step-view active">
+            <h2 class="pb-step-title">1. 기획 및 글감 수집</h2>
+            
+            <div class="pb-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <div class="pb-form-group" style="margin-bottom:0;">
+                    <label>광고주 선택</label>
+                    <select id="pb_advertiser_id" class="frm_input">
+                        <option value="">선택하세요</option>
+                        <?php
+                        $adv_res = sql_query("select id, name from ".bp_table('advertisers')." order by name");
+                        while($row = sql_fetch_array($adv_res)) echo "<option value='{$row['id']}'>{$row['name']}</option>";
+                        ?>
+                    </select>
+                </div>
+                <div class="pb-form-group" style="margin-bottom:0;">
+                    <label>사이트 선택</label>
+                    <select id="pb_site_id" class="frm_input">
+                        <option value="">광고주를 먼저 선택하세요</option>
+                    </select>
+                    <script>
+                        const ADV_SITES = {
+                            <?php
+                            $sites_res = sql_query("select id, advertiser_id, name from ".bp_table('sites')." order by name");
+                            $adv_sites = [];
+                            while($s = sql_fetch_array($sites_res)) {
+                                $adv_sites[$s['advertiser_id']][] = $s;
+                            }
+                            foreach ($adv_sites as $adv => $sites) {
+                                echo "'$adv': " . json_encode($sites) . ",\n";
+                            }
+                            ?>
+                        };
+                        document.getElementById('pb_advertiser_id').addEventListener('change', function() {
+                            const adv = this.value;
+                            const siteSelect = document.getElementById('pb_site_id');
+                            siteSelect.innerHTML = '<option value="">선택하세요</option>';
+                            if(ADV_SITES[adv]) {
+                                ADV_SITES[adv].forEach(s => {
+                                    siteSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                                });
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1.1rem; color: #334155; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">AI 글감 자동 수집 도구</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="border:1px solid #cbd5e1; border-radius:6px; padding:15px; background:#f8fafc;">
+                    <h3 style="margin-top:0; font-size:1rem; color:#334155;">🔗 URL / 뉴스 분석</h3>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" class="frm_input" placeholder="http://..." style="flex:1;">
+                        <button type="button" class="btn btn_02">분석</button>
+                    </div>
+                </div>
+                <div style="border:1px solid #cbd5e1; border-radius:6px; padding:15px; background:#f8fafc;">
+                    <h3 style="margin-top:0; font-size:1rem; color:#334155;">▶️ 유튜브 링크 분석</h3>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" class="frm_input" placeholder="https://youtube.com/..." style="flex:1;">
+                        <button type="button" class="btn btn_02">분석</button>
+                    </div>
+                </div>
+                <div style="border:1px solid #cbd5e1; border-radius:6px; padding:15px; background:#f8fafc;">
+                    <h3 style="margin-top:0; font-size:1rem; color:#334155;">📄 파일 분석 (PDF/이미지)</h3>
+                    <div style="display:flex; gap:5px;">
+                        <input type="file" class="frm_input" style="flex:1;">
+                        <button type="button" class="btn btn_02">분석</button>
+                    </div>
+                </div>
+                <div style="border:1px solid #cbd5e1; border-radius:6px; padding:15px; background:#f8fafc;">
+                    <h3 style="margin-top:0; font-size:1rem; color:#334155;">🎯 경쟁사 키워드 분석</h3>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" class="frm_input" placeholder="경쟁사 블로그 주소..." style="flex:1;">
+                        <button type="button" class="btn btn_02">분석</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top:20px;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">수집된 최종 글감 (직접 메모도 가능합니다)</label>
+                <textarea id="pb_extracted_material" class="frm_input" rows="8" placeholder="수집 도구를 통해 가져온 내용이나, 작성하고 싶은 핵심 내용을 이곳에 자유롭게 적어주세요. 우측 AI 비서가 이 내용을 바탕으로 글을 씁니다."></textarea>
+            </div>
+        </div>
+
+        <!-- 2단계: 본문 작성 -->
+        <div id="step-2" class="pb-step-view">
+            <h2 class="pb-step-title">2. 원스톱 본문 작성</h2>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">우측 <strong>AI 비서</strong>에게 지시를 내리고, [본문에 적용하기] 버튼을 누르면 이 화면이 채워집니다.</p>
+            
+            <div class="pb-form-group">
+                <label>포스팅 제목</label>
+                <input type="text" id="pb_post_title" class="frm_input" placeholder="AI 비서에게 매력적인 제목 5개를 뽑아달라고 요청해 보세요.">
+            </div>
+            
+            <div class="pb-form-group">
+                <label>본문 내용 (블록/전체 에디터)</label>
+                <textarea id="pb_body_content" class="frm_input" style="height: 350px;" placeholder="AI 비서와 대화하며 서론, 본론, 결론을 순차적으로 덧붙이거나, 전체 글을 한 번에 생성해 보세요."></textarea>
+            </div>
+            
+            <div class="pb-form-group">
+                <label>하단 업체/공통 정보 삽입</label>
+                <textarea id="pb_closing_text" class="frm_input" rows="4" placeholder="영업시간, 전화번호, 지도 링크 등 글 하단에 고정으로 들어갈 내용을 작성하세요."></textarea>
+            </div>
+        </div>
+
+        <!-- 3단계: 최적화 및 이미지 -->
+        <div id="step-3" class="pb-step-view">
+            <h2 class="pb-step-title">3. SEO 최적화 및 이미지</h2>
+            
+            <div class="pb-form-group">
+                <label>메인/보조 타겟 키워드 설정</label>
+                <input type="text" id="pb_keywords" class="frm_input" placeholder="쉼표(,)로 구분해 키워드를 입력하세요. 예: 강남역 맛집, 강남 삼겹살">
+            </div>
+            
+            <div id="pb_seo_results" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:20px; min-height:100px; margin-bottom: 25px;">
+                <p style="color:#64748b; text-align:center; margin-top:20px;">
+                    우측 챗봇 비서에게 <b>"본문 SEO 점수 확인해 줘"</b> 라고 요청하시면<br>키워드 밀도와 구조를 분석해 드립니다.
+                </p>
+            </div>
+
+            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:15px; background:#fff; margin-bottom:25px;">
+                <h3 style="margin-top:0; font-size:1rem; color:#334155;">📝 SEO 메타 설명 자동 생성</h3>
+                <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">2단계의 제목·본문과 위 키워드를 분석해 검색결과용 메타 설명을 만듭니다. 이미 입력된 값이 있으면 자동으로 덮어쓰지 않고, AI로 다시 생성할 때만 확인 후 대체합니다.</p>
+                <textarea id="pb_meta_description" class="frm_input" rows="3" style="width:100%;" placeholder="AI로 생성하거나 직접 입력하세요 (80~160자 권장)" oninput="Builder.updateMetaLength()"></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                    <span id="pb_meta_length_counter" style="font-size:0.8rem; color:#888;">0 / 80~160자</span>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" class="btn btn_02" onclick="Builder.generateSeoMeta(this)">AI로 생성</button>
+                        <button type="button" class="btn_submit btn" onclick="Builder.saveSeoMeta(this)">저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1.1rem; color: #334155; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">이미지 삽입 (자동 생성 / 직접 업로드)</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">우측 비서에게 "키워드에 어울리는 이미지 2개 그려줘" 라고 요청할 수 있습니다.</p>
+            
+            <div id="pb_image_list" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;"></div>
+            <div>
+                <input type="file" id="pb_image_upload" multiple accept="image/*" class="frm_input" style="width:auto;">
+                <button type="button" class="btn btn_02" onclick="Builder.uploadImages(this)">PC에서 이미지 업로드</button>
+            </div>
+        </div>
+
+        <!-- 4단계: 검수 및 발행 -->
+        <div id="step-4" class="pb-step-view">
+            <h2 class="pb-step-title">4. 검수 및 발행</h2>
+            
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button type="button" class="btn btn_03 active" id="pb_tab_btn_html" onclick="Builder.switchPreviewTab('html')" style="background:#fff; color:#333; font-weight:bold;">블로그 모바일뷰(HTML)</button>
+                <button type="button" class="btn btn_03" id="pb_tab_btn_text" onclick="Builder.switchPreviewTab('text')">원시 텍스트</button>
+            </div>
+            
+            <div id="pb_preview_area" style="border:1px solid #cbd5e1; border-radius:6px; padding:20px; min-height:400px; background:#fff;">
+                <p style="color:#64748b; text-align:center; margin-top:150px;">우측 비서에게 "최종 검수용 HTML 코드 만들어줘" 라고 요청하세요.</p>
+            </div>
+            <textarea id="pb_preview_text_area" class="frm_input" style="width:100%; display:none; min-height:400px;" readonly></textarea>
+            
+            <div style="margin-top:20px; text-align:right; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <div style="display:inline-block; margin-right: 15px;">
+                    <label>예약 발행 일시: </label>
+                    <input type="datetime-local" id="pb_target_date" class="frm_input" style="width: 200px; display:inline-block;">
+                </div>
+                <button type="button" class="btn_submit btn" onclick="alert('발행 큐에 등록되었습니다!')" style="background:#4f46e5; border-color:#4338ca;">🚀 네이버 블로그로 발행하기</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 4. 우측 챗봇 비서 (Right) -->
+    <aside class="pb-sidebar-right pb-panel-area">
+        <div class="pb-chat-header">
+            <span>🤖 AI 콘텐츠 운영 비서</span>
+            <span style="font-size:0.8rem; font-weight:normal; color:#10b981; display:flex; align-items:center; gap:5px;" id="pb_chat_status"><span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%;"></span> 온라인</span>
+        </div>
+        
+        <div class="pb-chat-messages" id="pb_chat_messages">
+            <!-- 기본 환영 메시지 -->
+            <div class="pb-chat-bubble pb-chat-ai">
+                안녕하세요! <b>ShowForm AI 콘텐츠 비서</b>입니다.<br><br>
+                이제 수동으로 버튼을 누를 필요 없이 저와 대화하며 포스팅을 작성할 수 있습니다.<br><br>
+                1단계에서 글감을 수집하신 후, 저에게 <b>"이 글감을 바탕으로 클릭을 유도하는 제목 5개 추천해 줘"</b> 라고 말씀해 보세요!
+            </div>
+        </div>
+        
+        <div class="pb-chat-input-area">
+            <textarea id="pb_chat_input" placeholder="AI 비서에게 요청할 내용을 입력하세요 (Enter 전송, Shift+Enter 줄바꿈)..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); Builder.sendChatMessage(); }"></textarea>
+            <button class="pb-chat-send-btn" onclick="Builder.sendChatMessage()" title="전송">➤</button>
+        </div>
+    </aside>
+
 </div>
 
 <?php

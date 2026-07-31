@@ -444,6 +444,150 @@ switch($action) {
         echo $content;
         exit;
 
+    case 'load_seo_meta':
+        // 기존 값이 있으면 화면에 먼저 보여주기 위함 - generate_seo_meta가 자동으로 덮어쓰지 않도록
+        // (덮어쓰기는 프론트에서 사용자 확인을 받은 뒤에만 일어난다).
+        if ($post_id === 0) {
+            die(json_encode(['ok' => false, 'error' => '포스트 ID가 없습니다.']));
+        }
+        $seo_row = sql_fetch(" select meta_title, meta_description from {$post_table} where id = '{$post_id}' ");
+        if (!$seo_row) {
+            die(json_encode(['ok' => false, 'error' => '포스트를 찾을 수 없습니다.']));
+        }
+        $response['meta_title'] = $seo_row['meta_title'];
+        $response['meta_description'] = $seo_row['meta_description'];
+        break;
+
+    case 'generate_seo_meta':
+        if (!function_exists('bp_ai_chat_request')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        $seo_title = isset($_POST['post_title']) ? trim($_POST['post_title']) : '';
+        $seo_body = isset($_POST['body_content']) ? trim($_POST['body_content']) : '';
+        $seo_keyword = isset($_POST['main_keyword']) ? trim($_POST['main_keyword']) : '';
+        if ($seo_title === '' && $seo_body === '') {
+            die(json_encode(['ok' => false, 'error' => '제목이나 본문을 먼저 입력해 주세요.']));
+        }
+
+        $sys_prompt = "당신은 SEO 메타 설명 작성 전문가입니다. 반드시 JSON 형식으로만 답하세요.";
+        $prompt = "다음 블로그 포스팅의 제목과 본문을 분석해서 검색결과에 노출될 메타 설명(meta description)을 작성해 주세요.\n\n"
+            . "[제목]\n{$seo_title}\n\n"
+            . "[본문 일부]\n" . mb_substr($seo_body, 0, 1000) . "\n\n"
+            . ($seo_keyword !== '' ? "[대표 키워드]\n{$seo_keyword}\n\n" : '')
+            . "조건: 반드시 한글 기준 80자 이상 160자 이하로 작성하고, "
+            . ($seo_keyword !== '' ? "대표 키워드 '{$seo_keyword}'를 자연스럽게 1회 포함하며, " : '')
+            . "클릭을 유도하는 자연스러운 문장으로 작성하세요. "
+            . "반드시 아래 JSON 형식만 출력하세요(다른 텍스트 없이): {\"meta_description\": \"내용\"}";
+
+        $ai_result = bp_ai_chat_request($prompt, $sys_prompt);
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => 'AI 생성 실패: ' . $ai_result['error']]));
+        }
+        $parsed = json_decode(trim($ai_result['message']), true);
+        if (!is_array($parsed) || empty($parsed['meta_description'])) {
+            die(json_encode(['ok' => false, 'error' => 'AI가 올바른 형식을 반환하지 않았습니다. 다시 시도해 주세요.']));
+        }
+
+        $meta_desc = trim((string) $parsed['meta_description']);
+        $len = mb_strlen($meta_desc);
+        $response['meta_description'] = $meta_desc;
+        $response['length'] = $len;
+        $response['length_ok'] = ($len >= 80 && $len <= 160);
+        break;
+
+    case 'save_seo_meta':
+        if ($post_id === 0) {
+            die(json_encode(['ok' => false, 'error' => '포스트 ID가 없습니다.']));
+        }
+        $meta_desc_save = isset($_POST['meta_description']) ? trim($_POST['meta_description']) : '';
+        $len_save = mb_strlen($meta_desc_save);
+        if ($len_save < 80 || $len_save > 160) {
+            die(json_encode(['ok' => false, 'error' => "메타 설명은 80~160자 사이여야 합니다(현재 {$len_save}자)."]));
+        }
+        sql_query(" update {$post_table} set meta_description = '" . sql_real_escape_string($meta_desc_save) . "', updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$post_id}' ");
+        bp_log_activity($project_id, 'seo_meta_saved', bp_current_admin_id(), mb_substr($meta_desc_save, 0, 50));
+        $response['message'] = '메타 설명이 저장되었습니다.';
+        break;
+
+    case 'chat_assistant':
+        // 챗봇 비서 응답 처리
+        if (!function_exists('bp_ai_chat_with_history')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        
+        $builder_state = isset($_POST['builder_state']) ? json_decode($_POST['builder_state'], true) : [];
+        if (!is_array($builder_state)) $builder_state = [];
+        
+        $step = isset($_POST['step']) ? (int)$_POST['step'] : 1;
+        $chat_history_json = isset($_POST['chat_history']) ? $_POST['chat_history'] : '[]';
+        $chat_history = json_decode($chat_history_json, true);
+        if (!is_array($chat_history)) $chat_history = [];
+        
+        $user_message = isset($_POST['user_message']) ? trim($_POST['user_message']) : '';
+        
+        if (empty($user_message) && empty($chat_history)) {
+            die(json_encode(['ok' => false, 'error' => '전송된 메시지가 없습니다.']));
+        }
+
+        // 컨텍스트 수집
+        $title = $builder_state['post_title'] ?? '';
+        $body = $builder_state['body_content'] ?? ''; // JS에서 body_content 로 넘긴다고 가정
+        $keywords = ($builder_state['main_keyword'] ?? '') . ', ' . ($builder_state['sub_keywords'] ?? '');
+        $material = $builder_state['material'] ?? '';
+        $tone = $builder_state['tone'] ?? '전문적';
+        
+        $sys_prompt = "당신은 블로그 포스팅 작성을 돕는 전문 AI 비서입니다.\n";
+        $sys_prompt .= "사용자의 요청을 분석하고, 대화에 응답하세요. \n";
+        $sys_prompt .= "명령에 따라 작성/수정된 텍스트가 있다면 적용 대상(target)과 적용 방법(action)을 지정하여 반환해야 합니다.\n\n";
+        $sys_prompt .= "[현재 작업 컨텍스트]\n";
+        $sys_prompt .= "- 현재 단계: {$step}단계\n";
+        $sys_prompt .= "- 현재 제목: {$title}\n";
+        $sys_prompt .= "- 현재 본문: " . mb_substr($body, 0, 1000) . "...\n";
+        $sys_prompt .= "- 키워드: {$keywords}\n";
+        $sys_prompt .= "- 참고 글감: " . mb_substr($material, 0, 500) . "\n";
+        $sys_prompt .= "- 작성 말투: {$tone}\n\n";
+        $sys_prompt .= "[응답 형식]\n";
+        $sys_prompt .= "반드시 아래 JSON 형식으로만 응답하세요.\n";
+        $sys_prompt .= "{\n";
+        $sys_prompt .= "  \"success\": true,\n";
+        $sys_prompt .= "  \"action\": \"replace_title|append_body|replace_body|chat 중 택1\",\n";
+        $sys_prompt .= "  \"target\": \"적용 대상 폼 요소 ID (pb_post_title, pb_body_content 등)\",\n";
+        $sys_prompt .= "  \"content\": \"생성/수정된 텍스트 (단순 대화인 경우 빈 문자열)\",\n";
+        $sys_prompt .= "  \"message\": \"사용자 채팅창에 보여질 친절한 안내 메시지 (줄바꿈 <br> 포함 가능)\"\n";
+        $sys_prompt .= "}\n";
+        
+        $messages = [];
+        $messages[] = ['role' => 'system', 'content' => $sys_prompt];
+        
+        // 이전 대화 기록 삽입 (최대 최근 10개로 제한하여 토큰 낭비 방지)
+        $chat_history = array_slice($chat_history, -10);
+        foreach ($chat_history as $msg) {
+            // role: user or assistant
+            $role = isset($msg['role']) && $msg['role'] === 'assistant' ? 'assistant' : 'user';
+            $content = isset($msg['content']) ? $msg['content'] : '';
+            if ($content) {
+                $messages[] = ['role' => $role, 'content' => $content];
+            }
+        }
+        
+        if (!empty($user_message)) {
+            $messages[] = ['role' => 'user', 'content' => $user_message];
+        }
+        
+        $ai_result = bp_ai_chat_with_history($messages, true); // jsonMode = true
+        
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => $ai_result['error']]));
+        }
+        
+        $parsed = json_decode(trim($ai_result['content']), true);
+        if (!is_array($parsed) || !isset($parsed['message'])) {
+            die(json_encode(['ok' => false, 'error' => 'AI가 올바른 JSON 형식을 반환하지 않았습니다. 다시 시도해 주세요.']));
+        }
+        
+        $response['ai_response'] = $parsed;
+        break;
+
     default:
         $response['error'] = 'Unknown action';
         $response['ok'] = false;
