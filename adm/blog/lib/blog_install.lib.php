@@ -209,5 +209,11 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v15.sql',
             'installed' => bp_install_column_exists($table_prefix, 'posts', 'builder_state'),
         ),
+        17 => array(
+            'label' => '새 프로젝트 등록 화면 개편', 'desc' => 'advertisers 대표자/업종, content_projects 목적/타깃/유형 다중선택 컬럼',
+            'file' => $sql_dir . '/blog_automation_v17.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'advertisers', 'industry')
+                && bp_install_column_exists($table_prefix, 'content_projects', 'purpose_tags'),
+        ),
     );
 }
