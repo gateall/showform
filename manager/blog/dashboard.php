@@ -231,7 +231,7 @@ include_once(__DIR__ . '/../layout/header.php');
                 array('key' => 'quota', 'label' => '월간 계약 수량'),
                 array('key' => 'posts_this_month', 'label' => '이번 달 작성'),
                 array('key' => 'published_this_month', 'label' => '이번 달 발행'),
-                array('key' => 'remaining', 'label' => '남은 수량'),
+                array('key' => 'remaining', 'label' => '남은 작성량'),
                 array('key' => 'last_published_at', 'label' => '최근 발행일'),
                 array('key' => 'status', 'label' => '상태'),
             ),
