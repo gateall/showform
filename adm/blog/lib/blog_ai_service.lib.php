@@ -270,6 +270,7 @@ class BlogOpenAiProvider implements BlogAiProvider
 
         $response = curl_exec($ch);
         $curl_err = curl_error($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($curl_err) {
@@ -282,6 +283,14 @@ class BlogOpenAiProvider implements BlogAiProvider
 
         if (!isset($res_data['choices'][0]['message']['content'])) {
             $msg = isset($res_data['error']['message']) ? $res_data['error']['message'] : 'AI 응답 파싱 실패';
+            // Rate Limit(429)·서버 오류(5xx)는 재시도로 해결될 수 있어 원인을 구분해 안내한다.
+            if ($http_code === 429) {
+                $msg = 'API 요청 한도(Rate Limit)를 초과했습니다. 잠시 후 다시 시도해 주세요. (' . $msg . ')';
+            } else if ($http_code >= 500) {
+                $msg = 'AI 서비스가 일시적으로 불안정합니다(HTTP ' . $http_code . '). 잠시 후 다시 시도해 주세요. (' . $msg . ')';
+            } else if ($http_code !== 200) {
+                $msg = 'HTTP ' . $http_code . ': ' . $msg;
+            }
             return array('ok' => false, 'content' => '', 'error' => $msg, 'tokens_prompt' => $tokens_prompt, 'tokens_completion' => $tokens_completion);
         }
 

@@ -177,6 +177,7 @@ switch($action) {
         $response['html'] = $html;
         $response['text'] = pb_build_post_text($state);
         $response['message'] = "포스팅이 성공적으로 완성되었습니다.";
+        bp_log_activity($project_id, 'post_completed', bp_current_admin_id(), (string) ($state['post_title'] ?? ''));
         break;
 
     case 'upload_images':
@@ -325,6 +326,7 @@ switch($action) {
             'sub_keywords' => isset($parsed['sub_keywords']) ? (string) $parsed['sub_keywords'] : '',
             'recommended_length' => isset($parsed['recommended_length']) ? (string) $parsed['recommended_length'] : '',
         );
+        bp_log_activity($project_id, 'material_analyzed', bp_current_admin_id(), $response['analysis']['topic']);
         break;
 
     case 'ai_generate':
@@ -368,6 +370,7 @@ switch($action) {
         }
         
         $response['generated_text'] = trim($ai_result['message']);
+        bp_log_activity($project_id, 'builder_ai_generated', bp_current_admin_id(), $type);
         break;
 
     case 'seo_check':
@@ -437,6 +440,7 @@ switch($action) {
             header('Content-Disposition: attachment; filename="' . $filename_base . '.txt"');
         }
 
+        bp_log_activity($project_id, 'post_exported', bp_current_admin_id(), $export_type);
         echo $content;
         exit;
 

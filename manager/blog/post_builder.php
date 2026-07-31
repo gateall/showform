@@ -132,7 +132,7 @@ include_once(__DIR__ . '/../layout/header.php');
                         </select>
                     </div>
                     <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateDirection()">AI 기획안 추천</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.generateDirection(this)">AI 기획안 추천</button>
                         <button type="button" class="btn_submit btn" onclick="Builder.saveStep(2)">방향 저장</button>
                     </div>
                 </div>
@@ -154,7 +154,7 @@ include_once(__DIR__ . '/../layout/header.php');
                         <input type="text" id="pb_sub_keywords" class="frm_input" style="width:100%;">
                     </div>
                     <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.recommendKeywords()">키워드 조합 추천</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.recommendKeywords(this)">키워드 조합 추천</button>
                         <button type="button" class="btn_submit btn" onclick="Builder.saveStep(3)">키워드 저장</button>
                     </div>
                 </div>
@@ -180,7 +180,7 @@ include_once(__DIR__ . '/../layout/header.php');
                         <button type="button" class="btn btn_03" onclick="Builder.addTocItem()">+ 목차 추가</button>
                     </div>
                     <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateTitles()">AI 제목 생성</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.generateTitles(this)">AI 제목 생성</button>
                         <button type="button" class="btn_submit btn" onclick="Builder.saveStep(4)">저장</button>
                     </div>
                 </div>
@@ -195,7 +195,7 @@ include_once(__DIR__ . '/../layout/header.php');
                 <div class="pb-step-body">
                     <textarea id="pb_intro_text" class="frm_input" rows="5" style="width:100%;"></textarea>
                     <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.generateIntro()">AI 도입부 생성</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.generateIntro(this)">AI 도입부 생성</button>
                         <button type="button" class="btn_submit btn" onclick="Builder.saveStep(5)">도입부 저장</button>
                     </div>
                 </div>
@@ -231,7 +231,7 @@ include_once(__DIR__ . '/../layout/header.php');
                     <div id="pb_image_list" class="pb-image-grid"></div>
                     <div style="margin-top:15px;">
                         <input type="file" id="pb_image_upload" multiple accept="image/*">
-                        <button type="button" class="btn btn_02" onclick="Builder.uploadImages()">업로드</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.uploadImages(this)">업로드</button>
                     </div>
                     <div class="pb-step-actions">
                         <button type="button" class="btn_submit btn" onclick="Builder.saveStep(7)">저장</button>
@@ -296,7 +296,7 @@ include_once(__DIR__ . '/../layout/header.php');
                         점검을 실행해주세요.
                     </div>
                     <div class="pb-step-actions">
-                        <button type="button" class="btn btn_02" onclick="Builder.runSeoCheck()">최적화 점검 실행</button>
+                        <button type="button" class="btn btn_02" onclick="Builder.runSeoCheck(this)">최적화 점검 실행</button>
                     </div>
                 </div>
             </section>
@@ -350,12 +350,12 @@ include_once(__DIR__ . '/../layout/header.php');
             </div>
             <div class="pb-panel">
                 <h3>최종 액션</h3>
-                <button type="button" class="btn_submit btn" style="width:100%; padding:15px; font-size:16px;" onclick="Builder.completePost()">포스팅 완성하기</button>
+                <button type="button" class="btn_submit btn" style="width:100%; padding:15px; font-size:16px;" onclick="Builder.completePost(this)">포스팅 완성하기</button>
                 
                 <div id="pb_post_actions" style="display:none; margin-top:20px;">
                     <hr>
                     <button type="button" class="btn btn_01" style="width:100%; margin-bottom:5px;" onclick="Builder.copyHtml()">HTML 복사</button>
-                    <button type="button" class="btn btn_02" style="width:100%; margin-bottom:5px;" onclick="Builder.showPublishModal()">즉시/예약 발행</button>
+                    <button type="button" class="btn btn_02" style="width:100%; margin-bottom:5px;" onclick="Builder.showPublishModal(this)">즉시/예약 발행</button>
                 </div>
             </div>
         </aside>
