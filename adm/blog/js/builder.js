@@ -11,7 +11,6 @@ const Builder = {
     init: function() {
         this.updateStickyBar();
         this.bindEvents();
-        console.log("Builder Initialized");
     },
 
     bindEvents: function() {
@@ -132,8 +131,6 @@ const Builder = {
     },
     
     saveStep: function(step) {
-        console.log("Saving step " + step + "...");
-        
         const stateData = this.gatherData();
         const payload = new URLSearchParams();
         payload.append('action', step === 'all' ? 'save_all' : 'save_step');
@@ -174,7 +171,6 @@ const Builder = {
     },
 
     saveAll: function() {
-        console.log("Saving all steps...");
         // 저장 성공 여부는 위 saveStep()의 비동기 응답에서 토스트로 알린다 -
         // 여기서 곧바로 alert()를 띄우면 실패했을 때도 "저장되었습니다"가 먼저 뜨는 오탐이 발생했었다.
         this.saveStep('all');
