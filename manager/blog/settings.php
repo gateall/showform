@@ -40,6 +40,19 @@ if ($tab === 'install') {
     }
 }
 
+// AI 설정 탭도 adm 쪽 ai_provider_list.php와 동일하게 최고관리자만 허용한다(API 키를 다루므로).
+if ($tab === 'ai') {
+    if ($is_admin !== 'super') {
+        alert('AI 설정은 최고관리자만 접근할 수 있습니다.');
+    }
+    $ai_providers_table = bp_table('ai_providers');
+    $ai_providers_res = sql_query(" select * from {$ai_providers_table} order by id asc ");
+    $ai_providers = array();
+    while ($ap = sql_fetch_array($ai_providers_res)) {
+        $ai_providers[] = $ap;
+    }
+}
+
 include_once(__DIR__ . '/../layout/header.php');
 ?>
 <div class="mgr-card" style="padding:1.25rem;margin-bottom:1.5rem;">
@@ -124,6 +137,42 @@ include_once(__DIR__ . '/../layout/header.php');
         <input type="hidden" name="mode" value="run_all">
         <button type="submit" class="btn_submit btn" onclick="return confirm('블로그 자동화 테이블 전체(V1~V<?php echo count($install_versions); ?>)를 설치하시겠습니까?');">전체 설치(누락분 포함 V1~V<?php echo count($install_versions); ?> 전체 재실행)</button>
     </form>
+
+    <?php elseif ($tab === 'ai'): ?>
+    <!-- AI 설정: adm/blog/ai_provider_list.php와 같은 테이블을 조회, 등록/수정/연결테스트는 기존 ai_provider_form.php를 그대로 재사용 -->
+    <p style="margin:0 0 1rem;color:var(--mgr-text-muted);font-size:0.9rem;">AI 콘텐츠 생성에 사용할 공급자 설정입니다. API 키는 저장 후 화면에 다시 표시되지 않으며, 마스킹된 값만 노출됩니다. 활성 공급자가 없거나 키가 없으면 템플릿 생성기로 자동 전환됩니다.</p>
+    <a href="./ai_provider_form.php" class="btn btn_01" style="margin-bottom:1rem;display:inline-block;">+ 공급자 등록</a>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--mgr-border);text-align:left;">
+                    <th style="padding:0.5rem;">코드</th>
+                    <th style="padding:0.5rem;">공급자명</th>
+                    <th style="padding:0.5rem;">기본 모델</th>
+                    <th style="padding:0.5rem;">API 키</th>
+                    <th style="padding:0.5rem;">활성</th>
+                    <th style="padding:0.5rem;">관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (count($ai_providers) > 0): ?>
+                    <?php foreach ($ai_providers as $ap): ?>
+                    <tr style="border-bottom:1px solid var(--mgr-border);">
+                        <td style="padding:0.5rem;"><code><?php echo get_text($ap['provider_code']); ?></code></td>
+                        <td style="padding:0.5rem;"><a href="./ai_provider_form.php?id=<?php echo (int)$ap['id']; ?>"><strong><?php echo get_text($ap['display_name']); ?></strong></a></td>
+                        <td style="padding:0.5rem;"><?php echo get_text($ap['default_model']); ?></td>
+                        <td style="padding:0.5rem;"><?php echo $ap['masked_hint'] ? get_text($ap['masked_hint']) : '<span style="color:var(--mgr-text-muted);">미설정</span>'; ?></td>
+                        <td style="padding:0.5rem;"><?php echo $ap['is_active'] === 'Y' ? '<span style="color:#10b981;">사용</span>' : '<span style="color:var(--mgr-text-muted);">중지</span>'; ?></td>
+                        <td style="padding:0.5rem;"><a href="./ai_provider_form.php?id=<?php echo (int)$ap['id']; ?>" class="btn btn_02">수정</a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="6" style="padding:1rem;text-align:center;color:var(--mgr-text-muted);">등록된 AI 공급자가 없습니다. 먼저 공급자를 등록해 주세요. 등록 전까지는 모든 AI 생성 요청이 템플릿 폴백으로 동작합니다.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
 
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->
