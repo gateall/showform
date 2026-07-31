@@ -2,6 +2,11 @@
  * 블로그 자동화 - 통합 포스팅 제작 폼 (Unified Post Builder)
  * Card-Based Studio UI Version (OpenAI 연동)
  */
+// post_builder_ajax.php는 /adm/blog/에만 존재한다. 이 스크립트는 /manager/blog/post_builder.php에서도
+// 로드되는데, fetch()의 상대경로는 현재 페이지 URL 기준으로 풀리므로 상대경로로 부르면 404가 난다.
+// post_builder.php가 심어둔 window.PB_ADMIN_URL(=G5_ADMIN_URL)을 우선 쓰고, 없으면(=adm에서 직접 열렸을 때) 상대경로로 폴백한다.
+const PB_AJAX_URL = (typeof window !== 'undefined' && window.PB_ADMIN_URL) ? window.PB_ADMIN_URL + '/blog/post_builder_ajax.php' : 'post_builder_ajax.php';
+
 const Builder = {
     currentStep: 1,
     maxStep: 4,
@@ -434,7 +439,7 @@ const Builder = {
         payload.append('action', 'load_state');
         payload.append('project_id', this.projectId);
         
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload })
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             if (res.ok && res.builder_state) {
@@ -469,7 +474,7 @@ const Builder = {
         payload.append('post_id', this.postId);
         payload.append('builder_state', JSON.stringify(stateData));
         
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload })
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             if (res.ok) {
@@ -499,7 +504,7 @@ const Builder = {
         const idx = this.cards.findIndex(c => c.id === card.id);
         payload.append('sort_order', idx >= 0 ? idx : 0);
 
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload });
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload });
     },
 
     /* ==========================================
@@ -546,7 +551,7 @@ const Builder = {
         payload.append('raw_material', rawMat);
         payload.append('locked_cards', JSON.stringify(lockedCards));
 
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload })
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             btn.disabled = false;
@@ -855,7 +860,7 @@ const Builder = {
         // Context 
         payload.append('raw_material', document.getElementById('pb_raw_material').value);
 
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload })
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             if (res.ok && res.new_content) {
@@ -905,7 +910,7 @@ const Builder = {
         payload.append('title_text', titleText);
         payload.append('body_text', bodyText);
 
-        fetch('post_builder_ajax.php', { method: 'POST', body: payload })
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             if (res.ok) {

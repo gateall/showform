@@ -8,6 +8,13 @@ $g5['title'] = '쇼폼 AI 스튜디오';
 include_once(__DIR__ . '/../layout/header.php');
 ?>
 <link rel="stylesheet" href="<?php echo G5_ADMIN_URL; ?>/blog/css/builder.css?ver=<?php echo G5_SERVER_TIME; ?>">
+<script>
+    // builder.js는 /adm/blog/에서 로드되지만 이 페이지는 /manager/blog/에서 서비스된다.
+    // fetch()의 상대경로는 <script src>가 아니라 "현재 페이지 URL" 기준으로 풀리므로,
+    // post_builder_ajax.php(=/adm/blog/에만 존재)를 상대경로로 부르면 /manager/blog/ 밑에서
+    // 찾다가 실패한다. 그래서 절대경로를 명시적으로 넘겨준다.
+    window.PB_ADMIN_URL = <?php echo json_encode(G5_ADMIN_URL); ?>;
+</script>
 <script src="<?php echo G5_ADMIN_URL; ?>/blog/js/builder.js?ver=<?php echo G5_SERVER_TIME; ?>"></script>
 
 <div id="post-builder-app" class="studio-mode">
