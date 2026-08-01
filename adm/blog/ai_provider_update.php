@@ -52,7 +52,7 @@ if ($id > 0) {
     // "사용함"으로 켜둘 수 있어야 한다 - 예전처럼 하나를 켜면 나머지를 자동으로
     // 끄지 않는다.
 
-    sql_query(" update {$table}
+    $ok = sql_query(" update {$table}
                     set display_name = '" . sql_real_escape_string($display_name) . "',
                         is_active = '{$is_active}',
                         default_model = '" . sql_real_escape_string($default_model) . "',
@@ -63,6 +63,12 @@ if ($id > 0) {
                         updated_at = '" . G5_TIME_YMDHIS . "'
                         {$key_sql}
                     where id = '{$id}' ");
+
+    // G5_DISPLAY_SQL_ERROR=false라 SQL 오류가 화면에 안 뜨고 조용히 삼켜질 수 있다(sql_query()가
+    // 예외를 잡고 null을 반환) - 실제 반환값을 확인한 뒤에만 "저장되었습니다"라고 알린다.
+    if (!$ok) {
+        alert('AI 공급자 설정 저장에 실패했습니다. 설정 > 설치 관리에서 최신 버전이 전부 설치되어 있는지 확인하거나, 잠시 후 다시 시도해 주세요.');
+    }
 
     alert('AI 공급자 설정이 저장되었습니다.', $return === 'manager' ? $manager_redirect : G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $id);
 }
@@ -77,7 +83,7 @@ if ($dup) {
     alert('이미 등록된 공급자 코드입니다.');
 }
 
-sql_query(" insert into {$table}
+$ok = sql_query(" insert into {$table}
                 set provider_code = '" . sql_real_escape_string($provider_code) . "',
                     display_name = '" . sql_real_escape_string($display_name) . "',
                     is_active = '{$is_active}',
@@ -90,5 +96,12 @@ sql_query(" insert into {$table}
                     updated_at = '" . G5_TIME_YMDHIS . "'
                     {$key_sql} ");
 $new_id = (int) sql_insert_id();
+
+// G5_DISPLAY_SQL_ERROR=false라 SQL 오류가 화면에 안 뜨고 조용히 삼켜질 수 있다(sql_query()가
+// 예외를 잡고 null을 반환) - 반환값과 실제 insert id가 생겼는지를 확인한 뒤에만 "등록되었습니다"라고
+// 알린다. 그렇지 않으면 컬럼 불일치 같은 서버 문제가 있어도 사용자는 성공한 줄 알게 된다.
+if (!$ok || $new_id <= 0) {
+    alert('AI 공급자 등록에 실패했습니다. 설정 > 설치 관리에서 최신 버전이 전부 설치되어 있는지 확인하거나, 잠시 후 다시 시도해 주세요.');
+}
 
 alert('AI 공급자가 등록되었습니다.', $return === 'manager' ? $manager_redirect : G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $new_id);
