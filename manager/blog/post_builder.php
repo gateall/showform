@@ -280,10 +280,23 @@ include_once(__DIR__ . '/../layout/header.php');
                                 <?php
                                 $ai_providers_res = sql_query("select id, display_name, provider_code, default_model, is_active, api_key_enc from ".bp_table('ai_providers')." order by display_name");
                                 while ($ap = sql_fetch_array($ai_providers_res)) {
-                                    $ap_status = empty($ap['api_key_enc']) ? 'API Key 없음' : ($ap['is_active'] === 'Y' ? '사용 중' : '사용 안 함');
+                                    $ap_is_live_code = bp_ai_provider_is_live($ap['provider_code']);
+                                    // "usable" = 지금 선택하면 실제로 AI가 호출된다(코드 지원 + 키 있음 + 활성).
+                                    // bp_ai_get_provider_meta()가 판단하는 조건과 동일하게 맞춰야, 여기서 "사용
+                                    // 가능"으로 보여준 것을 골라도 서버가 다시 준비 중이라고 막는 불일치가 없다.
+                                    $ap_usable = $ap_is_live_code && !empty($ap['api_key_enc']) && $ap['is_active'] === 'Y';
+                                    if (!$ap_is_live_code) {
+                                        $ap_status = '준비 중';
+                                    } elseif (empty($ap['api_key_enc'])) {
+                                        $ap_status = 'API 키 없음';
+                                    } elseif ($ap['is_active'] !== 'Y') {
+                                        $ap_status = '사용 안 함';
+                                    } else {
+                                        $ap_status = '사용 가능';
+                                    }
                                     $ap_model = $ap['default_model'] !== '' ? $ap['default_model'] : '기본 모델';
                                     $ap_label = get_text($ap['display_name']) . ' · ' . get_text($ap_model) . ' · ' . $ap_status;
-                                    echo "<option value='" . (int)$ap['id'] . "'>" . $ap_label . "</option>";
+                                    echo "<option value='" . (int)$ap['id'] . "' data-live='" . ($ap_usable ? '1' : '0') . "'>" . $ap_label . "</option>";
                                 }
                                 ?>
                             </select>

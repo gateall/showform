@@ -30,6 +30,45 @@ const Builder = {
         else alert(message);
     },
 
+    // 준비 중인 공급자로 실제 생성을 시도했을 때, 조용히 템플릿으로 넘어가지 않고
+    // 사용자에게 명시적으로 선택지를 준다. onChoice에는 'switch'/'template'/'cancel' 중 하나가 온다.
+    _confirmProviderFallback: function(providerLabel, onChoice) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:9999; display:flex; align-items:center; justify-content:center;';
+        overlay.innerHTML =
+            '<div style="background:#fff; border-radius:10px; padding:24px; max-width:420px; width:90%; box-shadow:0 10px 30px rgba(0,0,0,0.2);">' +
+                '<h3 style="margin:0 0 12px; font-size:1.05rem;">실제 AI 호출이 연결되지 않은 공급자입니다</h3>' +
+                '<p style="margin:0 0 18px; color:#475569; font-size:0.9rem; line-height:1.5;">현재 <strong>' + providerLabel + '</strong> API 실제 호출은 아직 연결되지 않았습니다.<br>ChatGPT로 변경하거나 AI 없이 안전 템플릿으로 생성할 수 있습니다.</p>' +
+                '<div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">' +
+                    '<button type="button" class="btn btn_02" data-choice="cancel">취소</button>' +
+                    '<button type="button" class="btn btn_02" data-choice="template">템플릿으로 생성</button>' +
+                    '<button type="button" class="btn_submit btn" data-choice="switch">ChatGPT로 변경</button>' +
+                '</div>' +
+            '</div>';
+        overlay.querySelectorAll('button[data-choice]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.body.removeChild(overlay);
+                onChoice(btn.getAttribute('data-choice'));
+            });
+        });
+        document.body.appendChild(overlay);
+    },
+
+    // pb_ai_provider_id의 <option data-live="1">(코드 지원+키 있음+활성, 서버 판단과 동일 기준)
+    // 중 첫 번째로 전환하고 저장까지 마친 뒤에만 resolve(true)한다 - 저장이 끝나기 전에
+    // 바로 재시도하면 서버가 여전히 이전 공급자를 보고 다시 준비중 취급할 수 있어서다.
+    _switchToChatGptProvider: function() {
+        const select = document.getElementById('pb_ai_provider_id');
+        if (!select) return Promise.resolve(false);
+        const liveOption = Array.from(select.options).find(opt => opt.dataset.live === '1');
+        if (!liveOption) {
+            this._toast('사용 가능한 ChatGPT 공급자가 없습니다. AI API 설정 관리에서 먼저 등록해 주세요.', 'error');
+            return Promise.resolve(false);
+        }
+        select.value = liveOption.value;
+        return this.saveAiProviderPref(true).then(() => true).catch(() => false);
+    },
+
     /* ==========================================
      * 1. Top Panel / Project Selection
      * ========================================== */
@@ -424,8 +463,10 @@ const Builder = {
 
     // 1단계의 "AI 공급자 / AI 사용 안 함"은 프로젝트당 하나씩만 있으면 되므로
     // 별도 저장 버튼 없이 바꾸는 즉시 저장한다(토글 버튼/셀렉트에서 호출).
-    saveAiProviderPref: function() {
-        if (!this.projectId) return;
+    // silent=true면 성공 토스트를 생략한다(_switchToChatGptProvider가 저장 직후 바로
+    // 생성을 재시도할 때, 저장 완료를 먼저 기다려야 하므로 Promise를 그대로 반환한다).
+    saveAiProviderPref: function(silent) {
+        if (!this.projectId) return Promise.resolve();
         const providerSelect = document.getElementById('pb_ai_provider_id');
         const disabledHidden = document.getElementById('pb_ai_disabled');
 
@@ -435,12 +476,13 @@ const Builder = {
         payload.append('ai_provider_id', providerSelect ? providerSelect.value : '');
         payload.append('ai_disabled', (disabledHidden && disabledHidden.value === 'Y') ? 'Y' : 'N');
 
-        this._postForm('ajax.builder.php', payload)
+        return this._postForm('ajax.builder.php', payload)
         .then(res => {
-            if (res.success) this._toast('AI 설정이 저장되었습니다.', 'success');
+            if (res.success) { if (!silent) this._toast('AI 설정이 저장되었습니다.', 'success'); }
             else alert('저장 실패: ' + res.error);
+            return res;
         })
-        .catch(err => alert('AI 설정 저장 요청에 실패했습니다.\n' + err.message));
+        .catch(err => { alert('AI 설정 저장 요청에 실패했습니다.\n' + err.message); throw err; });
     },
 
     /* ==========================================
@@ -558,7 +600,7 @@ const Builder = {
     /* ==========================================
      * 4. AI Generation (Generate All Cards)
      * ========================================== */
-    generateAllCards: function() {
+    generateAllCards: function(acceptTemplateFallback) {
         if (!this._requireProject()) return;
         const rawMat = document.getElementById('pb_raw_material').value.trim();
         if(!rawMat) {
@@ -566,9 +608,10 @@ const Builder = {
             return;
         }
 
-        // Locked 카드는 유지 방침
+        // Locked 카드는 유지 방침 (준비 중 공급자 확인 후 재시도하는 경우는 이미 한 번
+        // 물어봤으므로 같은 클릭 흐름 안에서 다시 묻지 않는다)
         const lockedCards = this.cards.filter(c => c.locked && c.state !== 'deleted');
-        if (lockedCards.length > 0) {
+        if (!acceptTemplateFallback && lockedCards.length > 0) {
             if(!confirm(`잠긴 카드 ${lockedCards.length}개는 유지하고 나머지 카드만 다시 생성합니다. 계속하시겠습니까?`)) {
                 return;
             }
@@ -598,12 +641,28 @@ const Builder = {
         payload.append('project_id', this.projectId);
         payload.append('raw_material', rawMat);
         payload.append('locked_cards', JSON.stringify(lockedCards));
+        if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
             btn.disabled = false;
             btn.innerText = origText;
+
+            if (res.needs_provider_confirm) {
+                document.getElementById('pb_card_canvas').innerHTML = '<div style="text-align:center; padding:50px; color:#94a3b8;">공급자를 확인해 주세요.</div>';
+                this._confirmProviderFallback(res.provider_label || '선택한 공급자', choice => {
+                    if (choice === 'template') {
+                        this.generateAllCards(true);
+                    } else if (choice === 'switch') {
+                        this._switchToChatGptProvider().then(switched => {
+                            if (switched) this.generateAllCards(false);
+                        });
+                    }
+                });
+                return;
+            }
+
             if (res.ok && res.cards) {
                 // 프론트엔드 병합 로직
                 // 서버에서 locked 카드가 반영된 전체 구조를 주거나 프론트에서 합쳐야 함.
@@ -887,7 +946,7 @@ const Builder = {
         this.regenerateCard(cardId, prompt);
     },
 
-    regenerateCard: function(cardId, prompt) {
+    regenerateCard: function(cardId, prompt, acceptTemplateFallback) {
         const card = this.cards.find(c => c.id === cardId);
         if(!card) return;
 
@@ -904,13 +963,29 @@ const Builder = {
         payload.append('card_title', card.title || '');
         payload.append('current_content', prevContent);
         payload.append('instruction', prompt);
-        
-        // Context 
+
+        // Context
         payload.append('raw_material', document.getElementById('pb_raw_material').value);
+        if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => res.json())
         .then(res => {
+            if (res.needs_provider_confirm) {
+                card.content = prevContent;
+                this.renderCards();
+                this._confirmProviderFallback(res.provider_label || '선택한 공급자', choice => {
+                    if (choice === 'template') {
+                        this.regenerateCard(cardId, prompt, true);
+                    } else if (choice === 'switch') {
+                        this._switchToChatGptProvider().then(switched => {
+                            if (switched) this.regenerateCard(cardId, prompt, false);
+                        });
+                    }
+                });
+                return;
+            }
+
             if (res.ok && res.new_content) {
                 card.content = res.new_content;
                 card.locked = false; // AI generated unlocks it

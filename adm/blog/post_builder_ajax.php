@@ -171,6 +171,9 @@ switch($action) {
         $prompt = "다음 글감을 바탕으로 블로그 초안을 작성하세요.\n\n[글감]\n{$raw_material}";
 
         $provider_meta = bp_ai_get_provider_meta($project_id);
+        if ($provider_meta['provider'] === 'template' && (!isset($_POST['accept_template_fallback']) || $_POST['accept_template_fallback'] !== '1')) {
+            die(json_encode(bp_build_template_fallback_confirm($project_id)));
+        }
         $ai_result = bp_ai_chat_request($prompt, $sys_prompt, $project_id);
 
         // AI 호출 로깅 (공통)
@@ -227,6 +230,9 @@ switch($action) {
         $prompt .= "위 지시사항을 반영하여 기존 텍스트를 재작성하세요.";
 
         $provider_meta = bp_ai_get_provider_meta($project_id);
+        if ($provider_meta['provider'] === 'template' && (!isset($_POST['accept_template_fallback']) || $_POST['accept_template_fallback'] !== '1')) {
+            die(json_encode(bp_build_template_fallback_confirm($project_id)));
+        }
         $ai_result = bp_ai_chat_request($prompt, $sys_prompt, $project_id);
 
         // AI 호출 로깅 (공통)

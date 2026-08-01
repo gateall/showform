@@ -378,6 +378,16 @@ function bp_ai_is_disabled_for_project(int $projectId): bool
     return $row && $row['ai_disabled'] === 'Y';
 }
 
+// "실제 라이브 API 호출이 가능한 공급자 코드"의 단일 진실 공급원 - 현재는 openai만.
+// 여기에 새 공급자를 추가하려면 bp_ai_get_provider()에도 그 공급자의 실제 연동 구현을
+// 함께 추가해야 한다(이 함수만 고치면 "라이브"라고 표시만 되고 실제로는 여전히
+// 템플릿으로 대체되는 불일치가 생긴다). manager/blog/post_builder.php의 공급자
+// 드롭다운 상태 표시도 이 함수를 그대로 쓴다.
+function bp_ai_provider_is_live(string $providerCode): bool
+{
+    return $providerCode === 'openai';
+}
+
 // 활성 공급자(ai_providers.is_active='Y')가 있고 키가 정상 복호화되면 실제 OpenAI 공급자를,
 // 그 외의 모든 경우(비활성·키 없음·복호화 실패)에는 안전한 템플릿 폴백을 반환한다.
 // 실제 외부 API 호출은 provider_code가 'openai'인 레코드에서만 지원한다. 이 체크가
@@ -390,7 +400,7 @@ function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
     if (!$active || empty($active['api_key_enc'])) {
         return new BlogAiTemplateProvider();
     }
-    if ($active['provider_code'] !== 'openai') {
+    if (!bp_ai_provider_is_live($active['provider_code'])) {
         return new BlogAiTemplateProvider();
     }
 
@@ -415,7 +425,7 @@ function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
 function bp_ai_get_provider_meta(int $projectId = 0): array
 {
     $active = bp_ai_get_active_provider($projectId);
-    if (!$active || empty($active['api_key_enc']) || $active['provider_code'] !== 'openai') {
+    if (!$active || empty($active['api_key_enc']) || !bp_ai_provider_is_live($active['provider_code'])) {
         return array('provider' => 'template', 'model' => '');
     }
     $api_key = bp_decrypt_secret($active['api_key_enc']);
@@ -423,6 +433,22 @@ function bp_ai_get_provider_meta(int $projectId = 0): array
         return array('provider' => 'template', 'model' => '');
     }
     return array('provider' => 'openai', 'model' => isset($active['default_model']) && $active['default_model'] !== '' ? $active['default_model'] : 'gpt-4o');
+}
+
+// 프로젝트에 지정된 공급자가 준비 중(템플릿 대체 대상)일 때, 조용히 템플릿으로 넘어가지
+// 않고 프론트가 "ChatGPT로 변경/템플릿으로 생성/취소" 선택창을 띄우도록 신호를 주는
+// 공용 응답 payload. post_builder_ajax.php의 generate_all_cards/regenerate_card 둘 다 사용한다.
+function bp_build_template_fallback_confirm(int $projectId): array
+{
+    $active = bp_ai_get_active_provider($projectId);
+    $provider_label = ($active && !empty($active['display_name'])) ? $active['display_name'] : '선택한 공급자';
+
+    return array(
+        'ok' => false,
+        'needs_provider_confirm' => true,
+        'provider_label' => $provider_label,
+        'error' => "현재 {$provider_label} API 실제 호출은 아직 연결되지 않았습니다. ChatGPT로 변경하거나 AI 없이 안전 템플릿으로 생성할 수 있습니다.",
+    );
 }
 
 function bp_ai_generate_titles(array $params, int $count = 5): array
