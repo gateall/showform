@@ -797,38 +797,37 @@ const Builder = {
     renderCards: function() {
         const canvas = document.getElementById('pb_card_canvas');
         canvas.innerHTML = '';
-        
+
         let html = '';
+
+        // 제목 후보들은 본문 섹션과 같은 큰 카드로 하나씩 그리면(5개면 화면이 세로로
+        // 아주 길어짐) 한눈에 비교하기 어렵다는 피드백이 있었다 - 압축된 한 줄짜리 행으로
+        // 묶어서 "제목" 박스 하나 안에 전부 모아 그린다.
+        const titleCards = this.cards.filter(c => c.type === 'title' && c.state !== 'deleted');
+        if (titleCards.length > 0) {
+            html += this._renderTitleGroup(titleCards);
+        }
+
         this.cards.forEach(card => {
+            if (card.type === 'title') return; // 위 그룹에서 이미 그림
             if (card.state === 'deleted') return;
-            
+
             const isHidden = card.state === 'hidden';
             const isActive = this.activeCardId === card.id;
-            
+
             let badgeText = '';
             let btnUseHtml = '';
-            
-            if (card.type === 'title') {
-                if (card.state === 'primary') {
-                    badgeText = '대표 제목';
-                    btnUseHtml = `<button class="btn-use active" onclick="Builder.setCardState('${card.id}', 'draft', event)">대표 지정 해제</button>`;
-                } else {
-                    badgeText = '제목 후보';
-                    btnUseHtml = `<button class="btn-use" onclick="Builder.setPrimaryTitle('${card.id}', event)">대표 지정</button>`;
-                }
+
+            if (card.state === 'selected' || card.state === 'primary') {
+                badgeText = '사용함';
+                btnUseHtml = `<button class="btn-use active" onclick="Builder.setCardState('${card.id}', 'draft', event)">사용 해제</button>`;
             } else {
-                if (card.state === 'selected' || card.state === 'primary') {
-                    badgeText = '사용함';
-                    btnUseHtml = `<button class="btn-use active" onclick="Builder.setCardState('${card.id}', 'draft', event)">사용 해제</button>`;
-                } else {
-                    badgeText = '사용 안 함';
-                    btnUseHtml = `<button class="btn-use" onclick="Builder.setCardState('${card.id}', 'selected', event)">사용하기</button>`;
-                }
+                badgeText = '사용 안 함';
+                btnUseHtml = `<button class="btn-use" onclick="Builder.setCardState('${card.id}', 'selected', event)">사용하기</button>`;
             }
-            
-            let cardTitleStr = card.type === 'title' ? '제목' : 
-                               card.type === 'intro' ? '도입부' : 
-                               card.type === 'section' ? (card.title || '본문 섹션') : 
+
+            let cardTitleStr = card.type === 'intro' ? '도입부' :
+                               card.type === 'section' ? (card.title || '본문 섹션') :
                                card.type === 'cta' ? '결론 및 CTA' : '기타';
 
             html += `
@@ -850,35 +849,100 @@ const Builder = {
                 </div>
             </div>`;
         });
-        
+
         canvas.innerHTML = html;
         this.renderRightPanel();
         this.renderMinimap();
     },
 
+    _escapeAttr: function(str) {
+        return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    },
+
+    // 제목 후보 전체를 하나의 "제목" 박스 안에 압축된 행으로 그린다. 체크박스가
+    // 대표 지정/해제를 대신하고(기존 setPrimaryTitle/setCardState 상태를 그대로 씀),
+    // styleLabel(우측 패널의 스타일 버튼이 붙여준 이름, 없으면 "기존")을 배지로 보여준다.
+    _renderTitleGroup: function(titleCards) {
+        let rows = '';
+        titleCards.forEach(card => {
+            const isHidden = card.state === 'hidden';
+            const isActive = this.activeCardId === card.id;
+            const isPrimary = card.state === 'primary';
+            const label = card.styleLabel || '기존';
+
+            rows += `
+            <div class="pb-title-row ${isActive ? 'active' : ''} ${isHidden ? 'state-hidden' : ''}" id="card_${card.id}" onclick="Builder.selectCard('${card.id}')">
+                <input type="checkbox" class="pb-title-check" title="대표 제목으로 지정" ${isPrimary ? 'checked' : ''} onclick="event.stopPropagation(); Builder.setTitleChecked('${card.id}', this.checked)">
+                <span class="pb-title-style-badge">${label}</span>
+                <input type="text" class="pb-title-input" id="textarea_${card.id}" value="${this._escapeAttr(card.content)}" onclick="event.stopPropagation()" onchange="Builder.updateCardContent('${card.id}', this.value)" ${isHidden ? 'disabled' : ''}>
+                <div class="pb-title-actions">
+                    ${card.locked ? '<span style="font-size:0.8rem;" title="잠금 됨 (AI 전체 재생성 시 보호됨)">🔒</span>' : '<span style="font-size:0.8rem; opacity:0.3; cursor:pointer;" title="수정/잠금 해제 상태" onclick="event.stopPropagation(); Builder.toggleLock(\''+card.id+'\', event)">🔓</span>'}
+                    <button onclick="event.stopPropagation(); Builder.toggleHidden('${card.id}', event)">${isHidden ? '표시' : '숨기기'}</button>
+                    <button onclick="event.stopPropagation(); Builder.deleteCard('${card.id}', event)" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;">삭제</button>
+                </div>
+            </div>`;
+        });
+
+        return `
+        <div class="pb-card" style="cursor:default;">
+            <div class="pb-card-header">
+                <div class="pb-card-title">
+                    <span>제목</span>
+                    <span class="card-badge">${titleCards.length}개 후보 - 체크된 것이 대표 제목</span>
+                </div>
+            </div>
+            <div class="pb-title-group" style="display:flex; flex-direction:column; gap:6px;">
+                ${rows}
+            </div>
+        </div>`;
+    },
+
+    // 제목 행의 체크박스 - 체크하면 그 제목을 대표로, 해제하면 대표에서 뺀다
+    // (기존 setPrimaryTitle/setCardState를 그대로 재사용).
+    setTitleChecked: function(cardId, checked) {
+        if (checked) this.setPrimaryTitle(cardId);
+        else this.setCardState(cardId, 'draft');
+    },
+
     renderMinimap: function() {
         const minimap = document.getElementById('pb_minimap');
         if (!minimap) return;
-        
+
         let html = '<div style="padding:10px; font-weight:bold; font-size:0.9rem; color:#475569; border-bottom:1px solid #e2e8f0;">카드 미니맵</div>';
-        
-        this.cards.forEach((card, idx) => {
+
+        // 제목 후보 5개가 "제목/제목/제목/제목/제목"으로 줄줄이 나와서 구분이 안 된다는
+        // 피드백 - 화면에서도 제목들을 하나의 그룹으로 모았으니 미니맵도 항목 하나로 합친다.
+        const titleCards = this.cards.filter(c => c.type === 'title' && c.state !== 'deleted');
+        if (titleCards.length > 0) {
+            const anyActive = titleCards.some(c => c.id === this.activeCardId);
+            html += `
+            <div class="minimap-item ${anyActive ? 'active' : ''}" onclick="Builder.scrollToCard('${titleCards[0].id}')">
+                <span style="font-size:0.8rem; color:#94a3b8; width:20px; display:inline-block;">·</span>
+                <span style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">제목 (${titleCards.length}개 후보)</span>
+            </div>
+            `;
+        }
+
+        let idx = 0;
+        this.cards.forEach((card) => {
+            if (card.type === 'title') return;
             if (card.state === 'deleted') return;
+            idx++;
             const isHidden = card.state === 'hidden';
             const isActive = this.activeCardId === card.id;
-            
-            let label = card.type === 'title' ? '제목' : (card.title || '본문');
-            
+
+            let label = card.title || '본문';
+
             html += `
             <div class="minimap-item ${isActive ? 'active' : ''} ${isHidden ? 'hidden' : ''}" onclick="Builder.scrollToCard('${card.id}')">
-                <span style="font-size:0.8rem; color:#94a3b8; width:20px; display:inline-block;">${idx+1}.</span>
+                <span style="font-size:0.8rem; color:#94a3b8; width:20px; display:inline-block;">${idx}.</span>
                 <span style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</span>
                 ${card.locked ? '<span style="font-size:0.7rem;">🔒</span>' : ''}
                 ${card.state === 'primary' || card.state === 'selected' ? '<span style="color:#10b981; font-size:0.7rem;">●</span>' : ''}
             </div>
             `;
         });
-        
+
         minimap.innerHTML = html;
     },
 
@@ -990,14 +1054,24 @@ const Builder = {
         }
 
         if (card.type === 'title') {
+            // 누르면 기존 제목을 덮어쓰지 않고 새 후보를 위의 "제목" 그룹에 추가한다
+            // (regenerateCard의 4번째 인자가 그 후보에 붙는 스타일 배지 이름이 된다).
             html += `
             <div class="pb-control-group">
-                <label>제목 스타일 변경</label>
+                <label>제목 스타일 변경 (새 후보로 추가됩니다)</label>
                 <div class="pb-btn-grid">
-                    <button onclick="Builder.regenerateCard('${card.id}', '더 매력적이고 자극적으로')">매력적으로</button>
-                    <button onclick="Builder.regenerateCard('${card.id}', '정보 전달 중심으로 담백하게')">담백하게</button>
-                    <button onclick="Builder.regenerateCard('${card.id}', '질문형으로')">질문형으로</button>
-                    <button onclick="Builder.regenerateCard('${card.id}', '숫자를 강조해서')">숫자 강조</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '더 매력적이고 자극적으로', false, '매력적으로')">매력적으로</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '정보 전달 중심으로 담백하게', false, '담백하게')">담백하게</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '질문형으로', false, '질문형')">질문형으로</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '숫자를 강조해서', false, '숫자 강조')">숫자 강조</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '궁금증을 유발하는 후킹 문구로', false, '궁금증 유발')">궁금증 유발</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '공감을 이끄는 감성적인 문구로', false, '공감형')">공감형</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '전문가처럼 신뢰감 있는 어조로', false, '전문가톤')">전문가톤</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '친근한 블로거 말투로', false, '친근하게')">친근하게</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '지금 당장 확인해야 할 것 같은 긴급함을 담아서', false, '긴급성 강조')">긴급성 강조</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '다른 곳과 비교하는 느낌으로', false, '비교형')">비교형</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', 'TOP 순위·리스트 느낌으로', false, 'TOP 리스트형')">TOP 리스트형</button>
+                    <button onclick="Builder.regenerateCard('${card.id}', '지역명과 핵심 키워드를 앞쪽에 강조해서', false, '키워드 강조')">키워드 강조</button>
                 </div>
             </div>`;
         } else {
@@ -1037,13 +1111,19 @@ const Builder = {
         this.regenerateCard(cardId, prompt);
     },
 
-    regenerateCard: function(cardId, prompt, acceptTemplateFallback) {
+    regenerateCard: function(cardId, prompt, acceptTemplateFallback, styleLabel) {
         const card = this.cards.find(c => c.id === cardId);
         if(!card) return;
 
+        // 제목은 기존 후보를 덮어쓰지 않는다 - "기존" 제목과 새로 만든 스타일 제목을
+        // 나란히 놓고 비교해서 고를 수 있어야 한다는 요구사항. 본문 섹션은 원래처럼
+        // 그 자리에서 바로 교체한다(비교 대상이 아니라 편집 대상이라 다르게 취급).
+        const isTitle = card.type === 'title';
         const prevContent = card.content;
-        card.content = 'AI가 재작성 중입니다... 잠시만 기다려주세요.';
-        this.renderCards();
+        if (!isTitle) {
+            card.content = 'AI가 재작성 중입니다... 잠시만 기다려주세요.';
+            this.renderCards();
+        }
 
         const payload = new URLSearchParams();
         payload.append('action', 'regenerate_card');
@@ -1063,14 +1143,13 @@ const Builder = {
         .then(res => this._parseAjaxJson(res))
         .then(res => {
             if (res.needs_provider_confirm) {
-                card.content = prevContent;
-                this.renderCards();
+                if (!isTitle) { card.content = prevContent; this.renderCards(); }
                 this._confirmProviderFallback(res.provider_label || '선택한 공급자', choice => {
                     if (choice === 'template') {
-                        this.regenerateCard(cardId, prompt, true);
+                        this.regenerateCard(cardId, prompt, true, styleLabel);
                     } else if (choice === 'switch') {
                         this._switchToChatGptProvider().then(switched => {
-                            if (switched) this.regenerateCard(cardId, prompt, false);
+                            if (switched) this.regenerateCard(cardId, prompt, false, styleLabel);
                         });
                     }
                 });
@@ -1078,19 +1157,35 @@ const Builder = {
             }
 
             if (res.ok && res.new_content) {
-                card.content = res.new_content;
-                card.locked = false; // AI generated unlocks it
-                this.saveCardPartial(card);
-                this.saveState();
-                this._toast('수정 완료', 'success');
+                if (isTitle) {
+                    const newCard = {
+                        id: 'card_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                        type: 'title',
+                        content: res.new_content,
+                        state: 'draft',
+                        locked: false,
+                        styleLabel: styleLabel || ''
+                    };
+                    const idx = this.cards.indexOf(card);
+                    this.cards.splice(idx + 1, 0, newCard);
+                    this.activeCardId = newCard.id;
+                    this.saveState();
+                    this._toast('새 제목 후보가 추가되었습니다.', 'success');
+                } else {
+                    card.content = res.new_content;
+                    card.locked = false; // AI generated unlocks it
+                    this.saveCardPartial(card);
+                    this.saveState();
+                    this._toast('수정 완료', 'success');
+                }
             } else {
-                card.content = prevContent; // rollback
+                if (!isTitle) card.content = prevContent; // rollback
                 alert('재작성 실패: ' + res.error);
             }
             this.renderCards();
         })
         .catch(err => {
-            card.content = prevContent;
+            if (!isTitle) card.content = prevContent;
             this.renderCards();
             if (err.message === 'LOGIN_REQUIRED') {
                 alert('로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.');

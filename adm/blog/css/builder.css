@@ -207,6 +207,73 @@
     box-sizing: border-box;
 }
 
+/* 제목 카드 - 본문 카드와 같은 큰 블록으로 그리면 한 줄짜리 제목에 비해 세로로 너무
+   길어져서 여러 제목을 한눈에 비교하기 어려웠다. 한 줄짜리 압축 행으로 그린다. */
+.pb-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: default;
+}
+.pb-title-row.active {
+    border: 2px solid #3b82f6;
+}
+.pb-title-row.state-hidden {
+    opacity: 0.5;
+    background: #f1f5f9;
+}
+.pb-title-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.pb-title-style-badge {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #475569;
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.pb-title-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 6px;
+    font-size: 0.95rem;
+    color: #334155;
+    border-radius: 4px;
+}
+.pb-title-input:hover, .pb-title-input:focus {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+.pb-title-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.pb-title-actions button {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.pb-title-actions button:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
 /* 4. 우측 컨트롤 패널 (Right) */
 .pb-sidebar-right {
     grid-area: right;

@@ -234,9 +234,18 @@ switch($action) {
         $instruction = isset($_POST['instruction']) ? $_POST['instruction'] : '';
         $raw_material = isset($_POST['raw_material']) ? $_POST['raw_material'] : '';
 
-        $sys_prompt = "당신은 블로그 콘텐츠 수정 전문가입니다.\n";
-        $sys_prompt .= "사용자의 지시사항에 따라 주어진 텍스트를 재작성하여 반환하세요.\n";
-        $sys_prompt .= "설명이나 부가적인 말 없이 재작성된 텍스트 원본만 반환해야 합니다.\n";
+        if ($card_type === 'title') {
+            // 제목 카드에 일반 수정 프롬프트를 쓰면 모델이 "설명"이나 여러 줄로 풀어써서
+            // 돌려주는 경우가 있었다(제목 후보 화면에 그대로 들어가면 어색해짐) - 길이와
+            // 형식을 명시적으로 못박아 제목 한 줄만 나오게 한다.
+            $sys_prompt = "당신은 한국어 블로그 제목만 작성하는 전문가입니다.\n";
+            $sys_prompt .= "반드시 60자 이내의 제목 한 줄만 반환하세요.\n";
+            $sys_prompt .= "설명, 인사말, 따옴표, 줄바꿈, 부가 설명 없이 제목 텍스트 그 자체만 출력해야 합니다.\n";
+        } else {
+            $sys_prompt = "당신은 블로그 콘텐츠 수정 전문가입니다.\n";
+            $sys_prompt .= "사용자의 지시사항에 따라 주어진 텍스트를 재작성하여 반환하세요.\n";
+            $sys_prompt .= "설명이나 부가적인 말 없이 재작성된 텍스트 원본만 반환해야 합니다.\n";
+        }
 
         $prompt = "[기존 텍스트 유형]\n{$card_type} ({$card_title})\n\n";
         $prompt .= "[기존 텍스트]\n{$current_content}\n\n";
