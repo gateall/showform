@@ -723,6 +723,12 @@ const Builder = {
             } else {
                 this.renderCards();
             }
+            // step-23은 2/3단계가 같은 화면을 쓰므로, 하단 이전/다음 버튼이 가리키는
+            // 단계도 지금이 2단계인지 3단계인지에 따라 매번 다시 맞춰준다.
+            const prevBtn = document.getElementById('pb_step23_prev_btn');
+            const nextBtn = document.getElementById('pb_step23_next_btn');
+            if (prevBtn) prevBtn.onclick = () => this.toggleStep(step - 1);
+            if (nextBtn) nextBtn.onclick = () => this.toggleStep(step + 1);
         }
         
         if (step === 4) {
@@ -1288,6 +1294,10 @@ const Builder = {
         } else {
             html += `
             <div class="pb-control-group">
+                <label>현재 글자 수</label>
+                <div style="font-size:0.9rem; color:#334155;">${card.content.length.toLocaleString()}자</div>
+            </div>
+            <div class="pb-control-group">
                 <label>길이 및 밀도 조절</label>
                 <div class="pb-btn-grid">
                     <button onclick="Builder.regenerateCard('${card.id}', '길이를 현재보다 더 짧게 요약해줘')">더 짧게</button>
@@ -1310,6 +1320,11 @@ const Builder = {
                 <textarea id="custom_prompt_${card.id}" class="frm_input" style="height:60px;" placeholder="예: '울산'이라는 단어를 두 번 더 넣어줘"></textarea>
                 <button type="button" class="btn btn_02" style="width:100%; margin-top:5px;" onclick="Builder.regenerateCardCustom('${card.id}')">명령 실행</button>
             </div>
+            <div class="pb-control-group">
+                <label>추가할 내용</label>
+                <textarea id="append_content_${card.id}" class="frm_input" style="height:80px;" placeholder="기존 글에 자연스럽게 포함시키고 싶은 내용을 입력하세요"></textarea>
+                <button type="button" class="btn btn_02" style="width:100%; margin-top:5px;" onclick="Builder.regenerateCardAppend('${card.id}')">추가하여 재편집</button>
+            </div>
             `;
         }
 
@@ -1320,6 +1335,16 @@ const Builder = {
         const prompt = document.getElementById('custom_prompt_' + cardId).value;
         if(!prompt) { alert('명령을 입력해주세요.'); return; }
         this.regenerateCard(cardId, prompt);
+    },
+
+    // "직접 프롬프트 명령"은 임의의 지시문(예: 말투 바꿔줘)이고, 이건 그와 달리 사용자가
+    // 준 원문 그대로의 추가 정보/문장을 기존 글 속에 자연스럽게 녹여 넣으라는 지시로
+    // 감싸서 보낸다 - 사용자가 입력한 텍스트 자체를 지시문으로 오인해 엉뚱하게 처리되지
+    // 않도록 구분한다.
+    regenerateCardAppend: function(cardId) {
+        const extra = document.getElementById('append_content_' + cardId).value.trim();
+        if(!extra) { alert('추가할 내용을 입력해주세요.'); return; }
+        this.regenerateCard(cardId, '다음 내용을 자연스럽게 포함시켜서 기존 글을 재작성해줘:\n' + extra);
     },
 
     regenerateCard: function(cardId, prompt, acceptTemplateFallback, styleLabel) {
