@@ -325,18 +325,26 @@ include_once(__DIR__ . '/../layout/header.php');
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
                     <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; color:#fff; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
                 </div>
+                <div class="pb-step-footer-nav">
+                    <span></span>
+                    <button type="button" class="btn btn_02" onclick="Builder.toggleStep(2)">다음 단계 →</button>
+                </div>
             </div>
 
             <!-- 2, 3단계 공용: 카드 기반 에디터 캔버스 -->
             <div id="step-23" class="pb-step-view">
                 <h2 class="pb-step-title" id="pb_step23_title">2. 초안 검토 및 조립</h2>
                 <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">AI가 생성한 카드들을 검토하고 불필요한 카드는 비노출/삭제하세요. 카드를 클릭하면 우측에서 세부 수정을 할 수 있습니다.</p>
-                
+
                 <div id="pb_card_canvas" style="display:flex; flex-direction:column; gap:15px; padding-bottom:100px;">
                     <!-- JS에서 카드가 렌더링됩니다 -->
                     <div style="text-align:center; padding:50px; color:#94a3b8;">
                         아직 생성된 초안이 없습니다.<br>1단계에서 [전체 자동 작성 시작]을 눌러주세요.
                     </div>
+                </div>
+                <div class="pb-step-footer-nav">
+                    <button type="button" class="btn btn_02" id="pb_step23_prev_btn" onclick="Builder.toggleStep(1)">← 이전 단계</button>
+                    <button type="button" class="btn_submit btn" id="pb_step23_next_btn" onclick="Builder.toggleStep(3)">다음 단계 →</button>
                 </div>
             </div>
 
@@ -345,6 +353,10 @@ include_once(__DIR__ . '/../layout/header.php');
                 <h2 class="pb-step-title">4. 자동 검수 및 완성</h2>
                 <div id="pb_inspect_canvas" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:20px;">
                     <p style="color:#64748b; text-align:center; padding:40px;">상단의 [전체 검수] 버튼을 눌러 품질을 점검하거나, [최종 조립 및 완성본 보기]를 눌러 글을 완성하세요.</p>
+                </div>
+                <div class="pb-step-footer-nav">
+                    <button type="button" class="btn btn_02" onclick="Builder.toggleStep(3)">← 이전 단계</button>
+                    <button type="button" class="btn_submit btn" style="background:#4f46e5; border-color:#4338ca; color:#fff;" onclick="Builder.finishPost()">✅ 최종 조립 및 완성본 보기</button>
                 </div>
             </div>
 
