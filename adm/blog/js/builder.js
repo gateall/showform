@@ -1354,6 +1354,16 @@ const Builder = {
                 <textarea id="append_content_${card.id}" class="frm_input" style="height:80px;" placeholder="기존 글에 자연스럽게 포함시키고 싶은 내용을 입력하세요"></textarea>
                 <button type="button" class="btn btn_02" style="width:100%; margin-top:5px;" onclick="Builder.regenerateCardAppend('${card.id}')">추가하여 재편집</button>
             </div>
+            <div class="pb-control-group">
+                <label>이미지 생성용 프롬프트</label>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <select id="img_prompt_count_${card.id}" class="frm_input" style="width:70px;">
+                        ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === 3 ? 'selected' : ''}>${n}개</option>`).join('')}
+                    </select>
+                    <button type="button" class="btn btn_02" style="flex:1;" onclick="Builder.generateImagePrompts('${card.id}')">생성</button>
+                </div>
+                <div id="img_prompts_${card.id}">${this._renderImagePrompts(card)}</div>
+            </div>
             `;
         }
 
@@ -1374,6 +1384,65 @@ const Builder = {
         const extra = document.getElementById('append_content_' + cardId).value.trim();
         if(!extra) { alert('추가할 내용을 입력해주세요.'); return; }
         this.regenerateCard(cardId, '다음 내용을 자연스럽게 포함시켜서 기존 글을 재작성해줘:\n' + extra);
+    },
+
+    // 실제 이미지 API는 호출하지 않는다 - 사용자가 별도 이미지 생성 도구(달리/미드저니 등)에
+    // 붙여넣을 영문 프롬프트 텍스트만 만들어 준다. card._imagePrompts에 임시로 들고 있다가
+    // (서버에는 저장하지 않음) 우측 패널이 다시 그려질 때도 사라지지 않게 한다.
+    _renderImagePrompts: function(card) {
+        const prompts = card._imagePrompts;
+        if (!prompts || prompts.length === 0) {
+            return '<div style="color:#94a3b8; font-size:0.85rem;">아직 생성된 프롬프트가 없습니다.</div>';
+        }
+        return prompts.map((p, i) => `
+            <div style="border:1px solid #e2e8f0; border-radius:4px; padding:8px; margin-bottom:6px; font-size:0.8rem; background:#fff;">
+                <div style="color:#334155; margin-bottom:6px;">${this._escapeAttr(p)}</div>
+                <button type="button" class="btn btn_02" style="font-size:0.75rem; padding:2px 8px;" onclick="Builder._copyImagePrompt(this, ${i}, '${card.id}')">복사</button>
+            </div>`).join('');
+    },
+
+    _copyImagePrompt: function(btn, idx, cardId) {
+        const card = this.cards.find(c => c.id === cardId);
+        if (!card || !card._imagePrompts || !card._imagePrompts[idx]) return;
+        navigator.clipboard.writeText(card._imagePrompts[idx]).then(() => {
+            this._toast('프롬프트가 복사되었습니다.', 'success');
+        });
+    },
+
+    generateImagePrompts: function(cardId) {
+        const card = this.cards.find(c => c.id === cardId);
+        if (!card) return;
+        if (!this._requireProject()) return;
+        if (!card.content || card.content.trim() === '') {
+            alert('내용이 비어 있어 프롬프트를 만들 수 없습니다.');
+            return;
+        }
+
+        const countSelect = document.getElementById('img_prompt_count_' + cardId);
+        const count = countSelect ? countSelect.value : 3;
+        const resultsDiv = document.getElementById('img_prompts_' + cardId);
+        if (resultsDiv) resultsDiv.innerHTML = '<div style="color:#94a3b8; font-size:0.85rem;">생성 중...</div>';
+
+        const payload = new URLSearchParams();
+        payload.append('action', 'generate_image_prompts');
+        payload.append('project_id', this.projectId);
+        payload.append('count', count);
+        payload.append('content_text', card.content);
+
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
+        .then(res => this._parseAjaxJson(res))
+        .then(res => {
+            if (res.ok && Array.isArray(res.prompts)) {
+                card._imagePrompts = res.prompts;
+                if (resultsDiv) resultsDiv.innerHTML = this._renderImagePrompts(card);
+            } else {
+                if (resultsDiv) resultsDiv.innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">생성 실패: ' + (res.error || '알 수 없는 오류') + '</div>';
+            }
+        })
+        .catch(err => {
+            const msg = err.message === 'LOGIN_REQUIRED' ? '로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.' : '네트워크 오류';
+            if (resultsDiv) resultsDiv.innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">' + msg + '</div>';
+        });
     },
 
     regenerateCard: function(cardId, prompt, acceptTemplateFallback, styleLabel) {

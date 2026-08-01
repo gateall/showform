@@ -22,6 +22,29 @@ if ($pb_auth_msg) {
 
 $response = ['ok' => true, 'action' => $action];
 
+// AI에게 {"items": [...]} 형태로 문자열 목록을 요청했을 때, json_object 응답 모드가
+// 강제하는 "최상위는 객체" 제약 때문에 모델이 items가 아닌 다른 키로 감싸거나 그냥
+// 배열만 주는 경우까지 대비해서 실제 목록을 뽑아낸다(generate_tags/generate_image_prompts
+// 둘 다 같은 모양의 응답을 기대하므로 공용으로 뺐다).
+function bp_extract_json_item_list(string $raw): ?array
+{
+    $parsed = json_decode(trim($raw), true);
+    if (is_array($parsed) && isset($parsed['items']) && is_array($parsed['items'])) {
+        return $parsed['items'];
+    }
+    if (is_array($parsed) && array_keys($parsed) === range(0, count($parsed) - 1)) {
+        return $parsed; // 모델이 바로 배열로 준 경우
+    }
+    if (is_array($parsed)) {
+        foreach ($parsed as $maybe_list) {
+            if (is_array($maybe_list) && ($maybe_list === array() || array_keys($maybe_list) === range(0, count($maybe_list) - 1))) {
+                return $maybe_list;
+            }
+        }
+    }
+    return null;
+}
+
 switch($action) {
     case 'save_step':
     case 'save_state':
@@ -414,27 +437,51 @@ switch($action) {
             die(json_encode(['ok' => false, 'error' => $ai_result['error']]));
         }
 
-        $parsed = json_decode(trim($ai_result['message']), true);
-        $items = null;
-        if (is_array($parsed) && isset($parsed['items']) && is_array($parsed['items'])) {
-            $items = $parsed['items'];
-        } elseif (is_array($parsed) && array_keys($parsed) === range(0, count($parsed) - 1)) {
-            $items = $parsed; // 모델이 바로 배열로 준 경우
-        } elseif (is_array($parsed)) {
-            foreach ($parsed as $maybe_list) {
-                if (is_array($maybe_list) && ($maybe_list === array() || array_keys($maybe_list) === range(0, count($maybe_list) - 1))) {
-                    $items = $maybe_list;
-                    break;
-                }
-            }
-        }
-
+        $items = bp_extract_json_item_list($ai_result['message']);
         if (!is_array($items)) {
             die(json_encode(['ok' => false, 'error' => 'AI가 올바른 형식을 반환하지 못했습니다.']));
         }
 
         $items = array_values(array_filter(array_map('trim', $items), function ($v) { return $v !== ''; }));
         $response['values'] = array_slice($items, 0, $count);
+        break;
+
+    // 카드(도입부/본문 섹션) 내용에 어울리는 이미지 생성용 프롬프트를 N개 만든다. 실제
+    // 이미지 API 호출은 하지 않는다 - 사용자가 별도 이미지 생성 도구(달리/미드저니 등)에
+    // 그대로 붙여 쓸 영문 프롬프트 텍스트만 만들어 준다.
+    case 'generate_image_prompts':
+        if (!function_exists('bp_ai_chat_request')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        if (!bp_ai_global_enabled()) {
+            die(json_encode(['ok' => false, 'error' => '관리자가 AI 기능을 전체적으로 꺼두었습니다.']));
+        }
+        $count = isset($_POST['count']) ? max(1, min(5, (int) $_POST['count'])) : 3;
+        $content_text = isset($_POST['content_text']) ? trim($_POST['content_text']) : '';
+        if ($content_text === '') {
+            die(json_encode(['ok' => false, 'error' => '내용이 비어 있습니다.']));
+        }
+
+        $sys_prompt = "당신은 AI 이미지 생성 도구(DALL-E, Midjourney 등)에 쓸 프롬프트를 작성하는 전문가입니다.\n";
+        $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요: {\"items\": [\"...\", \"...\"]}\n";
+        $sys_prompt .= "items 배열의 길이는 정확히 {$count}개여야 합니다.\n";
+        $sys_prompt .= "각 항목은 이미지 생성 도구가 바로 사용할 수 있는 영어 프롬프트 한 문단이어야 합니다(구체적인 장면, 스타일, 분위기 묘사 포함).\n";
+        $sys_prompt .= "설명이나 다른 텍스트 없이 위 JSON 객체만 반환하세요.";
+
+        $prompt = "다음 블로그 본문 내용에 어울리는 이미지 생성 프롬프트를 만들어 주세요.\n\n[본문 내용]\n" . mb_substr($content_text, 0, 1500);
+
+        $ai_result = bp_ai_chat_request($prompt, $sys_prompt, $project_id);
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => $ai_result['error']]));
+        }
+
+        $items = bp_extract_json_item_list($ai_result['message']);
+        if (!is_array($items)) {
+            die(json_encode(['ok' => false, 'error' => 'AI가 올바른 형식을 반환하지 못했습니다.']));
+        }
+
+        $items = array_values(array_filter(array_map('trim', $items), function ($v) { return $v !== ''; }));
+        $response['prompts'] = array_slice($items, 0, $count);
         break;
 
     default:
