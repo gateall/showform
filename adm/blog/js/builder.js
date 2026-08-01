@@ -1466,8 +1466,18 @@ const Builder = {
                 let html = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:15px; margin-bottom:15px;">
                                 <h3 style="margin:0; font-size:1.2rem;">품질 검수 결과</h3>
                                 <div style="font-size:1.5rem; font-weight:bold; color:${res.score >= 80 ? '#10b981' : (res.score >= 50 ? '#f59e0b' : '#ef4444')};">${res.score}점</div>
-                            </div>
-                            <ul style="list-style:none; padding:0; margin:0;">`;
+                            </div>`;
+
+                // 검수 결과에 체크 항목만 있고 실제 등록된 키워드/해시태그는 안 보인다는
+                // 피드백 - 1단계에서 입력/생성한 값을 그대로 요약해서 보여준다.
+                const kw = this.tagState.keywords.values.filter(v => v && v.trim() !== '');
+                const ht = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
+                html += `<div style="margin-bottom:15px; padding:12px 15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.9rem;">
+                            <div><strong>키워드</strong> (${kw.length}개): ${kw.length > 0 ? kw.join(', ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
+                            <div style="margin-top:6px;"><strong>해시태그</strong> (${ht.length}개): ${ht.length > 0 ? ht.join(' ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
+                         </div>`;
+
+                html += `<ul style="list-style:none; padding:0; margin:0;">`;
                 
                 res.checks.forEach(chk => {
                     let icon = chk.status === 'pass' ? '✅' : (chk.status === 'warn' ? '⚠️' : '❌');
