@@ -574,16 +574,22 @@ const Builder = {
         payload.append('project_id', this.projectId);
         
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
-        .then(res => res.json())
+        .then(res => this._parseAjaxJson(res))
         .then(res => {
             if (res.ok && res.builder_state) {
                 const s = res.builder_state;
                 if(s.raw_material) document.getElementById('pb_raw_material').value = s.raw_material;
-                if(s.cards && Array.isArray(s.cards)) {
+                if(s.cards && Array.isArray(s.cards) && s.cards.length > 0) {
                     this.cards = s.cards;
-                    if(this.currentStep === 2 || this.currentStep === 3) this.renderCards();
+                    // 페이지를 막 열었을 때는 currentStep이 아직 1이라 이 조건이 항상 거짓이었고,
+                    // 카드는 메모리에 들어왔지만 화면엔 안 보인 채로 남아 "불러오시겠습니까?"에
+                    // 확인을 눌러도 빈 화면처럼 보였다 - 복원된 카드가 있으면 검토 단계로 바로 넘긴다.
+                    this.toggleStep(2);
                 }
             }
+        })
+        .catch(err => {
+            this._toast(err.message === 'LOGIN_REQUIRED' ? '로그인이 만료되어 이전 내용을 불러오지 못했습니다. 새로고침 후 다시 로그인해주세요.' : '이전 내용을 불러오는 중 오류가 발생했습니다.', 'error');
         });
     },
 
@@ -609,7 +615,7 @@ const Builder = {
         payload.append('builder_state', JSON.stringify(stateData));
         
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
-        .then(res => res.json())
+        .then(res => this._parseAjaxJson(res))
         .then(res => {
             if (res.ok) {
                 if (res.post_id > 0) this.postId = res.post_id;
@@ -617,6 +623,17 @@ const Builder = {
                 const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 document.getElementById('pb-saved-time').innerText = timeStr;
                 // this._toast('저장 완료', 'success'); // Too noisy during partial saves
+            } else {
+                // 실패를 조용히 삼키면 화면엔 카드가 있는데 DB엔 없는 상태로 남는다(실제로
+                // 이렇게 초안 하나를 잃어버린 적이 있다) - 반드시 알려야 한다.
+                this._toast('저장 실패: ' + (res.error || '알 수 없는 오류'), 'error');
+            }
+        })
+        .catch(err => {
+            if (err.message === 'LOGIN_REQUIRED') {
+                this._toast('로그인이 만료되어 자동저장이 실패했습니다. 새로고침 후 다시 로그인하고, 화면의 내용을 다시 저장해주세요.', 'error');
+            } else {
+                this._toast('자동저장 중 네트워크 오류가 발생했습니다.', 'error');
             }
         });
     },
