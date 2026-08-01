@@ -36,6 +36,7 @@ include_once(__DIR__ . '/../layout/header.php');
                 <option value="">프로젝트 선택 ▼</option>
             </select>
             <button type="button" class="btn btn_03" id="btn_new_project_toggle" onclick="Builder.toggleNewProjectForm()">새 프로젝트 등록</button>
+            <button type="button" class="btn btn_02" onclick="Builder.editAdvertiser()">광고주 수정</button>
             <span style="margin-left: 10px; font-size: 0.9rem; color: #666;">상태: <strong id="pb-status-display">작성 전</strong></span>
         </div>
         <div class="pb-header-right">

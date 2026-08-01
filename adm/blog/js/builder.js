@@ -397,6 +397,17 @@ const Builder = {
         return true;
     },
 
+    // 상단에서 선택된 광고주의 수정 화면을 새 탭으로 연다 - 작성 중인 초안을 잃지 않도록
+    // 현재 탭을 이동시키지 않는다.
+    editAdvertiser: function() {
+        const advId = document.getElementById('top_advertiser_id').value;
+        if (!advId) {
+            alert('먼저 상단에서 광고주를 선택해주세요.');
+            return;
+        }
+        window.open('./advertiser_form.php?id=' + advId, '_blank');
+    },
+
     toggleNewProjectForm: function() {
         this.toggleStep(0);
         const advId = document.getElementById('top_advertiser_id').value;
