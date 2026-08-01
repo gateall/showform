@@ -51,6 +51,8 @@ if ($tab === 'ai') {
     while ($ap = sql_fetch_array($ai_providers_res)) {
         $ai_providers[] = $ap;
     }
+    $ai_global_enabled = bp_ai_global_enabled();
+    $ai_global_admin_token = get_admin_token();
 }
 
 include_once(__DIR__ . '/../layout/header.php');
@@ -139,9 +141,25 @@ include_once(__DIR__ . '/../layout/header.php');
     </form>
 
     <?php elseif ($tab === 'ai'): ?>
-    <!-- AI 설정: adm/blog/ai_provider_list.php와 같은 테이블을 조회, 등록/수정/연결테스트는 기존 ai_provider_form.php를 그대로 재사용 -->
-    <p style="margin:0 0 1rem;color:var(--mgr-text-muted);font-size:0.9rem;">AI 콘텐츠 생성에 사용할 공급자 설정입니다. API 키는 저장 후 화면에 다시 표시되지 않으며, 마스킹된 값만 노출됩니다. 활성 공급자가 없거나 키가 없으면 템플릿 생성기로 자동 전환됩니다.</p>
-    <a href="./ai_provider_form.php" class="btn btn_01" style="margin-bottom:1rem;display:inline-block;">+ 공급자 등록</a>
+    <!-- AI 설정: adm/blog/ai_provider_list.php와 같은 테이블을 조회. 등록/수정 폼은 별도 페이지로
+         이동하지 않고 partials/ai_provider_form_fields.php를 fetch로 받아 아래 컨테이너에 그대로
+         끼워 넣는다(iframe 금지 지침) - 저장/삭제/연결테스트 처리 로직은 기존 adm 스크립트를 그대로 재사용. -->
+    <p style="margin:0 0 1rem;color:var(--mgr-text-muted);font-size:0.9rem;">AI 콘텐츠 생성에 사용할 공급자 설정입니다. API 키는 마스킹된 값만 노출되며, "보기"를 눌러야 실제 값을 확인할 수 있습니다. 활성 공급자가 없거나 키가 없으면 템플릿 생성기로 자동 전환됩니다.</p>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem;margin-bottom:1.25rem;border:1px solid var(--mgr-border);border-radius:8px;background:<?php echo $ai_global_enabled ? '#f0fdf4' : '#fef2f2'; ?>;">
+        <div>
+            <strong><?php echo $ai_global_enabled ? 'AI 기능 전체 사용 중' : 'AI 기능 전체 중지됨'; ?></strong>
+            <p style="margin:0.25rem 0 0;color:var(--mgr-text-muted);font-size:0.85rem;">끄면 모든 프로젝트에서 AI 생성 요청이 즉시 차단되고 수동 작성만 가능합니다.</p>
+        </div>
+        <form method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/ai_global_settings_update.php" style="flex-shrink:0;" onsubmit="return confirm('<?php echo $ai_global_enabled ? 'AI 기능을 전체적으로 끄시겠습니까?' : 'AI 기능을 전체적으로 켜시겠습니까?'; ?>');">
+            <input type="hidden" name="token" value="<?php echo get_text($ai_global_admin_token); ?>">
+            <input type="hidden" name="is_enabled" value="<?php echo $ai_global_enabled ? 'N' : 'Y'; ?>">
+            <input type="hidden" name="return" value="manager">
+            <button type="submit" class="btn <?php echo $ai_global_enabled ? 'btn_01' : 'btn_submit'; ?>"><?php echo $ai_global_enabled ? 'AI 기능 끄기' : 'AI 기능 켜기'; ?></button>
+        </form>
+    </div>
+
+    <button type="button" class="btn btn_01" style="margin-bottom:1rem;" onclick="loadAiProviderForm(0)">+ 공급자 등록</button>
 
     <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
@@ -160,11 +178,11 @@ include_once(__DIR__ . '/../layout/header.php');
                     <?php foreach ($ai_providers as $ap): ?>
                     <tr style="border-bottom:1px solid var(--mgr-border);">
                         <td style="padding:0.5rem;"><code><?php echo get_text($ap['provider_code']); ?></code></td>
-                        <td style="padding:0.5rem;"><a href="./ai_provider_form.php?id=<?php echo (int)$ap['id']; ?>"><strong><?php echo get_text($ap['display_name']); ?></strong></a></td>
+                        <td style="padding:0.5rem;"><a href="javascript:void(0);" onclick="loadAiProviderForm(<?php echo (int)$ap['id']; ?>)"><strong><?php echo get_text($ap['display_name']); ?></strong></a></td>
                         <td style="padding:0.5rem;"><?php echo get_text($ap['default_model']); ?></td>
-                        <td style="padding:0.5rem;"><?php echo $ap['masked_hint'] ? get_text($ap['masked_hint']) : '<span style="color:var(--mgr-text-muted);">미설정</span>'; ?></td>
+                        <td style="padding:0.5rem;"><?php echo $ap['masked_hint'] ? '<code>' . get_text($ap['masked_hint']) . '</code>' : '<span style="color:var(--mgr-text-muted);">미설정</span>'; ?></td>
                         <td style="padding:0.5rem;"><?php echo $ap['is_active'] === 'Y' ? '<span style="color:#10b981;">사용</span>' : '<span style="color:var(--mgr-text-muted);">중지</span>'; ?></td>
-                        <td style="padding:0.5rem;"><a href="./ai_provider_form.php?id=<?php echo (int)$ap['id']; ?>" class="btn btn_02">수정</a></td>
+                        <td style="padding:0.5rem;"><button type="button" class="btn btn_02" onclick="loadAiProviderForm(<?php echo (int)$ap['id']; ?>)">수정</button></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -173,6 +191,49 @@ include_once(__DIR__ . '/../layout/header.php');
             </tbody>
         </table>
     </div>
+
+    <div id="ai_provider_inline_container" style="display:none;margin-top:1.25rem;padding:1.25rem;border:1px solid var(--mgr-border);border-radius:8px;background:var(--mgr-surface, #fff);"></div>
+
+    <script>
+    function loadAiProviderForm(id) {
+        var container = document.getElementById('ai_provider_inline_container');
+        var url = <?php echo json_encode(SF_MANAGER_URL . '/blog/ai_provider_form.php'); ?> + '?fragment=1' + (id ? '&id=' + encodeURIComponent(id) : '');
+
+        container.style.display = '';
+        container.innerHTML = '<p style="color:var(--mgr-text-muted);">불러오는 중...</p>';
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function(res) { return res.text(); })
+            .then(function(html) {
+                container.innerHTML = html;
+                bpExecuteInjectedScripts(container);
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            })
+            .catch(function() {
+                container.innerHTML = '<p style="color:#dc2626;">양식을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.</p>';
+            });
+    }
+
+    // innerHTML로 넣은 <script>는 브라우저가 자동 실행하지 않으므로, 태그를 새로 만들어
+    // 교체하는 방식으로 직접 실행시킨다(iframe을 쓰지 않기로 한 지침에 따른 대안).
+    function bpExecuteInjectedScripts(container) {
+        var scripts = container.querySelectorAll('script');
+        scripts.forEach(function(oldScript) {
+            var newScript = document.createElement('script');
+            for (var i = 0; i < oldScript.attributes.length; i++) {
+                newScript.setAttribute(oldScript.attributes[i].name, oldScript.attributes[i].value);
+            }
+            newScript.textContent = oldScript.textContent;
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
+    window.closeAiProviderForm = function() {
+        var container = document.getElementById('ai_provider_inline_container');
+        container.style.display = 'none';
+        container.innerHTML = '';
+    };
+    </script>
 
     <?php else: ?>
     <!-- 본문 영역 뼈대 -->

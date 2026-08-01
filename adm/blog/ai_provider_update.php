@@ -21,6 +21,8 @@ $max_tokens = isset($_POST['max_tokens']) ? (int) $_POST['max_tokens'] : 2000;
 $temperature = isset($_POST['temperature']) ? (float) $_POST['temperature'] : 0.70;
 $api_endpoint = isset($_POST['api_endpoint']) ? trim($_POST['api_endpoint']) : '';
 $api_key = isset($_POST['api_key']) ? trim($_POST['api_key']) : '';
+$return = isset($_POST['return']) ? $_POST['return'] : '';
+$manager_redirect = SF_MANAGER_URL . '/blog/settings.php?tab=ai';
 
 if ($display_name === '') {
     alert('공급자명을 입력해 주세요.');
@@ -58,7 +60,7 @@ if ($id > 0) {
                         {$key_sql}
                     where id = '{$id}' ");
 
-    alert('AI 공급자 설정이 저장되었습니다.', G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $id);
+    alert('AI 공급자 설정이 저장되었습니다.', $return === 'manager' ? $manager_redirect : G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $id);
 }
 
 // ---- 신규 등록 ----
@@ -85,4 +87,4 @@ sql_query(" insert into {$table}
                     {$key_sql} ");
 $new_id = (int) sql_insert_id();
 
-alert('AI 공급자가 등록되었습니다.', G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $new_id);
+alert('AI 공급자가 등록되었습니다.', $return === 'manager' ? $manager_redirect : G5_ADMIN_URL . '/blog/ai_provider_form.php?id=' . $new_id);

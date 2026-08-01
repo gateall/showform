@@ -23,4 +23,10 @@ if ((int) $in_use['cnt'] > 0) {
 }
 
 sql_query(" delete from {$table} where id = '{$id}' ");
-alert('AI 공급자가 삭제되었습니다.', G5_ADMIN_URL . '/blog/ai_provider_list.php');
+
+$return = isset($_REQUEST['return']) ? $_REQUEST['return'] : '';
+$redirect = ($return === 'manager')
+    ? SF_MANAGER_URL . '/blog/settings.php?tab=ai'
+    : G5_ADMIN_URL . '/blog/ai_provider_list.php';
+
+alert('AI 공급자가 삭제되었습니다.', $redirect);

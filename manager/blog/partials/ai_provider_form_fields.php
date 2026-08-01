@@ -97,11 +97,18 @@ $return_field = $is_inline ? 'manager' : '';
                     </td></tr>
                 <tr><th scope="row"><label for="api_key">API Key</label></th>
                     <td>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <input type="password" name="api_key" id="api_key" value="" class="frm_input" autocomplete="new-password" placeholder="새 값을 입력할 때만 교체됩니다" style="flex:1;">
-                            <button type="button" class="btn btn_02" id="btn_toggle_api_key" onclick="toggleApiKeyVisible()">보기</button>
+                        <?php if ($row['masked_hint']) { ?>
+                        <div id="api_key_current_wrap" style="display:flex; gap:6px; align-items:center; margin-bottom:10px;">
+                            <code id="api_key_current_display" data-masked="<?php echo get_text($row['masked_hint']); ?>" style="flex:1; padding:8px 10px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px; letter-spacing:1px;"><?php echo get_text($row['masked_hint']); ?></code>
+                            <button type="button" class="btn btn_02" id="btn_reveal_api_key" onclick="revealApiKey(<?php echo (int) $id; ?>)">보기</button>
+                            <a href="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_key_delete.php?id=<?php echo (int) $id; ?>&amp;token=<?php echo get_text($admin_token); ?><?php echo $is_inline ? '&amp;return=manager' : ''; ?>" class="btn btn_01" onclick="return confirm('저장된 API 키를 삭제하시겠습니까? 이후 AI 호출 시 키를 다시 입력해야 합니다.');">키 삭제</a>
                         </div>
-                        <span class="help_txt"><?php echo $row['masked_hint'] ? '현재 저장된 값: ' . get_text($row['masked_hint']) : '저장된 값 없음'; ?> · 붙여넣기가 안 되면 "보기"를 눌러 직접 확인하며 입력해 보세요.</span>
+                        <?php } ?>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <input type="password" name="api_key" id="api_key" value="" class="frm_input" autocomplete="new-password" placeholder="<?php echo $row['masked_hint'] ? '새 값을 입력할 때만 교체됩니다' : 'API 키를 입력하세요'; ?>" style="flex:1;">
+                            <button type="button" class="btn btn_02" id="btn_toggle_api_key" onclick="toggleApiKeyVisible()">입력값 보기</button>
+                        </div>
+                        <span class="help_txt"><?php echo $row['masked_hint'] ? '위 마스킹된 값이 현재 저장된 키입니다. "보기"를 누르면 실제 값을 확인하며, 20초 후 자동으로 다시 가려집니다. 아래 입력칸은 교체할 새 값을 넣을 때만 사용하세요.' : '저장된 값 없음 · 붙여넣기가 안 되면 "입력값 보기"를 눌러 직접 확인하며 입력해 보세요.'; ?></span>
                     </td></tr>
                 <tr><th scope="row">사용 상태</th>
                     <td>
@@ -155,52 +162,64 @@ $return_field = $is_inline ? 'manager' : '';
 </div>
 
 <script>
-$(function() {
-    $('#btn_test_connection').on('click', function() {
-        var $btn = $(this);
-        var $result = $('#test_result_area');
+(function() {
+    var btn = document.getElementById('btn_test_connection');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+        var result = document.getElementById('test_result_area');
 
-        $btn.prop('disabled', true).text('테스트 진행 중...');
-        $result.hide().html('');
+        btn.disabled = true;
+        btn.textContent = '테스트 진행 중...';
+        result.style.display = 'none';
+        result.innerHTML = '';
 
-        $.ajax({
-            url: <?php echo json_encode(G5_ADMIN_URL . '/blog/ai_provider_test.php'); ?>,
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                // 저장 폼이 쓰는 관리자 토큰과는 별개인 테스트 전용 토큰 - 테스트를 실행해도
-                // 저장 버튼이 계속 정상 작동한다(저장용 토큰을 건드리지 않음).
-                test_token: <?php echo json_encode(bp_get_test_token()); ?>,
-                id: <?php echo (int) $id; ?>
-            },
-            success: function(res) {
-                $result.show();
-                if (res.ok) {
-                    $result.css({'border-color': '#28a745', 'background-color': '#eaf9ed', 'color': '#155724'}).html(
-                        '<div><strong style="font-size:16px;">[연결 성공]</strong> ' + res.provider + ' 서버와 정상 연결되었습니다.</div>' +
-                        '<div style="margin-top:8px;"><strong>테스트 모델:</strong> ' + res.model + ' <em>(' + res.model_status + ')</em></div>' +
-                        '<div style="margin-top:4px;"><strong>응답 상태:</strong> HTTP ' + res.http_code + ' (' + res.elapsed_ms + 'ms)</div>' +
-                        '<div style="margin-top:8px; font-size:12px; color:#555;">테스트 일시: ' + res.timestamp + '</div>'
-                    );
-                } else {
-                    $result.css({'border-color': '#dc3545', 'background-color': '#fceeed', 'color': '#721c24'}).html(
-                        '<div><strong style="font-size:16px;">[연결 실패]</strong></div>' +
-                        '<div style="margin-top:8px;">' + res.error + '</div>'
-                    );
-                }
-            },
-            error: function(xhr, status, error) {
-                $result.show().css({'border-color': '#dc3545', 'background-color': '#fceeed', 'color': '#721c24'}).html(
-                    '<div><strong style="font-size:16px;">[통신 오류]</strong></div>' +
-                    '<div style="margin-top:8px;">서버와 통신 중 문제가 발생했습니다. (' + error + ')</div>'
-                );
-            },
-            complete: function() {
-                $btn.prop('disabled', false).text('연결 테스트 실행');
+        var params = new URLSearchParams();
+        // 저장 폼이 쓰는 관리자 토큰과는 별개인 테스트 전용 토큰 - 테스트를 실행해도
+        // 저장 버튼이 계속 정상 작동한다(저장용 토큰을 건드리지 않음).
+        params.set('test_token', <?php echo json_encode(bp_get_test_token()); ?>);
+        params.set('id', <?php echo (int) $id; ?>);
+
+        fetch(<?php echo json_encode(G5_ADMIN_URL . '/blog/ai_provider_test.php'); ?>, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: params.toString()
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            result.style.display = '';
+            if (res.ok) {
+                result.style.borderColor = '#28a745';
+                result.style.backgroundColor = '#eaf9ed';
+                result.style.color = '#155724';
+                result.innerHTML =
+                    '<div><strong style="font-size:16px;">[연결 성공]</strong> ' + res.provider + ' 서버와 정상 연결되었습니다.</div>' +
+                    '<div style="margin-top:8px;"><strong>테스트 모델:</strong> ' + res.model + ' <em>(' + res.model_status + ')</em></div>' +
+                    '<div style="margin-top:4px;"><strong>응답 상태:</strong> HTTP ' + res.http_code + ' (' + res.elapsed_ms + 'ms)</div>' +
+                    '<div style="margin-top:8px; font-size:12px; color:#555;">테스트 일시: ' + res.timestamp + '</div>';
+            } else {
+                result.style.borderColor = '#dc3545';
+                result.style.backgroundColor = '#fceeed';
+                result.style.color = '#721c24';
+                result.innerHTML =
+                    '<div><strong style="font-size:16px;">[연결 실패]</strong></div>' +
+                    '<div style="margin-top:8px;">' + res.error + '</div>';
             }
+        })
+        .catch(function() {
+            result.style.display = '';
+            result.style.borderColor = '#dc3545';
+            result.style.backgroundColor = '#fceeed';
+            result.style.color = '#721c24';
+            result.innerHTML =
+                '<div><strong style="font-size:16px;">[통신 오류]</strong></div>' +
+                '<div style="margin-top:8px;">서버와 통신 중 문제가 발생했습니다.</div>';
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '연결 테스트 실행';
         });
     });
-});
+})();
 </script>
 <?php } ?>
 
@@ -291,7 +310,81 @@ function toggleApiKeyVisible() {
     var btn = document.getElementById('btn_toggle_api_key');
     var showing = input.type === 'text';
     input.type = showing ? 'password' : 'text';
-    btn.innerText = showing ? '보기' : '숨기기';
+    btn.innerText = showing ? '입력값 보기' : '숨기기';
+}
+
+var _bpRevealedKeys = {};
+var _bpRevealTimer = null;
+
+function _bpRemaskApiKey() {
+    var display = document.getElementById('api_key_current_display');
+    var btn = document.getElementById('btn_reveal_api_key');
+    if (_bpRevealTimer) {
+        clearTimeout(_bpRevealTimer);
+        _bpRevealTimer = null;
+    }
+    if (!display || !btn || btn.dataset.revealed !== '1') return;
+    display.textContent = display.getAttribute('data-masked');
+    btn.textContent = '보기';
+    btn.dataset.revealed = '0';
+}
+
+// 화면에 평문 키를 오래 띄워두지 않도록, 보여준 뒤 일정 시간이 지나면 자동으로 다시 마스킹한다.
+var BP_REVEAL_TIMEOUT_MS = 20000;
+
+function revealApiKey(id) {
+    var display = document.getElementById('api_key_current_display');
+    var btn = document.getElementById('btn_reveal_api_key');
+    if (!display || !btn) return;
+
+    if (btn.dataset.revealed === '1') {
+        _bpRemaskApiKey();
+        return;
+    }
+    if (_bpRevealedKeys[id]) {
+        display.textContent = _bpRevealedKeys[id];
+        btn.textContent = '숨기기';
+        btn.dataset.revealed = '1';
+        if (_bpRevealTimer) clearTimeout(_bpRevealTimer);
+        _bpRevealTimer = setTimeout(_bpRemaskApiKey, BP_REVEAL_TIMEOUT_MS);
+        return;
+    }
+
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '확인 중...';
+
+    var params = new URLSearchParams();
+    params.set('test_token', <?php echo json_encode(bp_get_test_token()); ?>);
+    params.set('id', String(id));
+
+    fetch(<?php echo json_encode(G5_ADMIN_URL . '/blog/ai_provider_key_reveal.php'); ?>, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: params.toString()
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+            _bpRevealedKeys[id] = data.api_key;
+            display.textContent = data.api_key;
+            btn.textContent = '숨기기';
+            btn.dataset.revealed = '1';
+            if (_bpRevealTimer) clearTimeout(_bpRevealTimer);
+            _bpRevealTimer = setTimeout(_bpRemaskApiKey, BP_REVEAL_TIMEOUT_MS);
+        } else {
+            btn.textContent = originalText;
+            var msg = data.error || 'API 키 확인에 실패했습니다.';
+            if (window.mgrToast) { window.mgrToast(msg, 'danger'); } else { alert(msg); }
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        var msg = '서버와 통신 중 문제가 발생했습니다.';
+        if (window.mgrToast) { window.mgrToast(msg, 'danger'); } else { alert(msg); }
+    });
 }
 
 document.getElementById('model_mode_list').addEventListener('change', toggleModelMode);
