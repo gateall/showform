@@ -1053,6 +1053,10 @@ const Builder = {
                     this.toggleStep(2);
                 }
                 if (Array.isArray(s.hashtag_enabled)) this.tagState.hashtags.enabled = s.hashtag_enabled;
+                if (Array.isArray(s.selected_rule_ids)) this._setChecked('.pb-chk-generation-rule', s.selected_rule_ids);
+                if (s.extra_instruction && document.getElementById('pb_extra_instruction')) {
+                    document.getElementById('pb_extra_instruction').value = s.extra_instruction;
+                }
             }
             if (res.ok && Array.isArray(res.keywords) && res.keywords.length > 0) {
                 this.tagState.keywords.values = res.keywords;
@@ -1076,7 +1080,11 @@ const Builder = {
             cards: this.cards,
             // posts.hashtags 컬럼은 값 목록만 담으므로, "미적용" 체크 마스크는 새 컬럼을
             // 만들지 않고 이 builder_state JSON에 얹어서 같이 저장/복원한다.
-            hashtag_enabled: this.tagState.hashtags.enabled
+            hashtag_enabled: this.tagState.hashtags.enabled,
+            // AI 글 생성 조건 체크 상태 - blog_generation_rules는 프리셋 라이브러리일 뿐이고,
+            // "이 프로젝트에서 어떤 걸 체크했는지"는 별도 테이블 없이 여기 실어서 보존한다.
+            selected_rule_ids: this._collectChecked('.pb-chk-generation-rule'),
+            extra_instruction: document.getElementById('pb_extra_instruction') ? document.getElementById('pb_extra_instruction').value : ''
         };
     },
     
@@ -1225,6 +1233,8 @@ const Builder = {
         payload.append('contact_fields', JSON.stringify(this._contactFields.filter(f => this.contactState.checked[f.key]).map(f => f.key)));
         payload.append('target_length', this.targetLength);
         payload.append('structure_template', this.structureTemplate);
+        payload.append('selected_rule_ids', JSON.stringify(this._collectChecked('.pb-chk-generation-rule')));
+        payload.append('extra_instruction', document.getElementById('pb_extra_instruction') ? document.getElementById('pb_extra_instruction').value : '');
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })

@@ -280,6 +280,38 @@ switch($action) {
         if ($locked_info !== "") {
             $sys_prompt .= "단, 다음 잠긴(locked) 내용들은 새 초안에 반드시 포함하고 내용을 덮어쓰지 마십시오.\n{$locked_info}\n";
         }
+
+        // AI 글 생성 조건 - post_builder.php 1단계에서 체크한 조건(blog_generation_rules)의
+        // rule_instruction만 골라 프롬프트에 그대로 얹는다. 조건 "이름"만 보내면 AI가 정확히
+        // 못 지킬 수 있어(사용자 지적), 반드시 상세 지시문 본문을 전달한다.
+        $selected_rule_ids = isset($_POST['selected_rule_ids']) ? json_decode($_POST['selected_rule_ids'], true) : [];
+        if (is_array($selected_rule_ids) && !empty($selected_rule_ids)) {
+            $selected_rule_ids = array_values(array_filter(array_map('intval', $selected_rule_ids)));
+        } else {
+            $selected_rule_ids = [];
+        }
+        if (!empty($selected_rule_ids)) {
+            $rules_table = bp_table('generation_rules');
+            $rule_ids_sql = implode(',', $selected_rule_ids);
+            $rules_res = sql_query(" select rule_instruction from {$rules_table}
+                                      where id in ({$rule_ids_sql}) and is_active = 'Y'
+                                      order by rule_type, sort_order, id ");
+            $rule_lines = [];
+            while ($rule_row = sql_fetch_array($rules_res)) {
+                $rule_lines[] = trim($rule_row['rule_instruction']);
+            }
+            if (!empty($rule_lines)) {
+                $sys_prompt .= "\n[글 작성 조건] 아래 조건을 모두 준수하여 글을 작성하세요. 조건끼리 충돌하면 먼저 나온 조건을 우선하세요.\n";
+                foreach ($rule_lines as $i => $line) {
+                    $sys_prompt .= ($i + 1) . ". {$line}\n";
+                }
+            }
+        }
+        $extra_instruction = isset($_POST['extra_instruction']) ? trim($_POST['extra_instruction']) : '';
+        if ($extra_instruction !== '') {
+            $sys_prompt .= "\n[이번 글 추가 지시]\n{$extra_instruction}\n";
+        }
+
         // OpenAI json_object 응답 모드는 최상위가 반드시 객체여야 한다(배열 자체를 최상위로
         // 반환할 수 없음) - 그래서 배열을 예시로 보여주면 모델이 임의의 키로 감싸 버려서(예:
         // {"posts":[...]}) 아래 unwrap 로직(cards 키만 확인)이 못 찾는 경우가 있었다. 예시 자체를

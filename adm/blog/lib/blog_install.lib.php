@@ -262,5 +262,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v24.sql',
             'installed' => bp_install_column_exists($table_prefix, 'ai_providers', 'last_test_status'),
         ),
+        25 => array(
+            'label' => 'AI 글 생성 조건 프리셋', 'desc' => 'blog_generation_rules 테이블 추가(작성/기술/SEO/금지 조건 체크리스트)',
+            'file' => $sql_dir . '/blog_automation_v25.sql',
+            'installed' => bp_install_table_exists($table_prefix, 'generation_rules'),
+        ),
     );
 }

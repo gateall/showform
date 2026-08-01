@@ -20,6 +20,7 @@ function bp_table(string $name): string
         'images', 'post_images', 'category_mappings', 'naver_packages',
         'post_performance', 'report_snapshots', 'advertiser_accounts',
         'channel_apps', 'ai_global_settings', 'post_sections', 'image_presets',
+        'generation_rules',
     );
     if (!in_array($name, $allowed, true)) {
         alert('잘못된 테이블 요청입니다.');

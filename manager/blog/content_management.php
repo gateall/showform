@@ -14,6 +14,7 @@ $tabs = array(
     'advertisers' => '광고주',
     'posts' => '포스팅',
     'keywords' => '키워드',
+    'generation_rules' => '생성조건',
     'publishing' => '발행 관리',
     'reports' => '보고서'
 );
@@ -202,6 +203,22 @@ if ($tab === 'keywords') {
     $kw_list = array();
     while ($kw_row = sql_fetch_array($kw_result)) {
         $kw_list[] = $kw_row;
+    }
+}
+
+// ---- 생성조건 탭: post_builder.php 1단계에서 체크박스로 노출되는 AI 글 생성 조건
+// (blog_generation_rules) 프리셋을 관리한다. 신규 화면 - 다른 탭처럼 옛 화면을 흡수한 게
+// 아니라 처음부터 이 탭으로 만들었다.
+if ($tab === 'generation_rules') {
+    $gr_table = bp_table('generation_rules');
+    $gr_type_labels = array(
+        'writing_rule' => '작성 조건', 'technical_rule' => '기술 조건',
+        'seo_rule' => 'SEO 조건', 'prohibited_rule' => '금지 조건', 'quality_rule' => '품질 조건',
+    );
+    $gr_result = sql_query("select * from {$gr_table} order by rule_type, sort_order, id");
+    $gr_list = array();
+    while ($gr_row = sql_fetch_array($gr_result)) {
+        $gr_list[] = $gr_row;
     }
 }
 
@@ -599,6 +616,40 @@ include_once(__DIR__ . '/../layout/header.php');
 
     $kw_qs = array('tab' => 'keywords', 'stx_keyword' => $kw_stx_keyword, 'stx_advertiser' => $kw_stx_advertiser, 'stx_project' => $kw_stx_project, 'status' => $kw_status, 'locked' => $kw_locked);
     echo mgr_pagination($kw_page, $kw_total_pages, '?' . http_build_query($kw_qs) . '&page=');
+    ?>
+    <?php elseif ($tab === 'generation_rules'): ?>
+    <p style="color:var(--mgr-text-muted);font-size:.875rem;margin:0 0 1rem;">post_builder.php 1단계 "AI 글 생성 조건"에 체크박스로 노출되는 지시문 프리셋입니다. 체크된 조건의 "AI 전달용 상세 지시문"만 실제 프롬프트에 실립니다.</p>
+    <div style="margin-bottom:1rem;">
+        <a href="./generation_rule_form.php" class="mgr-btn mgr-btn-primary">+ 조건 등록</a>
+    </div>
+    <?php
+    $gr_admin_token = get_admin_token();
+    $gr_table_rows = array();
+    foreach ($gr_list as $row) {
+        $gr_table_rows[] = array(
+            'rule_type' => isset($gr_type_labels[$row['rule_type']]) ? $gr_type_labels[$row['rule_type']] : htmlspecialchars($row['rule_type']),
+            'rule_name' => htmlspecialchars($row['rule_name']),
+            'rule_instruction' => htmlspecialchars(mb_substr($row['rule_instruction'], 0, 60)) . (mb_strlen($row['rule_instruction']) > 60 ? '…' : ''),
+            'is_default' => $row['is_default'] === 'Y' ? '기본체크' : '-',
+            'is_active' => mgr_status_badge($row['is_active'] === 'Y' ? '사용' : '숨김', $row['is_active'] === 'Y' ? 'success' : 'muted'),
+            'sort_order' => (int) $row['sort_order'],
+            'manage' => '<a href="./generation_rule_form.php?id=' . (int) $row['id'] . '" class="mgr-btn">수정</a> '
+                . '<a href="' . G5_ADMIN_URL . '/blog/generation_rule_update.php?mode=delete&id=' . (int) $row['id'] . '&token=' . $gr_admin_token . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'이 생성 조건을 삭제하시겠습니까?\');">삭제</a>',
+        );
+    }
+    echo mgr_data_table(
+        array(
+            array('key' => 'rule_type', 'label' => '구분'),
+            array('key' => 'rule_name', 'label' => '조건 이름'),
+            array('key' => 'rule_instruction', 'label' => 'AI 전달용 지시문(요약)'),
+            array('key' => 'is_default', 'label' => '기본 체크'),
+            array('key' => 'is_active', 'label' => '상태'),
+            array('key' => 'sort_order', 'label' => '순서'),
+            array('key' => 'manage', 'label' => '관리'),
+        ),
+        $gr_table_rows,
+        array('empty_title' => '등록된 생성 조건이 없습니다')
+    );
     ?>
     <?php elseif ($tab === 'publishing'): ?>
     <form method="get" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">

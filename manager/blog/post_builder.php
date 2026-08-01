@@ -323,6 +323,50 @@ include_once(__DIR__ . '/../layout/header.php');
                     <p style="font-size:0.8rem; color:#94a3b8; margin:8px 0 0;">프로젝트마다 다른 AI 에이전트를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다. 변경 즉시 저장됩니다.</p>
                 </div>
 
+                <!-- AI 글 생성 조건 - 관리자가 미리 등록해둔 지시문 중 체크한 것만 AI 프롬프트에
+                     실제로 실려서 전달된다(체크박스 값 자체가 아니라 rule_instruction 텍스트가
+                     전달됨). 체크 상태는 builder_state에 실려 프로젝트별로 보존된다. -->
+                <div class="pb-ai-panel" style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <span style="font-size:0.85rem; font-weight:bold; color:#475569;">AI 글 생성 조건 <span style="font-weight:normal; color:#94a3b8; font-size:0.78rem;">- 체크한 조건만 AI 지시문으로 전달됩니다</span></span>
+                        <a href="./generation_rule_form.php" target="_blank" class="btn btn_02" style="font-size:0.8rem;">+ 조건 등록</a>
+                    </div>
+                    <?php
+                    $gr_type_labels = array(
+                        'writing_rule' => '작성 조건', 'technical_rule' => '기술 조건',
+                        'seo_rule' => 'SEO 조건', 'prohibited_rule' => '금지 조건', 'quality_rule' => '품질 조건',
+                    );
+                    $gr_res = sql_query("select id, rule_type, rule_name, is_default from " . bp_table('generation_rules') . " where is_active = 'Y' order by rule_type, sort_order, id");
+                    $gr_by_type = array();
+                    $gr_count = 0;
+                    while ($gr = sql_fetch_array($gr_res)) {
+                        $gr_by_type[$gr['rule_type']][] = $gr;
+                        $gr_count++;
+                    }
+                    if ($gr_count === 0) {
+                    ?>
+                    <p style="font-size:0.8rem; color:#94a3b8; margin:0;">등록된 생성 조건이 없습니다. [+ 조건 등록]에서 먼저 만들어 주세요.</p>
+                    <?php } else {
+                        foreach ($gr_by_type as $gr_type => $gr_rules) {
+                    ?>
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:4px;"><?php echo isset($gr_type_labels[$gr_type]) ? $gr_type_labels[$gr_type] : get_text($gr_type); ?></div>
+                        <div class="pb-check-scroll">
+                            <?php foreach ($gr_rules as $gr_rule) { ?>
+                            <label style="display:block; width:auto;">
+                                <input type="checkbox" class="pb-chk-generation-rule" value="<?php echo (int) $gr_rule['id']; ?>" <?php echo $gr_rule['is_default'] === 'Y' ? 'checked' : ''; ?>>
+                                <?php echo get_text($gr_rule['rule_name']); ?>
+                            </label>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <?php } } ?>
+                    <div class="pb-form-group" style="margin-top:6px;">
+                        <label style="font-size:0.8rem; color:#666;">이번 글 추가 지시 <span style="color:#94a3b8;">(체크 조건으로 해결 안 되는 사항을 직접 입력)</span></label>
+                        <textarea id="pb_extra_instruction" class="frm_input" rows="2" placeholder="예: 40~50대 자영업자가 이해하기 쉬운 표현으로 작성"></textarea>
+                    </div>
+                </div>
+
                 <div id="pb_generate_blocked_msg" style="display:none; margin-top:10px; padding:10px 14px; border:1px solid #f59e0b; border-radius:6px; background:#fffbeb; font-size:0.85rem; color:#92400e; text-align:right;"></div>
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
                     <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; color:#fff; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
