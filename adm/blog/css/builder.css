@@ -297,9 +297,17 @@
     font-size: 1.1rem;
     font-weight: bold;
     color: #1e293b;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 2px solid #e2e8f0;
+}
+/* pb-right-title("컨트롤 패널", 모든 단계 공통) 아래 각 단계별 실제 내용을 구분해서
+   보여주는 두 번째 줄 - 제목/본문/키워드 등 무엇을 다루는 패널인지 표시한다. */
+.pb-right-subtitle {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #64748b;
+    margin-bottom: 15px;
 }
 .pb-control-group {
     margin-bottom: 20px;

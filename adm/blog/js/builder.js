@@ -1293,7 +1293,8 @@ const Builder = {
         // 2/3단계용) - 키워드/해시태그 입력 패널을 우측에 보여준다.
         if (this.currentStep === 1) {
             panel.innerHTML = `
-                <div class="pb-right-title">키워드 · 해시태그</div>
+                <div class="pb-right-title">⚙️ 컨트롤 패널</div>
+                <div class="pb-right-subtitle">키워드 · 해시태그</div>
                 <div id="pb_tags_keywords" class="pb-tags-panel"></div>
                 <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
             `;
@@ -1311,14 +1312,18 @@ const Builder = {
         }
 
         if (!this.activeCardId) {
-            panel.innerHTML = '<div style="text-align:center; color:#94a3b8; padding-top:150px; font-size:0.95rem;">중앙에서 카드를 클릭하시면<br>이곳에 전용 설정 패널이 나타납니다.</div>';
+            panel.innerHTML = `
+                <div class="pb-right-title">⚙️ 컨트롤 패널</div>
+                <div style="text-align:center; color:#94a3b8; padding-top:100px; font-size:0.95rem;">중앙에서 카드를 클릭하시면<br>이곳에 전용 설정 패널이 나타납니다.</div>
+            `;
             return;
         }
 
         const card = this.cards.find(c => c.id === this.activeCardId);
         if (!card) return;
 
-        let html = `<div class="pb-right-title">AI 빠른 수정 (${card.type === 'title' ? '제목' : '본문'})</div>`;
+        let html = `<div class="pb-right-title">⚙️ 컨트롤 패널</div>`;
+        html += `<div class="pb-right-subtitle">AI 빠른 수정 (${card.type === 'title' ? '제목' : '본문'})</div>`;
         
         if (card.locked) {
             html += `<div style="padding:10px; background:#fef3c7; border:1px solid #fde68a; border-radius:4px; margin-bottom:15px; font-size:0.85rem; color:#92400e;">이 카드는 🔒잠금 처리되었습니다. 일괄 재생성으로부터 보호받고 있습니다.</div>`;
