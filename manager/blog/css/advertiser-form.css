@@ -1,0 +1,332 @@
+/* 광고주 등록·수정 화면(advertiser_form.php) 전용 CSS.
+   .advertiserFormPage 아래로만 적용되어 다른 관리자 화면에는 영향을 주지 않는다.
+   PHP 저장 로직, input의 name/id/value, 자바스크립트 이벤트는 이 스타일 시트와 무관하다. */
+
+.advertiserFormPage {
+    --af-border: #dce3eb;
+    --af-text: #1f2937;
+    --af-muted: #64748b;
+    --af-primary: #2563eb;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px 20px 30px;
+    color: var(--af-text);
+}
+
+.advertiserFormPage *,
+.advertiserFormPage *::before,
+.advertiserFormPage *::after {
+    box-sizing: border-box;
+}
+
+/* 상단 헤더 */
+.advertiserFormPage .af-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.advertiserFormPage .af-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.advertiserFormPage .af-header-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+.advertiserFormPage .af-header-name {
+    color: var(--af-muted);
+    font-size: 14px;
+}
+.advertiserFormPage .af-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.advertiserFormPage .af-status-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.advertiserFormPage .af-status-badge.is-on { background: #ecfdf5; color: #047857; }
+.advertiserFormPage .af-status-badge.is-off { background: #fef2f2; color: #b91c1c; }
+
+.advertiserFormPage .af-lead {
+    margin: 0 0 14px;
+    color: var(--af-muted);
+    font-size: 13px;
+}
+
+/* 섹션 카드 */
+.advertiserFormPage .af-section {
+    margin-bottom: 12px;
+    padding: 16px;
+    border: 1px solid var(--af-border);
+    border-radius: 10px;
+}
+.advertiserFormPage .af-section--basic { background: #f5f9ff; }
+.advertiserFormPage .af-section--contact { background: #f3fbf9; }
+.advertiserFormPage .af-section--business { background: #f8f6ff; }
+.advertiserFormPage .af-section--marketing { background: #fff9f1; }
+.advertiserFormPage .af-section--channel { background: #f5f7fc; }
+.advertiserFormPage .af-section--memo { background: #f7f8fa; }
+
+.advertiserFormPage .af-section__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 15px;
+    font-weight: 700;
+}
+.advertiserFormPage .af-section__title::before {
+    width: 4px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--af-primary);
+    content: "";
+    flex-shrink: 0;
+}
+.advertiserFormPage .af-label-note {
+    font-weight: 400;
+    color: var(--af-muted);
+    font-size: 12px;
+}
+.advertiserFormPage .af-required {
+    color: #dc2626;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* 필드 그리드 - PC 2/3열, 태블릿 2열, 모바일 1열 */
+.advertiserFormPage .af-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+}
+.advertiserFormPage .af-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.advertiserFormPage .af-field {
+    min-width: 0;
+}
+.advertiserFormPage .af-field--full {
+    grid-column: 1 / -1;
+}
+.advertiserFormPage .af-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* 입력창 압축 */
+.advertiserFormPage input[type="text"],
+.advertiserFormPage input[type="email"],
+.advertiserFormPage input[type="tel"],
+.advertiserFormPage input[type="url"],
+.advertiserFormPage input[type="number"],
+.advertiserFormPage input[type="date"],
+.advertiserFormPage select,
+.advertiserFormPage textarea {
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 14px;
+}
+.advertiserFormPage input[type="text"],
+.advertiserFormPage input[type="email"],
+.advertiserFormPage input[type="tel"],
+.advertiserFormPage input[type="url"],
+.advertiserFormPage input[type="number"],
+.advertiserFormPage input[type="date"],
+.advertiserFormPage select {
+    height: 38px;
+    padding: 0 10px;
+}
+.advertiserFormPage textarea {
+    min-height: 90px;
+    padding: 9px 10px;
+    line-height: 1.55;
+    resize: vertical;
+}
+.advertiserFormPage input:focus,
+.advertiserFormPage select:focus,
+.advertiserFormPage textarea:focus {
+    border-color: var(--af-primary);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* 업종/서비스지역 체크박스 목록 (기존 pb-check-scroll을 이 페이지 안에서 재정의) */
+.advertiserFormPage .pb-check-scroll {
+    max-height: 160px;
+    overflow-y: auto;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #fff;
+}
+.advertiserFormPage .pb-check-scroll label {
+    display: inline-block;
+    width: 47%;
+    font-weight: normal;
+    font-size: 13px;
+    padding: 3px 0;
+}
+
+/* 사용여부/계약상태 라디오 -> 버튼형 표시 (name/value는 그대로, 겉모습만 버튼처럼) */
+.advertiserFormPage .af-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.advertiserFormPage .af-toggle label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.advertiserFormPage .af-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.advertiserFormPage .af-toggle label:has(input:checked) {
+    border-color: var(--af-primary);
+    background: var(--af-primary);
+    color: #fff;
+}
+.advertiserFormPage .af-toggle label:has(input:focus-visible) {
+    outline: 2px solid var(--af-primary);
+    outline-offset: 2px;
+}
+
+/* 채널 목록 테이블 압축 (기존 tbl_frm01/tbl_wrap 전역 클래스는 그대로 두고, 이 페이지
+   안에서만 th/td 크기를 줄인다) */
+.advertiserFormPage .af-section--channel .tbl_frm01 th {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+.advertiserFormPage .af-section--channel .tbl_frm01 td {
+    padding: 7px 10px;
+    font-size: 13px;
+}
+
+/* 하단 액션바 */
+.advertiserFormPage .af-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--af-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(8px);
+}
+.advertiserFormPage .af-btn {
+    display: inline-flex;
+    min-width: 86px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.advertiserFormPage .af-btn--primary {
+    border-color: var(--af-primary);
+    background: var(--af-primary);
+    color: #fff;
+}
+
+@media (max-width: 1199px) {
+    .advertiserFormPage .af-grid--3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .advertiserFormPage {
+        padding: 16px 16px 30px;
+    }
+}
+
+@media (max-width: 767px) {
+    .advertiserFormPage {
+        padding: 10px 10px 24px;
+    }
+    .advertiserFormPage .af-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .advertiserFormPage .af-section {
+        padding: 12px;
+        border-radius: 8px;
+    }
+    .advertiserFormPage .af-grid,
+    .advertiserFormPage .af-grid--3 {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+    .advertiserFormPage .af-field--full {
+        grid-column: auto;
+    }
+    .advertiserFormPage input[type="text"],
+    .advertiserFormPage input[type="email"],
+    .advertiserFormPage input[type="tel"],
+    .advertiserFormPage input[type="url"],
+    .advertiserFormPage input[type="number"],
+    .advertiserFormPage input[type="date"],
+    .advertiserFormPage select {
+        height: 42px;
+        font-size: 16px;
+    }
+    .advertiserFormPage .pb-check-scroll label {
+        width: 100%;
+    }
+    .advertiserFormPage .af-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 10px;
+    }
+    .advertiserFormPage .af-actions .af-btn {
+        width: 100%;
+        min-width: 0;
+        height: 44px;
+    }
+    .advertiserFormPage .af-actions .af-btn--primary {
+        grid-column: 1 / -1;
+    }
+}
