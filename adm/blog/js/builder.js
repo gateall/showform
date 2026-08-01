@@ -1300,7 +1300,7 @@ const Builder = {
             let label = card.title || '본문';
 
             html += `
-            <div class="minimap-item ${isActive ? 'active' : ''} ${isHidden ? 'hidden' : ''}" onclick="Builder.scrollToCard('${card.id}')">
+            <div class="minimap-item ${isActive ? 'active' : ''} ${isHidden ? 'hidden' : ''}" onclick="Builder.scrollToCard('${card.id}')" title="${this._escapeAttr(label)}">
                 <span style="font-size:0.8rem; color:#94a3b8; width:20px; display:inline-block;">${idx}.</span>
                 <span style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</span>
                 ${card.locked ? '<span style="font-size:0.7rem;">🔒</span>' : ''}
@@ -1430,9 +1430,17 @@ const Builder = {
         }
 
         if (this.currentStep === 4) {
+            const kw4 = this.tagState.keywords.values.filter(v => v && v.trim() !== '');
+            const ht4 = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
                 ${this._renderTargetLengthControl()}
+                <div class="pb-right-subtitle">키워드 · 해시태그</div>
+                <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                    <div><strong>키워드</strong> (${kw4.length}개): ${kw4.length > 0 ? kw4.join(', ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
+                    <div style="margin-top:6px;"><strong>해시태그</strong> (${ht4.length}개): ${ht4.length > 0 ? ht4.join(' ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
+                    <p style="margin:8px 0 0; color:#94a3b8; font-size:0.75rem;">수정하려면 1단계로 이동해서 편집하세요.</p>
+                </div>
                 <p style="color:#94a3b8; font-size:0.8rem;">목표 글자수를 바꾸면 검수 결과가 그 기준으로 다시 표시됩니다. 실제 본문 길이를 바꾸려면 1단계에서 다시 생성하거나 카드를 직접 수정하세요.</p>
             `;
             return;
@@ -1788,6 +1796,16 @@ const Builder = {
             htmlOut += `<p>${c.content.replace(/\n/g, '<br>')}</p>\n\n`;
             textOut += `${c.content}\n\n`;
         });
+
+        // 해시태그는 실제 블로그 글처럼 맨 아래 붙여준다. 키워드는 여기 따로 나열하지
+        // 않는다 - 본문 자체에 자연스럽게 녹아있어야 하는 것이라 별도 목록으로 붙이면
+        // 오히려 어색하다(사용자 확인 사항).
+        const hashtagValues = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
+        if (hashtagValues.length > 0) {
+            const hashtagLine = hashtagValues.map(v => (v.charAt(0) === '#' ? v : '#' + v)).join(' ');
+            htmlOut += `<p>${hashtagLine}</p>\n`;
+            textOut += `${hashtagLine}\n`;
+        }
 
         document.getElementById('pb_preview_html').innerHTML = htmlOut;
         document.getElementById('pb_preview_text').value = textOut;
