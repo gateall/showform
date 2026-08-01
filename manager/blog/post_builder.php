@@ -279,7 +279,9 @@ include_once(__DIR__ . '/../layout/header.php');
                                 <option value="">기본값(전역 활성 공급자)</option>
                                 <?php
                                 $ai_providers_res = sql_query("select id, display_name, provider_code, default_model, is_active, api_key_enc from ".bp_table('ai_providers')." order by display_name");
+                                $ai_providers_count = 0;
                                 while ($ap = sql_fetch_array($ai_providers_res)) {
+                                    $ai_providers_count++;
                                     $ap_is_live_code = bp_ai_provider_is_live($ap['provider_code']);
                                     // "usable" = 지금 선택하면 실제로 AI가 호출된다(코드 지원 + 키 있음 + 활성).
                                     // bp_ai_get_provider_meta()가 판단하는 조건과 동일하게 맞춰야, 여기서 "사용
@@ -300,6 +302,9 @@ include_once(__DIR__ . '/../layout/header.php');
                                 }
                                 ?>
                             </select>
+                            <?php if ($ai_providers_count === 0) { ?>
+                            <p class="pb-control-warning" style="font-size:0.8rem; color:#b45309; margin:4px 0 0;">등록된 AI 공급자가 없습니다. 설정 &gt; AI 설정에서 먼저 등록해 주세요.</p>
+                            <?php } ?>
                         </div>
                         <div>
                             <span style="font-size:0.85rem; color:transparent; display:block; margin-bottom:4px;">.</span>

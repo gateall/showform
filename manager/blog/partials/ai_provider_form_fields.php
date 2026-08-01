@@ -39,7 +39,7 @@ $return_field = $is_inline ? 'manager' : '';
 .ai-toggle-btn.off.active{border-color:#dc2626;background:#fef2f2;color:#b91c1c;}
 </style>
 <div class="local_desc01 local_desc">
-    <p>실제 외부 API 호출은 현재 <strong>챗GPT(OpenAI)</strong>만 지원합니다. 다른 종류는 등록·키 저장은 되지만, 실제 생성 요청 시 안전한 템플릿 생성기로 자동 전환됩니다(연동 예정).</p>
+    <p>실제 외부 API 호출은 현재 <strong>챗GPT(OpenAI)</strong>만 지원합니다. 다른 종류는 등록·키 저장은 되지만, 포스팅 화면에서 실제 생성을 시도하면 조용히 대체되지 않고 챗GPT로 변경할지 템플릿으로 생성할지 먼저 선택하게 됩니다(연동 예정).</p>
 </div>
 
 <form name="faiproviderform" method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_update.php">
