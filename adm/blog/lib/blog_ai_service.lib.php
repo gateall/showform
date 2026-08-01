@@ -268,7 +268,11 @@ class BlogOpenAiProvider implements BlogAiProvider
             'model' => $this->model,
             'messages' => $messages,
             'temperature' => $this->temperature,
-            'max_tokens' => $this->maxTokens,
+            // gpt-5/o1/o3 등 최신 모델은 max_tokens를 거부하고 max_completion_tokens를
+            // 요구한다(실서버 확인: "Unsupported parameter: 'max_tokens' is not supported
+            // with this model. Use 'max_completion_tokens' instead."). 구버전 모델도
+            // max_completion_tokens를 동일하게 지원하므로 전체를 이 이름으로 통일한다.
+            'max_completion_tokens' => $this->maxTokens,
         );
         if ($jsonMode) {
             $payload['response_format'] = array('type' => 'json_object');
