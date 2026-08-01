@@ -161,12 +161,18 @@ switch($action) {
         if ($locked_info !== "") {
             $sys_prompt .= "단, 다음 잠긴(locked) 내용들은 새 초안에 반드시 포함하고 내용을 덮어쓰지 마십시오.\n{$locked_info}\n";
         }
-        $sys_prompt .= "반드시 아래 JSON 배열 형식으로만 응답하세요.\n\n";
-        $sys_prompt .= "[\n";
-        $sys_prompt .= "  { \"id\": \"t1\", \"type\": \"title\", \"content\": \"매력적인 제목 후보 1\", \"state\": \"primary\", \"locked\": false },\n";
-        $sys_prompt .= "  { \"id\": \"c1\", \"type\": \"intro\", \"title\": \"도입부\", \"content\": \"(공감을 이끄는 도입부 문단들...)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "  { \"id\": \"c2\", \"type\": \"section\", \"title\": \"(소제목 1)\", \"content\": \"(본론 내용...)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "]\n";
+        // OpenAI json_object 응답 모드는 최상위가 반드시 객체여야 한다(배열 자체를 최상위로
+        // 반환할 수 없음) - 그래서 배열을 예시로 보여주면 모델이 임의의 키로 감싸 버려서(예:
+        // {"posts":[...]}) 아래 unwrap 로직(cards 키만 확인)이 못 찾는 경우가 있었다. 예시 자체를
+        // {"cards":[...]} 형태로 줘서 모델이 실제로 쓸 키 이름을 명시적으로 고정시킨다.
+        $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요. 최상위는 객체이고, 그 안의 \"cards\" 키에 배열을 담습니다.\n\n";
+        $sys_prompt .= "{\n";
+        $sys_prompt .= "  \"cards\": [\n";
+        $sys_prompt .= "    { \"id\": \"t1\", \"type\": \"title\", \"content\": \"매력적인 제목 후보 1\", \"state\": \"primary\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c1\", \"type\": \"intro\", \"title\": \"도입부\", \"content\": \"(공감을 이끄는 도입부 문단들...)\", \"state\": \"selected\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c2\", \"type\": \"section\", \"title\": \"(소제목 1)\", \"content\": \"(본론 내용...)\", \"state\": \"selected\", \"locked\": false }\n";
+        $sys_prompt .= "  ]\n";
+        $sys_prompt .= "}\n";
 
         $prompt = "다음 글감을 바탕으로 블로그 초안을 작성하세요.\n\n[글감]\n{$raw_material}";
 
@@ -184,11 +190,20 @@ switch($action) {
         }
 
         $cards = json_decode(trim($ai_result['message']), true);
-        if (is_array($cards) && isset($cards['cards'])) {
+        if (is_array($cards) && isset($cards['cards']) && is_array($cards['cards'])) {
             $cards = $cards['cards'];
+        } elseif (is_array($cards) && array_keys($cards) !== range(0, count($cards) - 1)) {
+            // "cards" 키가 아닌 다른 이름으로 감싸서 응답한 경우(모델이 임의의 키를 고른 경우)
+            // 대비 - 값이 리스트(순차 배열)인 첫 번째 키를 찾아 그걸 실제 카드 배열로 쓴다.
+            foreach ($cards as $maybe_list) {
+                if (is_array($maybe_list) && ($maybe_list === array() || array_keys($maybe_list) === range(0, count($maybe_list) - 1))) {
+                    $cards = $maybe_list;
+                    break;
+                }
+            }
         }
-        
-        if (!is_array($cards) || count($cards) === 0) {
+
+        if (!is_array($cards) || count($cards) === 0 || array_keys($cards) !== range(0, count($cards) - 1)) {
             die(json_encode(['ok' => false, 'error' => 'AI가 올바른 JSON 카드를 생성하지 못했습니다.']));
         }
 

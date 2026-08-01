@@ -713,13 +713,13 @@ const Builder = {
                 return;
             }
 
-            if (res.ok && res.cards) {
+            if (res.ok && Array.isArray(res.cards) && res.cards.length > 0) {
                 // 프론트엔드 병합 로직
                 // 서버에서 locked 카드가 반영된 전체 구조를 주거나 프론트에서 합쳐야 함.
                 // 편의상 프론트에서 기존 카드를 리셋하고 서버에서 온 새 카드들을 쓰되,
                 // locked 카드는 덮어쓰지 않음. (현재는 서버 프롬프트에 의해 재생성되거나 보호됨)
                 // 완벽한 병합은 서버 응답과 매칭해야 하나, MVP 수준에선 통째로 할당합니다.
-                
+
                 let newCards = res.cards;
                 
                 // 만약 서버가 잠긴 카드 아이디를 그대로 반환했다면 유지, 아니면 프론트단에서 강제 덮어쓰기 방어
