@@ -56,10 +56,18 @@ if ($tab === 'ai') {
 
     // 마스터 키(BP_CRYPTO_KEY) 회전 후에만 의미 있는 카운트 - 평소에는 항상 0이다.
     // 암호문 자체의 프리픽스로 판단하므로 encryption_key_version 컬럼(V22) 설치 여부와 무관하게 동작한다.
+    // bp_crypto_extract_version()은 버전 프리픽스가 없는 legacy 암호문에 대해 null을 반환한다 -
+    // 이건 "회전 후 남은 옛 버전"이 아니라 "버전 체계 도입 전에 저장된, 지금 키로도 정상
+    // 복호화되는 값"이므로 재암호화가 필요한 상태로 잘못 세면 안 된다(회전이 한 번도 없었는데도
+    // 이 배너가 뜨는 오탐이 있었다).
     $ai_current_key_version = bp_crypto_current_version();
     $ai_needs_reencrypt_count = 0;
     foreach ($ai_providers as $ap) {
-        if ($ap['api_key_enc'] !== '' && bp_crypto_extract_version($ap['api_key_enc']) !== $ai_current_key_version) {
+        if ($ap['api_key_enc'] === '') {
+            continue;
+        }
+        $ap_version = bp_crypto_extract_version($ap['api_key_enc']);
+        if ($ap_version !== null && $ap_version !== $ai_current_key_version) {
             $ai_needs_reencrypt_count++;
         }
     }
