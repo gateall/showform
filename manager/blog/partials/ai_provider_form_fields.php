@@ -98,9 +98,14 @@ $return_field = $is_inline ? 'manager' : '';
                 <tr><th scope="row"><label for="api_key">API Key</label></th>
                     <td>
                         <?php if ($row['masked_hint']) { ?>
-                        <div id="api_key_current_wrap" style="display:flex; gap:6px; align-items:center; margin-bottom:10px;">
+                        <div id="api_key_current_wrap" style="display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
                             <code id="api_key_current_display" data-masked="<?php echo get_text($row['masked_hint']); ?>" style="flex:1; padding:8px 10px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px; letter-spacing:1px;"><?php echo get_text($row['masked_hint']); ?></code>
                             <button type="button" class="btn btn_02" id="btn_reveal_api_key" onclick="revealApiKey(<?php echo (int) $id; ?>)">보기</button>
+                            <span id="api_key_reveal_prompt" style="display:none; gap:6px; align-items:center;">
+                                <input type="password" id="api_key_reveal_password" class="frm_input" autocomplete="off" placeholder="관리자 비밀번호" style="width:160px;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmRevealApiKey(<?php echo (int) $id; ?>);}">
+                                <button type="button" class="btn btn_02" id="btn_confirm_reveal_api_key" onclick="confirmRevealApiKey(<?php echo (int) $id; ?>)">확인</button>
+                                <button type="button" class="btn btn_02" onclick="cancelRevealApiKey()">취소</button>
+                            </span>
                             <a href="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_key_delete.php?id=<?php echo (int) $id; ?>&amp;token=<?php echo get_text($admin_token); ?><?php echo $is_inline ? '&amp;return=manager' : ''; ?>" class="btn btn_01" onclick="return confirm('저장된 API 키를 삭제하시겠습니까? 이후 AI 호출 시 키를 다시 입력해야 합니다.');">키 삭제</a>
                         </div>
                         <?php } ?>
@@ -108,7 +113,7 @@ $return_field = $is_inline ? 'manager' : '';
                             <input type="password" name="api_key" id="api_key" value="" class="frm_input" autocomplete="new-password" placeholder="<?php echo $row['masked_hint'] ? '새 값을 입력할 때만 교체됩니다' : 'API 키를 입력하세요'; ?>" style="flex:1;">
                             <button type="button" class="btn btn_02" id="btn_toggle_api_key" onclick="toggleApiKeyVisible()">입력값 보기</button>
                         </div>
-                        <span class="help_txt"><?php echo $row['masked_hint'] ? '위 마스킹된 값이 현재 저장된 키입니다. "보기"를 누르면 실제 값을 확인하며, 20초 후 자동으로 다시 가려집니다. 아래 입력칸은 교체할 새 값을 넣을 때만 사용하세요.' : '저장된 값 없음 · 붙여넣기가 안 되면 "입력값 보기"를 눌러 직접 확인하며 입력해 보세요.'; ?></span>
+                        <span class="help_txt"><?php echo $row['masked_hint'] ? '위 마스킹된 값이 현재 저장된 키입니다. "보기"를 누르면 관리자 비밀번호 확인 후 실제 값을 보여주며, 20초 후 자동으로 다시 가려집니다. 아래 입력칸은 교체할 새 값을 넣을 때만 사용하세요.' : '저장된 값 없음 · 붙여넣기가 안 되면 "입력값 보기"를 눌러 직접 확인하며 입력해 보세요.'; ?></span>
                     </td></tr>
                 <tr><th scope="row">사용 상태</th>
                     <td>
@@ -313,7 +318,6 @@ function toggleApiKeyVisible() {
     btn.innerText = showing ? '입력값 보기' : '숨기기';
 }
 
-var _bpRevealedKeys = {};
 var _bpRevealTimer = null;
 
 function _bpRemaskApiKey() {
@@ -332,31 +336,50 @@ function _bpRemaskApiKey() {
 // 화면에 평문 키를 오래 띄워두지 않도록, 보여준 뒤 일정 시간이 지나면 자동으로 다시 마스킹한다.
 var BP_REVEAL_TIMEOUT_MS = 20000;
 
+// "보기"는 매번 관리자 비밀번호를 다시 물어본다(클라이언트에 평문을 캐싱해 재사용하지
+// 않음) - 세션이 살아있다는 것만으로 바로 열람되지 않게 하기 위함.
 function revealApiKey(id) {
-    var display = document.getElementById('api_key_current_display');
     var btn = document.getElementById('btn_reveal_api_key');
-    if (!display || !btn) return;
+    if (!btn) return;
 
     if (btn.dataset.revealed === '1') {
         _bpRemaskApiKey();
         return;
     }
-    if (_bpRevealedKeys[id]) {
-        display.textContent = _bpRevealedKeys[id];
-        btn.textContent = '숨기기';
-        btn.dataset.revealed = '1';
-        if (_bpRevealTimer) clearTimeout(_bpRevealTimer);
-        _bpRevealTimer = setTimeout(_bpRemaskApiKey, BP_REVEAL_TIMEOUT_MS);
+
+    var prompt = document.getElementById('api_key_reveal_prompt');
+    var pwInput = document.getElementById('api_key_reveal_password');
+    btn.style.display = 'none';
+    prompt.style.display = 'inline-flex';
+    pwInput.value = '';
+    pwInput.focus();
+}
+
+function cancelRevealApiKey() {
+    var btn = document.getElementById('btn_reveal_api_key');
+    var prompt = document.getElementById('api_key_reveal_prompt');
+    var pwInput = document.getElementById('api_key_reveal_password');
+    pwInput.value = '';
+    prompt.style.display = 'none';
+    btn.style.display = '';
+}
+
+function confirmRevealApiKey(id) {
+    var pwInput = document.getElementById('api_key_reveal_password');
+    var okBtn = document.getElementById('btn_confirm_reveal_api_key');
+    var password = pwInput.value;
+    if (!password) {
+        if (window.mgrToast) { window.mgrToast('비밀번호를 입력해 주세요.', 'warning'); }
         return;
     }
 
-    var originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '확인 중...';
+    okBtn.disabled = true;
+    okBtn.textContent = '확인 중...';
 
     var params = new URLSearchParams();
     params.set('test_token', <?php echo json_encode(bp_get_test_token()); ?>);
     params.set('id', String(id));
+    params.set('admin_password', password);
 
     fetch(<?php echo json_encode(G5_ADMIN_URL . '/blog/ai_provider_key_reveal.php'); ?>, {
         method: 'POST',
@@ -365,23 +388,30 @@ function revealApiKey(id) {
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
-        btn.disabled = false;
+        // 성공/실패와 무관하게 입력했던 비밀번호는 필드에 남기지 않는다.
+        pwInput.value = '';
+        okBtn.disabled = false;
+        okBtn.textContent = '확인';
+
         if (data.ok) {
-            _bpRevealedKeys[id] = data.api_key;
+            cancelRevealApiKey();
+            var display = document.getElementById('api_key_current_display');
+            var btn = document.getElementById('btn_reveal_api_key');
             display.textContent = data.api_key;
+            btn.style.display = '';
             btn.textContent = '숨기기';
             btn.dataset.revealed = '1';
             if (_bpRevealTimer) clearTimeout(_bpRevealTimer);
             _bpRevealTimer = setTimeout(_bpRemaskApiKey, BP_REVEAL_TIMEOUT_MS);
         } else {
-            btn.textContent = originalText;
             var msg = data.error || 'API 키 확인에 실패했습니다.';
             if (window.mgrToast) { window.mgrToast(msg, 'danger'); } else { alert(msg); }
         }
     })
     .catch(function() {
-        btn.disabled = false;
-        btn.textContent = originalText;
+        pwInput.value = '';
+        okBtn.disabled = false;
+        okBtn.textContent = '확인';
         var msg = '서버와 통신 중 문제가 발생했습니다.';
         if (window.mgrToast) { window.mgrToast(msg, 'danger'); } else { alert(msg); }
     });
