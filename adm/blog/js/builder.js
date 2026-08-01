@@ -39,6 +39,23 @@ const Builder = {
 
     // "키워드 · 해시태그" 두 패널을 한 번에 접고 펼치는 상위 토글 - 패널마다 있는
     // 개별 접기/펼치기와는 별개로, 그룹 전체를 한 번에 숨길 때 쓴다.
+    // 최종 본문 목표 글자수(기승전결+방문팁 합산) - 1단계/4단계 컨트롤 패널 양쪽에서 같은
+    // 값을 보고 조정한다. generateAllCards()가 서버로 넘겨서 프롬프트의 "약 N자 목표"에
+    // 그대로 쓰인다.
+    targetLength: 2000,
+    onTargetLengthChange: function(value) {
+        const n = parseInt(value, 10);
+        this.targetLength = (!isNaN(n) && n > 0) ? n : 2000;
+        if (this.currentStep === 4) this.inspectAll();
+    },
+    _renderTargetLengthControl: function() {
+        return `
+        <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:4px;">본문 목표 글자수(기승전결+방문팁 합산)</label>
+            <input type="number" class="frm_input" style="width:100px;" min="200" step="100" value="${this.targetLength}" onchange="Builder.onTargetLengthChange(this.value)"> 자
+        </div>`;
+    },
+
     tagGroupCollapsed: false,
     toggleTagGroup: function() {
         this.tagGroupCollapsed = !this.tagGroupCollapsed;
@@ -1072,6 +1089,7 @@ const Builder = {
         payload.append('raw_material', rawMat);
         payload.append('locked_cards', JSON.stringify(lockedCards));
         payload.append('contact_fields', JSON.stringify(this._contactFields.filter(f => this.contactState.checked[f.key]).map(f => f.key)));
+        payload.append('target_length', this.targetLength);
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
@@ -1392,6 +1410,7 @@ const Builder = {
         if (this.currentStep === 1) {
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
+                ${this._renderTargetLengthControl()}
                 <div class="pb-right-subtitle" style="display:flex; align-items:center; justify-content:space-between;">
                     <span>키워드 · 해시태그</span>
                     <button type="button" class="btn btn_02" onclick="Builder.toggleTagGroup()">${this.tagGroupCollapsed ? '펼치기 ▾' : '접기 ▴'}</button>
@@ -1413,7 +1432,8 @@ const Builder = {
         if (this.currentStep === 4) {
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
-                <div style="color:#94a3b8; font-size:0.9rem;">최종 조립 전 설정 항목이 이곳에 추가될 예정입니다.</div>
+                ${this._renderTargetLengthControl()}
+                <p style="color:#94a3b8; font-size:0.8rem;">목표 글자수를 바꾸면 검수 결과가 그 기준으로 다시 표시됩니다. 실제 본문 길이를 바꾸려면 1단계에서 다시 생성하거나 카드를 직접 수정하세요.</p>
             `;
             return;
         }
@@ -1707,9 +1727,12 @@ const Builder = {
                 // 피드백 - 1단계에서 입력/생성한 값을 그대로 요약해서 보여준다.
                 const kw = this.tagState.keywords.values.filter(v => v && v.trim() !== '');
                 const ht = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
+                const bodyLen = bodyText.trim().length;
+                const lenDiff = bodyLen - this.targetLength;
                 html += `<div style="margin-bottom:15px; padding:12px 15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.9rem;">
                             <div><strong>키워드</strong> (${kw.length}개): ${kw.length > 0 ? kw.join(', ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
                             <div style="margin-top:6px;"><strong>해시태그</strong> (${ht.length}개): ${ht.length > 0 ? ht.join(' ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
+                            <div style="margin-top:6px;"><strong>본문 글자수</strong>: ${bodyLen}자 / 목표 ${this.targetLength}자 (${lenDiff >= 0 ? '+' : ''}${lenDiff}자)</div>
                          </div>`;
 
                 html += `<ul style="list-style:none; padding:0; margin:0;">`;

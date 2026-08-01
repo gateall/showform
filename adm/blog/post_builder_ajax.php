@@ -226,7 +226,8 @@ switch($action) {
         } else {
             $sys_prompt .= "  (등록된 업체 정보가 없으니 일반적인 방문 안내 멘트로만 마무리하세요)\n";
         }
-        $sys_prompt .= "\n기/승/전/결/방문팁을 모두 합친 본문 전체 분량은 약 2000자를 목표로 하세요.\n";
+        $target_length = isset($_POST['target_length']) ? max(200, (int) $_POST['target_length']) : 2000;
+        $sys_prompt .= "\n기/승/전/결/방문팁을 모두 합친 본문 전체 분량은 약 {$target_length}자를 목표로 하세요.\n";
         if ($locked_info !== "") {
             $sys_prompt .= "단, 다음 잠긴(locked) 내용들은 새 초안에 반드시 포함하고 내용을 덮어쓰지 마십시오.\n{$locked_info}\n";
         }
