@@ -144,6 +144,29 @@ switch($action) {
         $response['message'] = "임시저장 완료";
         break;
 
+    // "완료" 버튼(finishPost)에서만 호출된다 - save_state/save_step은 builder_state(카드
+    // JSON)만 저장하고 posts.title/body는 절대 건드리지 않아서, 카드 빌더로 완성한 글이
+    // project_view.php의 "제목"/"본문(현재)"에도, 실제 발행 파이프라인(blog_publisher.lib.php,
+    // posts.title/body를 직접 읽음)에도 반영되지 않던 문제가 있었다 - 여기서 명시적으로
+    // 채워준다. body_html은 클라이언트가 이미 조립한 그대로(제목 h1 제외)를 신뢰한다 -
+    // 서버에서 카드 목록을 다시 조립하면 조립 로직이 두 군데(JS/PHP)로 갈라져 어긋날 위험이 있다.
+    case 'finalize_post':
+        if ($project_id === 0 || $post_id === 0) {
+            die(json_encode(['ok' => false, 'error' => '프로젝트/포스트 정보가 없습니다.']));
+        }
+        $final_title = isset($_POST['title']) ? trim($_POST['title']) : '';
+        $final_body_html = isset($_POST['body_html']) ? $_POST['body_html'] : '';
+        if ($final_title === '') {
+            die(json_encode(['ok' => false, 'error' => '제목이 없습니다.']));
+        }
+        sql_query(" update {$post_table}
+                    set title = '" . sql_real_escape_string($final_title) . "',
+                        body = '" . sql_real_escape_string($final_body_html) . "',
+                        updated_at = '" . G5_TIME_YMDHIS . "'
+                    where id = '{$post_id}' and project_id = '{$project_id}' ");
+        $response['message'] = '완성본이 프로젝트에 반영되었습니다.';
+        break;
+
     case 'save_card':
         if ($post_id === 0) {
             die(json_encode(['ok' => false, 'error' => '포스트 ID가 없습니다.']));

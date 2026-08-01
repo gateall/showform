@@ -2001,14 +2001,19 @@ const Builder = {
         // Generate HTML
         let htmlOut = `<h1>${titleText}</h1>\n\n`;
         let textOut = `${titleText}\n\n`;
+        // posts.title/body에 그대로 저장될 본문 - <h1> 제목은 title 컬럼에 따로 들어가므로
+        // 여기엔 안 포함시킨다(발행 파이프라인이 title+body를 각자 다른 자리에 쓴다).
+        let bodyHtmlOut = '';
 
         bodyCards.forEach(c => {
             if (c.title) {
                 htmlOut += `<h2>${c.title}</h2>\n`;
                 textOut += `[${c.title}]\n`;
+                bodyHtmlOut += `<h2>${c.title}</h2>\n`;
             }
             htmlOut += `<p>${c.content.replace(/\n/g, '<br>')}</p>\n\n`;
             textOut += `${c.content}\n\n`;
+            bodyHtmlOut += `<p>${c.content.replace(/\n/g, '<br>')}</p>\n\n`;
         });
 
         // 해시태그는 실제 블로그 글처럼 맨 아래 붙여준다. 키워드는 여기 따로 나열하지
@@ -2020,6 +2025,7 @@ const Builder = {
             const hashtagLine = hashtagValues.map(v => (v.charAt(0) === '#' ? v : '#' + v)).join(' ');
             htmlOut += `<p>${hashtagLine}</p>\n`;
             textOut += `${hashtagLine}\n`;
+            bodyHtmlOut += `<p>${hashtagLine}</p>\n`;
         }
 
         document.getElementById('pb_preview_html').innerHTML = htmlOut;
@@ -2028,8 +2034,31 @@ const Builder = {
         // Save one last time
         this.saveState();
 
+        // saveState()는 builder_state(카드 JSON)만 저장한다 - project_view.php의 "제목"/
+        // "본문(현재)" 그리고 실제 발행 파이프라인(blog_publisher.lib.php)은 posts.title/body
+        // 컬럼을 직접 읽으므로, "완료" 시점에 조립된 결과를 그 컬럼에도 명시적으로 반영해야
+        // 카드 빌더에서 완성한 글이 검수/발행 단계에서 실제로 보이고 나간다.
+        this.finalizePostColumns(titleText, bodyHtmlOut);
+
         // Slide up the panel
         document.getElementById('pb_bottom_panel').classList.add('active');
+    },
+
+    finalizePostColumns: function(title, bodyHtml) {
+        if (!this.projectId || !this.postId) return;
+        const payload = new URLSearchParams();
+        payload.append('action', 'finalize_post');
+        payload.append('project_id', this.projectId);
+        payload.append('post_id', this.postId);
+        payload.append('title', title);
+        payload.append('body_html', bodyHtml);
+
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
+        .then(res => this._parseAjaxJson(res))
+        .then(res => {
+            if (!res.ok) this._toast('완성본을 프로젝트에 반영하지 못했습니다: ' + (res.error || '알 수 없는 오류'), 'error');
+        })
+        .catch(() => this._toast('완성본 반영 중 네트워크 오류가 발생했습니다. 다시 "완료"를 눌러주세요.', 'error'));
     },
 
     copyHtml: function() {
