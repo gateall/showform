@@ -32,10 +32,15 @@ const Builder = {
     // posts.tags(콤마구분)/posts.hashtags("#태그" 공백구분)에 그대로 저장한다(project_view.php의
     // SEO 편집 폼이 쓰는 기존 저장 형식과 동일 - 새 컬럼/테이블을 만들지 않았다).
     tagState: {
-        keywords: { count: 5, values: [], autoGenerate: false },
-        hashtags: { count: 5, values: [], autoGenerate: false }
+        keywords: { count: 5, values: [], autoGenerate: false, collapsed: false },
+        hashtags: { count: 5, values: [], autoGenerate: false, collapsed: false }
     },
     _autoTagTimers: {},
+
+    toggleTagPanel: function(type) {
+        this.tagState[type].collapsed = !this.tagState[type].collapsed;
+        this.renderTagPanel(type);
+    },
 
     renderTagPanel: function(type) {
         const containerId = type === 'hashtags' ? 'pb_tags_hashtags' : 'pb_tags_keywords';
@@ -45,6 +50,17 @@ const Builder = {
         const label = type === 'hashtags' ? '해시태그' : '키워드';
         const state = this.tagState[type];
         const values = state.values;
+
+        // 우측 패널이 세로로 너무 길어진다는 피드백 - 접었을 때는 헤더 한 줄만 남긴다.
+        if (state.collapsed) {
+            const filledCount = values.filter(v => v && v.trim() !== '').length;
+            container.innerHTML = `
+            <div style="margin-top:12px; padding:10px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">${label} (${filledCount}개 입력됨)</span>
+                <button type="button" class="btn btn_02" onclick="Builder.toggleTagPanel('${type}')">펼치기 ▾</button>
+            </div>`;
+            return;
+        }
 
         let inputs = '';
         for (let i = 0; i < state.count; i++) {
@@ -61,14 +77,15 @@ const Builder = {
         <div style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                 <span style="font-size:0.85rem; font-weight:bold; color:#475569;">${label} (최대 30개)</span>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:0.8rem; color:#666;">개수</span>
-                    <select class="frm_input" style="width:60px;" onchange="Builder.onTagCountChange('${type}', this.value)">
-                        ${countOptions}
-                    </select>
-                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', false)">AI로 채우기</button>
-                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', true)">포스트 내용에 맞게</button>
-                </div>
+                <button type="button" class="btn btn_02" onclick="Builder.toggleTagPanel('${type}')">접기 ▴</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                <span style="font-size:0.8rem; color:#666;">개수</span>
+                <select class="frm_input" style="width:60px;" onchange="Builder.onTagCountChange('${type}', this.value)">
+                    ${countOptions}
+                </select>
+                <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', false)">AI로 채우기</button>
+                <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', true)">포스트 내용에 맞게</button>
             </div>
             <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#666; margin-bottom:10px;">
                 <input type="checkbox" ${state.autoGenerate ? 'checked' : ''} onchange="Builder.onAutoTagToggle('${type}', this.checked)">
