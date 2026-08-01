@@ -641,6 +641,17 @@ const Builder = {
         if (genBtn && genBtn.disabled) {
             return;
         }
+        // 헤더의 "✨ 전체 AI 생성"과 2단계 패널의 "✨ 전체 자동 작성 시작"이 같은 함수를
+        // 부르는 별개의 두 버튼이다 - 이 진행중 플래그 없이는 genBtn(2단계 버튼)만
+        // disabled 처리되어서, 헤더 버튼을 또 누르면 첫 요청이 아직 끝나기 전에 같은
+        // project_id로 두 번째 generate_all_cards 요청이 동시에 나갔다. 세션 파일 락 때문에
+        // 두 번째 요청이 첫 요청 뒤에서 대기하다 OpenAI 호출까지 이어지면 호스팅의 게이트웨이
+        // 타임아웃을 넘겨 실제로 네트워크 단에서 실패하고, 그 결과 성공 토스트와 "네트워크
+        // 오류" 토스트가 동시에 뜨는 것처럼 보였다.
+        if (this._generatingAll) {
+            this._toast('이미 생성 중입니다. 잠시만 기다려주세요.', 'error');
+            return;
+        }
 
         // Locked 카드는 유지 방침 (준비 중 공급자 확인 후 재시도하는 경우는 이미 한 번
         // 물어봤으므로 같은 클릭 흐름 안에서 다시 묻지 않는다)
@@ -652,9 +663,12 @@ const Builder = {
         }
 
         const btn = genBtn || document.querySelector('button[onclick="Builder.generateAllCards()"]');
+        const headerBtn = document.getElementById('pb_btn_generate_all_header');
         const origText = btn.innerText;
         btn.innerText = 'AI 전체 생성 중... (10~20초 소요)';
         btn.disabled = true;
+        if (headerBtn) headerBtn.disabled = true;
+        this._generatingAll = true;
 
         this.toggleStep(2);
         document.getElementById('pb_card_canvas').innerHTML = `
@@ -682,6 +696,8 @@ const Builder = {
         .then(res => {
             btn.disabled = false;
             btn.innerText = origText;
+            if (headerBtn) headerBtn.disabled = false;
+            this._generatingAll = false;
 
             if (res.needs_provider_confirm) {
                 document.getElementById('pb_card_canvas').innerHTML = '<div style="text-align:center; padding:50px; color:#94a3b8;">공급자를 확인해 주세요.</div>';
@@ -730,6 +746,8 @@ const Builder = {
         .catch(err => {
             btn.disabled = false;
             btn.innerText = origText;
+            if (headerBtn) headerBtn.disabled = false;
+            this._generatingAll = false;
             this._toast('네트워크 오류', 'error');
         });
     },
