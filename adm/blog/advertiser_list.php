@@ -66,6 +66,10 @@ if ($total_count > 0) {
         $list[] = $row;
     }
 }
+// 모바일 카드 뷰와 PC 테이블 뷰가 같은 $list를 두 번 돌면서 각자 삭제 링크를 만드는데,
+// get_admin_token()을 매 행마다 부르면 호출할 때마다 세션 토큰이 새로 덮어써져서 마지막
+// 행 말고는 전부 "올바른 방법으로 이용해 주십시오" 오류가 났다 - 한 번만 불러서 재사용한다.
+$adv_admin_token = get_admin_token();
 ?>
 
 <!-- 모바일: 카드 뷰 -->
@@ -89,7 +93,7 @@ if ($total_count > 0) {
             </div>
             <div class="bp-project-actions">
                 <a href="./advertiser_form.php?id=<?php echo (int) $row['id']; ?>" class="btn btn_02">수정</a>
-                <a href="./advertiser_delete.php?id=<?php echo (int) $row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                <a href="./advertiser_delete.php?id=<?php echo (int) $row['id']; ?>&amp;token=<?php echo $adv_admin_token; ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
             </div>
         </div>
         <?php } ?>
@@ -125,7 +129,7 @@ if ($total_count > 0) {
                         <td><?php echo get_text($row['created_at']); ?></td>
                         <td>
                             <a href="./advertiser_form.php?id=<?php echo (int)$row['id']; ?>" class="btn btn_02">수정</a>
-                            <a href="./advertiser_delete.php?id=<?php echo (int)$row['id']; ?>&amp;token=<?php echo get_admin_token(); ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                            <a href="./advertiser_delete.php?id=<?php echo (int)$row['id']; ?>&amp;token=<?php echo $adv_admin_token; ?>" class="btn btn_01" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
                         </td>
                     </tr>
                 <?php } ?>
