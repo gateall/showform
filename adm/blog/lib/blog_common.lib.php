@@ -28,6 +28,50 @@ function bp_table(string $name): string
     return G5_TABLE_PREFIX . 'blog_' . $name;
 }
 
+// project_action.php의 mode=delete는 content_projects.deleted_at만 채우는 소프트
+// 삭제라서, 행 자체는 그대로 남는다. 그런데 content_keywords/posts/content_activity_logs
+// 등은 project_id를 ON DELETE RESTRICT로 참조하고 있어서, 소프트 삭제된 프로젝트가
+// 하나라도 있으면 그 광고주/사이트를 실제로 DELETE하는 SQL 자체가 DB 엔진 단계에서
+// 막힌다(G5_DISPLAY_SQL_ERROR=false라 화면엔 아무 에러도 안 뜨고, 호출부가 성공 여부를
+// 확인 안 하면 "삭제되었습니다"가 그대로 뜨면서 실제로는 아무 것도 안 지워진다 -
+// 실사용자가 이 증상을 그대로 재현해서 알려줬다). 광고주/사이트를 실제로 지우기 직전에,
+// 이미 사용자가 "삭제"를 눌러 소프트 삭제해둔 프로젝트는 여기서 완전히(하드) 삭제해
+// 참조를 없앤다 - project_action.php가 소프트 삭제를 허용하기 전에 이미 발행 이력/작업이
+// 없음을 확인했으므로, 여기서 다시 그 조건을 검사하지 않고 자식 테이블들을 안전하게 지운다.
+function bp_purge_deleted_project(int $project_id): void
+{
+    $posts_table = bp_table('posts');
+    $targets_table = bp_table('post_targets');
+    $quality_table = bp_table('content_quality_checks');
+    $keywords_table = bp_table('content_keywords');
+    $candidates_table = bp_table('content_title_candidates');
+    $logs_table = bp_table('content_activity_logs');
+    $gen_logs_table = bp_table('content_generation_logs');
+    $projects_table = bp_table('content_projects');
+
+    $post_ids = array();
+    $post_res = sql_query(" select id from {$posts_table} where project_id = '{$project_id}' ");
+    while ($post_row = sql_fetch_array($post_res)) {
+        $post_ids[] = (int) $post_row['id'];
+    }
+
+    if (!empty($post_ids)) {
+        $post_ids_sql = implode(',', $post_ids);
+        // post_targets/content_quality_checks가 posts.id를 RESTRICT로 참조하므로
+        // posts를 지우기 전에 먼저 지운다. post_sections 등(v16)은 posts.id를
+        // ON DELETE CASCADE로 참조해서 posts 삭제 시 자동으로 같이 지워진다.
+        sql_query(" delete from {$targets_table} where post_id in ({$post_ids_sql}) ");
+        sql_query(" delete from {$quality_table} where post_id in ({$post_ids_sql}) ");
+    }
+    sql_query(" delete from {$quality_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$posts_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$keywords_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$candidates_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$logs_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$gen_logs_table} where project_id = '{$project_id}' ");
+    sql_query(" delete from {$projects_table} where id = '{$project_id}' ");
+}
+
 // "연결 테스트"류 AJAX 액션 전용 CSRF 토큰. 그누보드 공용 get_admin_token()/
 // check_admin_token()과 완전히 분리된 세션 키(bp_test_token)를 쓴다 - 저장 폼과
 // 같은 토큰을 공유하면, 연결 테스트를 한 번 실행하는 순간(그누보드 토큰은 1회성이라
