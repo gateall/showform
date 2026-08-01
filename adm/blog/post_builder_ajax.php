@@ -183,8 +183,38 @@ switch($action) {
             }
         }
 
+        // "방문팁" 마무리 섹션에 실제 업체 정보를 넣게 하려면 광고주 연락처가 필요하다.
+        $adv_table = bp_table('advertisers');
+        $advertiser = sql_fetch(" select a.name, a.phone, a.email, a.address, a.domain, a.consult_url
+                                   from {$project_table} p
+                                   join {$adv_table} a on a.id = p.advertiser_id
+                                   where p.id = '{$project_id}' ");
+        $contact_lines = "";
+        if ($advertiser) {
+            if (!empty($advertiser['name'])) $contact_lines .= "- 상호: {$advertiser['name']}\n";
+            if (!empty($advertiser['address'])) $contact_lines .= "- 주소: {$advertiser['address']}\n";
+            if (!empty($advertiser['phone'])) $contact_lines .= "- 전화: {$advertiser['phone']}\n";
+            if (!empty($advertiser['email'])) $contact_lines .= "- 이메일: {$advertiser['email']}\n";
+            if (!empty($advertiser['domain'])) $contact_lines .= "- 웹사이트: {$advertiser['domain']}\n";
+            if (!empty($advertiser['consult_url'])) $contact_lines .= "- 상담/SNS 주소: {$advertiser['consult_url']}\n";
+        }
+
+        // 기승전결(起承轉結) + 방문팁 구조, 전체 약 2000자 목표 - PM 지시로 서론/본론2~3개/결론
+        // 형태의 이전 구조를 대체한다.
         $sys_prompt = "당신은 블로그 포스팅 초안을 설계하고 작성하는 수석 에디터입니다.\n";
-        $sys_prompt .= "제공된 글감을 분석하여 SEO 최적화된 블로그 포스팅의 전체 구조(제목 5개, 서론, 본론 2~3개 섹션, 결론/CTA)를 한 번에 작성해야 합니다.\n";
+        $sys_prompt .= "제공된 글감을 분석하여, 아래 \"기승전결 + 방문팁\" 구조로 블로그 포스팅 전체를 한 번에 작성해야 합니다.\n\n";
+        $sys_prompt .= "- 제목 5개 (매력적인 제목 후보)\n";
+        $sys_prompt .= "- 기(도입부): 상부/하부 2개 문단으로 구성\n";
+        $sys_prompt .= "- 승(전개): 상부/하부 2개 문단으로 구성\n";
+        $sys_prompt .= "- 전(전환·핵심 내용): 상부/하부 2개 문단으로 구성\n";
+        $sys_prompt .= "- 결(마무리): 상부/하부 2개 문단으로 구성\n";
+        $sys_prompt .= "- 방문팁: 마지막 안내 멘트 다음에 아래 업체 정보를 자연스럽게 포함\n";
+        if ($contact_lines !== "") {
+            $sys_prompt .= $contact_lines;
+        } else {
+            $sys_prompt .= "  (등록된 업체 정보가 없으니 일반적인 방문 안내 멘트로만 마무리하세요)\n";
+        }
+        $sys_prompt .= "\n기/승/전/결/방문팁을 모두 합친 본문 전체 분량은 약 2000자를 목표로 하세요.\n";
         if ($locked_info !== "") {
             $sys_prompt .= "단, 다음 잠긴(locked) 내용들은 새 초안에 반드시 포함하고 내용을 덮어쓰지 마십시오.\n{$locked_info}\n";
         }
@@ -192,12 +222,18 @@ switch($action) {
         // 반환할 수 없음) - 그래서 배열을 예시로 보여주면 모델이 임의의 키로 감싸 버려서(예:
         // {"posts":[...]}) 아래 unwrap 로직(cards 키만 확인)이 못 찾는 경우가 있었다. 예시 자체를
         // {"cards":[...]} 형태로 줘서 모델이 실제로 쓸 키 이름을 명시적으로 고정시킨다.
-        $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요. 최상위는 객체이고, 그 안의 \"cards\" 키에 배열을 담습니다.\n\n";
+        // type은 반드시 intro/section/cta 중 하나로 고정한다 - 다른 값을 주면 화면에서
+        // 카드 제목이 "기타"로만 표시되던 문제가 있었다.
+        $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요. 최상위는 객체이고, 그 안의 \"cards\" 키에 배열을 담습니다.\n";
+        $sys_prompt .= "type은 반드시 title, intro, section, cta 중 하나여야 합니다(다른 값 금지).\n\n";
         $sys_prompt .= "{\n";
         $sys_prompt .= "  \"cards\": [\n";
         $sys_prompt .= "    { \"id\": \"t1\", \"type\": \"title\", \"content\": \"매력적인 제목 후보 1\", \"state\": \"primary\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c1\", \"type\": \"intro\", \"title\": \"도입부\", \"content\": \"(공감을 이끄는 도입부 문단들...)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c2\", \"type\": \"section\", \"title\": \"(소제목 1)\", \"content\": \"(본론 내용...)\", \"state\": \"selected\", \"locked\": false }\n";
+        $sys_prompt .= "    { \"id\": \"c1\", \"type\": \"intro\", \"title\": \"기(도입부)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c2\", \"type\": \"section\", \"title\": \"승(전개)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c3\", \"type\": \"section\", \"title\": \"전(전환)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c4\", \"type\": \"section\", \"title\": \"결(마무리)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
+        $sys_prompt .= "    { \"id\": \"c5\", \"type\": \"cta\", \"title\": \"방문팁\", \"content\": \"(마지막 멘트 + 업체 정보)\", \"state\": \"selected\", \"locked\": false }\n";
         $sys_prompt .= "  ]\n";
         $sys_prompt .= "}\n";
 

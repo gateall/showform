@@ -64,8 +64,15 @@ function bp_quality_check_forbidden_words(string $body, string $forbiddenWordsRa
 function bp_quality_check_contact_missing(string $body, string $phone, string $consultUrl): array
 {
     $missing = array();
-    if ($phone !== '' && mb_strpos($body, $phone) === false) {
-        $missing[] = '전화번호';
+    // 전화번호는 하이픈/공백 표기가 저장된 값과 한 글자만 달라도(예: "010-1234-5678"을
+    // AI가 "010 1234 5678"로 바꿔써도) 완전히 다른 문자열이 되어 실패 처리됐다 - 숫자만
+    // 남겨서 비교한다(실제 번호가 본문에 있는지가 중요하지, 하이픈 표기 방식은 무관하다).
+    if ($phone !== '') {
+        $phone_digits = preg_replace('/\D/', '', $phone);
+        $body_digits = preg_replace('/\D/', '', $body);
+        if ($phone_digits === '' || strpos($body_digits, $phone_digits) === false) {
+            $missing[] = '전화번호';
+        }
     }
     if ($consultUrl !== '' && mb_strpos($body, $consultUrl) === false) {
         $missing[] = '상담 URL';
