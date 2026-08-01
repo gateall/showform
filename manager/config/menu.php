@@ -63,6 +63,12 @@ $manager_menu = array(
         'items' => array(
             array('title' => '그누보드 관리자', 'url' => G5_ADMIN_URL . '/', 'permission' => '', 'external' => true),
             array('title' => '홈페이지 보기', 'url' => G5_URL . '/', 'permission' => '', 'external' => true),
+            // 'super_only'는 admin.menuXXX.php에 등록된 실제 auth 코드가 아니다 - 이 화면은
+            // auth_check_menu()가 아니라 $is_admin==='super' 단독 체크로 보호되므로(마스터
+            // 암호화 키를 다루는 화면이라 일반 관리자에게는 메뉴 자체를 안 보여주기 위한
+            // 장치일 뿐), 존재하지 않는 코드를 넣어 mgr_menu_visible()이 최고관리자
+            // 외에는 항상 false를 반환하게 만든다.
+            array('title' => '암호화 키 생성기', 'url' => SF_MANAGER_URL . '/system/crypto_key_generator.php', 'permission' => 'super_only'),
             array('title' => '관리자 로그아웃', 'url' => SF_MANAGER_URL . '/logout.php', 'permission' => ''),
         ),
     ),
