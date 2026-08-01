@@ -16,8 +16,9 @@ const Builder = {
     activeCardId: null,
 
     init: function() {
-        this.toggleStep(1); 
-        
+        this.toggleStep(1);
+        this.updateProviderStatusUI();
+
         const loadProjectId = localStorage.getItem('pb_load_project_id');
         if (loadProjectId) {
             localStorage.removeItem('pb_load_project_id');
@@ -485,6 +486,31 @@ const Builder = {
         .catch(err => { alert('AI 설정 저장 요청에 실패했습니다.\n' + err.message); throw err; });
     },
 
+    // 선택된 공급자의 상태(data-status, post_builder.php가 서버에서 렌더링)를 보고
+    // "전체 자동 작성 시작" 버튼을 켜고 끈다. 연결 오류·API 키 필요일 때만 막는다(테스트
+    // 필요·사용 안 함은 그대로 시도 가능 - 서버 쪽 판단과 일치시키기 위함).
+    updateProviderStatusUI: function() {
+        const select = document.getElementById('pb_ai_provider_id');
+        const btn = document.getElementById('pb_btn_generate_all');
+        const msgBox = document.getElementById('pb_generate_blocked_msg');
+        if (!select || !btn || !msgBox) return;
+
+        const selected = select.options[select.selectedIndex];
+        const status = selected ? selected.dataset.status : '';
+
+        if (status === 'error' || status === 'no_key') {
+            const label = status === 'error' ? '연결 오류' : 'API 키 필요';
+            btn.disabled = true;
+            msgBox.style.display = '';
+            msgBox.innerHTML = '선택한 AI 공급자 상태: <strong>' + label + '</strong> - 실행할 수 없습니다. ' +
+                '<a href="./settings.php?tab=ai" target="_blank" class="btn btn_02" style="margin-left:8px;">AI API 설정 관리로 이동</a>';
+        } else {
+            btn.disabled = false;
+            msgBox.style.display = 'none';
+            msgBox.innerHTML = '';
+        }
+    },
+
     /* ==========================================
      * 2. Step Navigation
      * ========================================== */
@@ -608,6 +634,14 @@ const Builder = {
             return;
         }
 
+        // 클릭 시점에도 한 번 더 확인한다(버튼 disabled를 우회해서 호출된 경우 대비 -
+        // updateProviderStatusUI()가 이미 disabled 처리했겠지만 이중 방어).
+        this.updateProviderStatusUI();
+        const genBtn = document.getElementById('pb_btn_generate_all');
+        if (genBtn && genBtn.disabled) {
+            return;
+        }
+
         // Locked 카드는 유지 방침 (준비 중 공급자 확인 후 재시도하는 경우는 이미 한 번
         // 물어봤으므로 같은 클릭 흐름 안에서 다시 묻지 않는다)
         const lockedCards = this.cards.filter(c => c.locked && c.state !== 'deleted');
@@ -617,7 +651,7 @@ const Builder = {
             }
         }
 
-        const btn = document.querySelector('button[onclick="Builder.generateAllCards()"]');
+        const btn = genBtn || document.querySelector('button[onclick="Builder.generateAllCards()"]');
         const origText = btn.innerText;
         btn.innerText = 'AI 전체 생성 중... (10~20초 소요)';
         btn.disabled = true;

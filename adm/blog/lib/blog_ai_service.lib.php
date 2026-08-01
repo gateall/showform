@@ -317,6 +317,226 @@ class BlogOpenAiProvider implements BlogAiProvider
     }
 }
 
+// 실제 Gemini(Generative Language API) 호출 공급자. OpenAI와 달리 API 키를 Authorization
+// 헤더가 아니라 URL 쿼리스트링(?key=...)으로 전달해야 하므로, curl 오류 메시지·로그 어디에도
+// 요청 URL 전체를 그대로 남기지 않는다(키가 그 안에 들어있기 때문). 실제 오류 응답 형태는
+// {"error":{"code":400,"message":"...","status":"INVALID_ARGUMENT"}} - 구글 실서버에 잘못된
+// 키로 직접 요청해 확인한 형식이다.
+class BlogGeminiProvider implements BlogAiProvider
+{
+    private string $apiKeyPlain;
+    private string $endpoint;
+    private string $model;
+    private int $maxTokens;
+    private float $temperature;
+
+    public function __construct(string $apiKeyPlain, string $endpoint, string $model, int $maxTokens, float $temperature)
+    {
+        $this->apiKeyPlain = $apiKeyPlain;
+        $this->endpoint = $endpoint !== '' ? rtrim($endpoint, '/') : 'https://generativelanguage.googleapis.com/v1beta';
+        $this->model = $model !== '' ? $model : 'gemini-2.5-pro';
+        $this->maxTokens = $maxTokens > 0 ? $maxTokens : 2000;
+        $this->temperature = $temperature;
+    }
+
+    public function generateTitles(array $params, int $count): array
+    {
+        $count = max(3, min(10, $count));
+        $topic = isset($params['topic']) ? trim($params['topic']) : '';
+        $keyword = isset($params['primary_keyword']) ? trim($params['primary_keyword']) : '';
+        $region = isset($params['service_region']) ? trim($params['service_region']) : '';
+
+        $system_prompt = "너는 블로그 SEO 제목을 만드는 카피라이터야. 아래 정보로 한국어 블로그 제목 후보를 "
+            . "{$count}개 만들어라. 각 제목은 60자 이내, 과장광고·허위 정보 없이, 실제 검색 의도에 맞게 작성해라.\n"
+            . "[정보]\n주제: {$topic}\n대표 키워드: {$keyword}\n지역: " . ($region !== '' ? $region : '전국') . "\n\n"
+            . "반드시 아래 JSON 형식만 출력해라: {\"titles\": [\"제목1\", \"제목2\", ...]}";
+
+        $result = $this->callGenerateContent($system_prompt, '제목 후보 JSON을 생성해줘.', true);
+        if (!$result['ok']) {
+            return array('ok' => false, 'titles' => array(), 'error' => $result['error'], 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+        }
+
+        $parsed = json_decode($result['content'], true);
+        if (!is_array($parsed) || !isset($parsed['titles']) || !is_array($parsed['titles']) || empty($parsed['titles'])) {
+            return array('ok' => false, 'titles' => array(), 'error' => 'AI가 올바른 제목 JSON 형식을 반환하지 않았습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+        }
+
+        $titles = array();
+        foreach ($parsed['titles'] as $t) {
+            if (is_string($t) && trim($t) !== '') {
+                $titles[] = mb_substr(trim($t), 0, 60);
+            }
+        }
+        if (empty($titles)) {
+            return array('ok' => false, 'titles' => array(), 'error' => 'AI 응답에 유효한 제목이 없습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+        }
+
+        return array('ok' => true, 'titles' => array_slice($titles, 0, $count), 'error' => '', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+    }
+
+    public function generateBody(array $params): array
+    {
+        $title = isset($params['title']) ? trim($params['title']) : '';
+        $topic = isset($params['topic']) ? trim($params['topic']) : '';
+        $keyword = isset($params['primary_keyword']) ? trim($params['primary_keyword']) : '';
+        $region = isset($params['service_region']) ? trim($params['service_region']) : '';
+        $content_type = isset($params['content_type']) ? trim($params['content_type']) : 'info';
+
+        $system_prompt = "너는 지역 서비스 업체를 위한 블로그 글을 쓰는 작가야. 아래 정보로 한국어 블로그 본문을 "
+            . "작성해라. 존재하지 않는 요금·통계·고객 사례를 만들어내지 말고, 과장광고 표현을 쓰지 마라. "
+            . "업체명·전화번호·주소는 실제 값을 모르니 {{business_name}}, {{phone}}, {{address}}, "
+            . "{{service_region}}, {{consult_url}} 자리표시자를 그대로 사용해라(나중에 서버가 치환한다).\n"
+            . "[정보]\n제목: {$title}\n주제: {$topic}\n대표 키워드: {$keyword}\n지역: " . ($region !== '' ? $region : '전국')
+            . "\n글 유형: {$content_type}\n\n"
+            . "반드시 아래 JSON 형식만 출력해라: "
+            . "{\"subtitle\": \"소제목\", \"body\": \"도입부와 본문\", \"faq\": \"FAQ 섹션\", \"cta\": \"CTA 문구\", \"hashtags\": [\"#태그1\", \"#태그2\"]}";
+
+        $result = $this->callGenerateContent($system_prompt, '본문 JSON을 생성해줘.', true);
+        if (!$result['ok']) {
+            return array('ok' => false, 'body' => '', 'hashtags' => '', 'error' => $result['error'], 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+        }
+
+        $parsed = json_decode($result['content'], true);
+        if (!is_array($parsed) || !isset($parsed['body']) || trim((string) $parsed['body']) === '') {
+            return array('ok' => false, 'body' => '', 'hashtags' => '', 'error' => 'AI가 올바른 본문 JSON 형식을 반환하지 않았습니다.', 'tokens_prompt' => $result['tokens_prompt'], 'tokens_completion' => $result['tokens_completion']);
+        }
+
+        $sections = array();
+        if (!empty($parsed['subtitle'])) {
+            $sections[] = (string) $parsed['subtitle'];
+        }
+        $sections[] = (string) $parsed['body'];
+        if (!empty($parsed['faq'])) {
+            $sections[] = "\n[FAQ]\n" . $parsed['faq'];
+        }
+        if (!empty($parsed['cta'])) {
+            $sections[] = "\n[CTA]\n" . $parsed['cta'];
+        }
+
+        $hashtags = '';
+        if (!empty($parsed['hashtags']) && is_array($parsed['hashtags'])) {
+            $tags = array();
+            foreach ($parsed['hashtags'] as $tag) {
+                if (is_string($tag) && trim($tag) !== '') {
+                    $tags[] = trim($tag);
+                }
+            }
+            $hashtags = implode(' ', array_slice($tags, 0, 10));
+        }
+
+        return array(
+            'ok' => true,
+            'body' => implode("\n", $sections),
+            'hashtags' => $hashtags,
+            'error' => '',
+            'tokens_prompt' => $result['tokens_prompt'],
+            'tokens_completion' => $result['tokens_completion'],
+        );
+    }
+
+    public function chatRequest(string $prompt, string $systemPrompt): array
+    {
+        $jsonMode = (stripos($systemPrompt, 'json') !== false || stripos($prompt, 'json') !== false);
+        $result = $this->callGenerateContent($systemPrompt, $prompt, $jsonMode);
+        if (!$result['ok']) {
+            return array('ok' => false, 'message' => '', 'error' => $result['error']);
+        }
+        return array('ok' => true, 'message' => $result['content'], 'error' => '');
+    }
+
+    // OpenAI 스타일 {role, content} 메시지 배열을 Gemini의 {role, parts} contents 형태로
+    // 변환한다 - system 역할은 Gemini에 contents로 안 들어가고 systemInstruction으로 빠진다.
+    public function chatWithHistory(array $messages, bool $jsonMode = true): array
+    {
+        $systemInstruction = '';
+        $contents = array();
+        foreach ($messages as $m) {
+            $role = isset($m['role']) ? $m['role'] : 'user';
+            $text = isset($m['content']) ? (string) $m['content'] : '';
+            if ($role === 'system') {
+                $systemInstruction .= ($systemInstruction !== '' ? "\n" : '') . $text;
+                continue;
+            }
+            $contents[] = array('role' => $role === 'assistant' ? 'model' : 'user', 'parts' => array(array('text' => $text)));
+        }
+        return $this->callGenerateContentRaw($contents, $systemInstruction, $jsonMode);
+    }
+
+    // 반환: array('ok'=>bool, 'content'=>string, 'error'=>string, 'tokens_prompt'=>int, 'tokens_completion'=>int)
+    // 이 함수 밖으로는 $this->apiKeyPlain 값이 절대 전달되지 않는다(오류 메시지에도 포함 금지).
+    private function callGenerateContent(string $systemPrompt, string $userPrompt, bool $jsonMode = true): array
+    {
+        $contents = array(array('role' => 'user', 'parts' => array(array('text' => $userPrompt))));
+        return $this->callGenerateContentRaw($contents, $systemPrompt, $jsonMode);
+    }
+
+    private function callGenerateContentRaw(array $contents, string $systemInstruction, bool $jsonMode = true): array
+    {
+        if ($this->apiKeyPlain === '') {
+            return array('ok' => false, 'content' => '', 'error' => 'AI API 키가 설정되지 않았습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
+        }
+        if (!function_exists('curl_init')) {
+            return array('ok' => false, 'content' => '', 'error' => '서버에 curl 확장이 설치되어 있지 않습니다.', 'tokens_prompt' => 0, 'tokens_completion' => 0);
+        }
+
+        $payload = array(
+            'contents' => $contents,
+            'generationConfig' => array(
+                'temperature' => $this->temperature,
+                'maxOutputTokens' => $this->maxTokens,
+            ),
+        );
+        if ($systemInstruction !== '') {
+            $payload['systemInstruction'] = array('parts' => array(array('text' => $systemInstruction)));
+        }
+        if ($jsonMode) {
+            $payload['generationConfig']['responseMimeType'] = 'application/json';
+        }
+
+        // 키를 URL 쿼리스트링으로 전달해야 하는 Gemini API 특성상, 이 $url 변수는 절대
+        // 로그·오류 메시지·예외에 그대로 노출하지 않는다(curl_error()는 URL을 포함하지
+        // 않는 연결 단계 오류만 담으므로 안전하게 그대로 써도 된다).
+        $url = $this->endpoint . '/models/' . rawurlencode($this->model) . ':generateContent?key=' . rawurlencode($this->apiKeyPlain);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 40);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        $response = curl_exec($ch);
+        $curl_err = curl_error($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($curl_err) {
+            return array('ok' => false, 'content' => '', 'error' => 'AI 호출 오류: ' . $curl_err, 'tokens_prompt' => 0, 'tokens_completion' => 0);
+        }
+
+        $res_data = json_decode((string) $response, true);
+        $tokens_prompt = isset($res_data['usageMetadata']['promptTokenCount']) ? (int) $res_data['usageMetadata']['promptTokenCount'] : 0;
+        $tokens_completion = isset($res_data['usageMetadata']['candidatesTokenCount']) ? (int) $res_data['usageMetadata']['candidatesTokenCount'] : 0;
+
+        if (!isset($res_data['candidates'][0]['content']['parts'][0]['text'])) {
+            $msg = isset($res_data['error']['message']) ? $res_data['error']['message'] : 'AI 응답 파싱 실패';
+            if ($http_code === 429) {
+                $msg = 'API 요청 한도(Rate Limit)를 초과했습니다. 잠시 후 다시 시도해 주세요. (' . $msg . ')';
+            } else if ($http_code >= 500) {
+                $msg = 'AI 서비스가 일시적으로 불안정합니다(HTTP ' . $http_code . '). 잠시 후 다시 시도해 주세요. (' . $msg . ')';
+            } else if ($http_code !== 200) {
+                $msg = 'HTTP ' . $http_code . ': ' . $msg;
+            }
+            return array('ok' => false, 'content' => '', 'error' => $msg, 'tokens_prompt' => $tokens_prompt, 'tokens_completion' => $tokens_completion);
+        }
+
+        return array('ok' => true, 'content' => $res_data['candidates'][0]['content']['parts'][0]['text'], 'error' => '', 'tokens_prompt' => $tokens_prompt, 'tokens_completion' => $tokens_completion);
+    }
+}
+
 // 모델별 1K 토큰당 USD 단가 추정 — 실제 청구서와 다를 수 있는 참고용 수치이며, 정확한
 // 비용은 OpenAI 대시보드에서 확인해야 한다. 등록되지 않은 모델은 보수적인 기본 단가를 쓴다.
 function bp_estimate_openai_cost(string $model, int $tokensPrompt, int $tokensCompletion): float
@@ -378,22 +598,68 @@ function bp_ai_is_disabled_for_project(int $projectId): bool
     return $row && $row['ai_disabled'] === 'Y';
 }
 
-// "실제 라이브 API 호출이 가능한 공급자 코드"의 단일 진실 공급원 - 현재는 openai만.
+// "실제 라이브 API 호출이 가능한 공급자 코드"의 단일 진실 공급원 - openai, gemini.
 // 여기에 새 공급자를 추가하려면 bp_ai_get_provider()에도 그 공급자의 실제 연동 구현을
 // 함께 추가해야 한다(이 함수만 고치면 "라이브"라고 표시만 되고 실제로는 여전히
 // 템플릿으로 대체되는 불일치가 생긴다). manager/blog/post_builder.php의 공급자
 // 드롭다운 상태 표시도 이 함수를 그대로 쓴다.
 function bp_ai_provider_is_live(string $providerCode): bool
 {
-    return $providerCode === 'openai';
+    return in_array($providerCode, array('openai', 'gemini'), true);
 }
 
-// 활성 공급자(ai_providers.is_active='Y')가 있고 키가 정상 복호화되면 실제 OpenAI 공급자를,
-// 그 외의 모든 경우(비활성·키 없음·복호화 실패)에는 안전한 템플릿 폴백을 반환한다.
-// 실제 외부 API 호출은 provider_code가 'openai'인 레코드에서만 지원한다. 이 체크가
-// 빠져있던 이전 버전은 gemini/anthropic/deepseek/xai 등으로 등록한 키를 그대로
-// OpenAI 엔드포인트로 보내버리는 버그가 있었다(다른 서비스 키가 OpenAI 인증에서
-// 그냥 실패하거나, 최악의 경우 우연히 형식이 맞아 엉뚱한 곳에 전송될 수 있었다).
+// 화면(공급자 목록·post_builder 드롭다운)에 보여줄 상태 문구 - 5개로 고정한다.
+// provider_code의 "라이브 여부" 하드코딩이 아니라, 실제 등록 상태(키·활성화)와 마지막
+// 연결 테스트 이력(last_test_status, ai_provider_test.php가 갱신)으로 판단한다.
+// 우선순위: 사용 안 함(관리자가 의도적으로 끔) > API 키 필요 > 테스트 필요(키는 있으나
+// 한 번도 테스트 안 함) > 연결 오류(마지막 테스트 실패) > 사용 중(마지막 테스트 성공).
+function bp_ai_provider_status_label(array $row): string
+{
+    if (!isset($row['is_active']) || $row['is_active'] !== 'Y') {
+        return '사용 안 함';
+    }
+    if (empty($row['api_key_enc'])) {
+        return 'API 키 필요';
+    }
+    $status = isset($row['last_test_status']) ? $row['last_test_status'] : '';
+    if ($status === 'success') {
+        return '사용 중';
+    }
+    if ($status === 'error') {
+        return '연결 오류';
+    }
+    return '테스트 필요';
+}
+
+// ai_provider_test.php가 연결 테스트를 실행할 때마다 결과를 남긴다 - post_builder.php
+// 드롭다운이 매번 실시간으로 API를 재호출하지 않고 이 값을 그대로 읽어 상태를 표시한다.
+function bp_ai_save_test_result(int $id, string $status, string $message): void
+{
+    $table = bp_table('ai_providers');
+    sql_query(" update {$table}
+                    set last_test_status = '" . sql_real_escape_string($status) . "',
+                        last_test_message = '" . sql_real_escape_string(mb_substr($message, 0, 255)) . "',
+                        last_test_at = '" . G5_TIME_YMDHIS . "'
+                    where id = '" . (int) $id . "' ");
+}
+
+// provider_code별 기본 엔드포인트/모델 - bp_ai_get_provider()/bp_ai_get_provider_meta()가
+// 같은 표를 보고 판단해야 둘이 어긋나지 않는다.
+function bp_ai_provider_defaults(string $providerCode): array
+{
+    if ($providerCode === 'gemini') {
+        return array('endpoint' => 'https://generativelanguage.googleapis.com/v1beta', 'model' => 'gemini-2.5-pro');
+    }
+    return array('endpoint' => 'https://api.openai.com/v1', 'model' => 'gpt-4o');
+}
+
+// 활성 공급자(ai_providers.is_active='Y')가 있고 키가 정상 복호화되면 실제 공급자
+// 인스턴스(OpenAI 또는 Gemini)를, 그 외의 모든 경우(비활성·키 없음·복호화 실패·아직
+// 실제 연동이 없는 코드)에는 안전한 템플릿 폴백을 반환한다. 실제 외부 API 호출은
+// bp_ai_provider_is_live()가 true인 코드에서만 지원한다. 이 체크가 빠져있던 이전 버전은
+// gemini/anthropic/deepseek/xai 등으로 등록한 키를 그대로 OpenAI 엔드포인트로 보내버리는
+// 버그가 있었다(다른 서비스 키가 OpenAI 인증에서 그냥 실패하거나, 최악의 경우 우연히
+// 형식이 맞아 엉뚱한 곳에 전송될 수 있었다).
 function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
 {
     $active = bp_ai_get_active_provider($projectId);
@@ -409,15 +675,16 @@ function bp_ai_get_provider(int $projectId = 0): BlogAiProvider
         return new BlogAiTemplateProvider();
     }
 
-    $endpoint = !empty($active['api_endpoint']) ? $active['api_endpoint'] : 'https://api.openai.com/v1';
+    $defaults = bp_ai_provider_defaults($active['provider_code']);
+    $endpoint = !empty($active['api_endpoint']) ? $active['api_endpoint'] : $defaults['endpoint'];
+    $model = (isset($active['default_model']) && $active['default_model'] !== '') ? $active['default_model'] : $defaults['model'];
+    $max_tokens = isset($active['max_tokens']) ? (int) $active['max_tokens'] : 2000;
+    $temperature = isset($active['temperature']) ? (float) $active['temperature'] : 0.7;
 
-    return new BlogOpenAiProvider(
-        $api_key,
-        $endpoint,
-        isset($active['default_model']) ? $active['default_model'] : '',
-        isset($active['max_tokens']) ? (int) $active['max_tokens'] : 2000,
-        isset($active['temperature']) ? (float) $active['temperature'] : 0.7
-    );
+    if ($active['provider_code'] === 'gemini') {
+        return new BlogGeminiProvider($api_key, $endpoint, $model, $max_tokens, $temperature);
+    }
+    return new BlogOpenAiProvider($api_key, $endpoint, $model, $max_tokens, $temperature);
 }
 
 // bp_ai_get_provider()와 동일한 판단 로직으로, 어떤 공급자/모델이 실제로 쓰였는지만
@@ -432,7 +699,9 @@ function bp_ai_get_provider_meta(int $projectId = 0): array
     if ($api_key === '') {
         return array('provider' => 'template', 'model' => '');
     }
-    return array('provider' => 'openai', 'model' => isset($active['default_model']) && $active['default_model'] !== '' ? $active['default_model'] : 'gpt-4o');
+    $defaults = bp_ai_provider_defaults($active['provider_code']);
+    $model = (isset($active['default_model']) && $active['default_model'] !== '') ? $active['default_model'] : $defaults['model'];
+    return array('provider' => $active['provider_code'], 'model' => $model);
 }
 
 // 프로젝트에 지정된 공급자가 준비 중(템플릿 대체 대상)일 때, 조용히 템플릿으로 넘어가지

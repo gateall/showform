@@ -28,7 +28,7 @@ $g5['title'] = $id > 0 ? 'AI 공급자 수정' : 'AI 공급자 등록';
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
 <div class="local_desc01 local_desc">
-    <p>실제 외부 API 호출은 <code>provider_code</code>가 <code>openai</code>인 활성 레코드에서만 지원됩니다. 그 외 코드는 레코드로 등록·관리는 되지만, 포스팅 화면에서 실제 생성을 시도하면 조용히 대체되지 않고 챗GPT로 변경할지 템플릿으로 생성할지 먼저 선택하게 됩니다(추후 단계에서 라우팅 확장 예정).</p>
+    <p>실제 외부 API 호출은 <code>provider_code</code>가 <code>openai</code> 또는 <code>gemini</code>인 활성 레코드에서만 지원됩니다. 그 외 코드는 레코드로 등록·관리는 되지만, 포스팅 화면에서 실제 생성을 시도하면 조용히 대체되지 않고 챗GPT로 변경할지 템플릿으로 생성할지 먼저 선택하게 됩니다(추후 단계에서 라우팅 확장 예정).</p>
 </div>
 
 <form name="faiproviderform" method="post" action="./ai_provider_update.php">

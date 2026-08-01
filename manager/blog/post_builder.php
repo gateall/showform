@@ -275,30 +275,33 @@ include_once(__DIR__ . '/../layout/header.php');
                         </div>
                         <div style="flex:1; min-width:220px;">
                             <span style="font-size:0.85rem; color:#666; display:block; margin-bottom:4px;">AI 에이전트</span>
-                            <select id="pb_ai_provider_id" class="frm_input" onchange="Builder.saveAiProviderPref()">
+                            <select id="pb_ai_provider_id" class="frm_input" onchange="Builder.saveAiProviderPref(); Builder.updateProviderStatusUI();">
                                 <option value="">기본값(전역 활성 공급자)</option>
                                 <?php
-                                $ai_providers_res = sql_query("select id, display_name, provider_code, default_model, is_active, api_key_enc from ".bp_table('ai_providers')." order by display_name");
+                                $ai_providers_res = sql_query("select id, display_name, provider_code, default_model, is_active, api_key_enc, last_test_status from ".bp_table('ai_providers')." order by display_name");
                                 $ai_providers_count = 0;
+                                // 상태 문구(사람이 읽는 라벨) => 버튼 게이팅에 쓸 기계용 키.
+                                $ap_status_key_map = array(
+                                    '사용 중' => 'active',
+                                    '테스트 필요' => 'needs_test',
+                                    '연결 오류' => 'error',
+                                    '사용 안 함' => 'disabled',
+                                    'API 키 필요' => 'no_key',
+                                );
                                 while ($ap = sql_fetch_array($ai_providers_res)) {
                                     $ai_providers_count++;
                                     $ap_is_live_code = bp_ai_provider_is_live($ap['provider_code']);
-                                    // "usable" = 지금 선택하면 실제로 AI가 호출된다(코드 지원 + 키 있음 + 활성).
-                                    // bp_ai_get_provider_meta()가 판단하는 조건과 동일하게 맞춰야, 여기서 "사용
-                                    // 가능"으로 보여준 것을 골라도 서버가 다시 준비 중이라고 막는 불일치가 없다.
+                                    // data-live: "지금 선택하면 실제로 AI 호출을 시도한다"(코드 지원 + 키 있음 +
+                                    // 활성) - bp_ai_get_provider()의 판단 조건과 동일. 연결 테스트 통과 여부와는
+                                    // 별개로, [ChatGPT로 변경] 대체 대상을 찾는 기존 로직이 그대로 쓴다.
                                     $ap_usable = $ap_is_live_code && !empty($ap['api_key_enc']) && $ap['is_active'] === 'Y';
-                                    if (!$ap_is_live_code) {
-                                        $ap_status = '준비 중';
-                                    } elseif (empty($ap['api_key_enc'])) {
-                                        $ap_status = 'API 키 없음';
-                                    } elseif ($ap['is_active'] !== 'Y') {
-                                        $ap_status = '사용 안 함';
-                                    } else {
-                                        $ap_status = '사용 가능';
-                                    }
+                                    // 상태 문구는 하드코딩된 "준비 중"이 아니라, 실제 등록 상태 + 저장된 연결
+                                    // 테스트 결과(last_test_status)로 판단한다 - bp_ai_provider_status_label().
+                                    $ap_status = bp_ai_provider_status_label($ap);
+                                    $ap_status_key = isset($ap_status_key_map[$ap_status]) ? $ap_status_key_map[$ap_status] : 'needs_test';
                                     $ap_model = $ap['default_model'] !== '' ? $ap['default_model'] : '기본 모델';
                                     $ap_label = get_text($ap['display_name']) . ' · ' . get_text($ap_model) . ' · ' . $ap_status;
-                                    echo "<option value='" . (int)$ap['id'] . "' data-live='" . ($ap_usable ? '1' : '0') . "'>" . $ap_label . "</option>";
+                                    echo "<option value='" . (int)$ap['id'] . "' data-live='" . ($ap_usable ? '1' : '0') . "' data-status='" . $ap_status_key . "'>" . $ap_label . "</option>";
                                 }
                                 ?>
                             </select>
@@ -314,8 +317,9 @@ include_once(__DIR__ . '/../layout/header.php');
                     <p style="font-size:0.8rem; color:#94a3b8; margin:8px 0 0;">프로젝트마다 다른 AI 에이전트를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다. 변경 즉시 저장됩니다.</p>
                 </div>
 
+                <div id="pb_generate_blocked_msg" style="display:none; margin-top:10px; padding:10px 14px; border:1px solid #f59e0b; border-radius:6px; background:#fffbeb; font-size:0.85rem; color:#92400e; text-align:right;"></div>
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
-                    <button type="button" class="btn_submit btn" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
+                    <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
                 </div>
             </div>
 

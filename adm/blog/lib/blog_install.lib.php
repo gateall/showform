@@ -257,5 +257,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v23.sql',
             'installed' => bp_install_column_is_nullable($table_prefix, 'content_activity_logs', 'project_id'),
         ),
+        24 => array(
+            'label' => '연결 테스트 결과 저장', 'desc' => 'ai_providers last_test_status/last_test_message/last_test_at 컬럼 추가',
+            'file' => $sql_dir . '/blog_automation_v24.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'ai_providers', 'last_test_status'),
+        ),
     );
 }

@@ -10,20 +10,26 @@ if (!defined('_GNUBOARD_')) exit;
 //       이동 대신 닫기 동작을 하고, 저장/삭제 후 항상 설정 탭으로 돌아오게 return 값을 심는다)
 $is_inline = isset($is_inline) ? (bool) $is_inline : false;
 
-// AI 종류 => [표시 라벨, 실제 호출 지원 여부, 모델 목록]. 모델 목록은 자주 바뀌므로
-// 여기 배열만 고치면 화면에 바로 반영된다. 실제 API 호출은 openai만 지원한다
-// (blog_ai_service.lib.php의 BlogOpenAiProvider) - 나머지(웹 검색 포함)는 등록·키 저장은
-// 되지만 실제 생성/조회 시 안전한 템플릿 생성기로 자동 전환된다(가짜로 "연동됨"처럼
-// 보이게 하지 않기 위함 - 실제 연동은 추후 단계).
+// AI 종류 => [표시 라벨, 모델 목록]. 모델 목록은 자주 바뀌므로 여기 배열만 고치면
+// 화면에 바로 반영된다. "실제 호출 지원 여부"는 더 이상 이 배열에 하드코딩하지 않고
+// bp_ai_provider_is_live($code)를 그대로 물어본다(openai, gemini) - blog_ai_service.lib.php의
+// BlogOpenAiProvider/BlogGeminiProvider가 실제 구현이다. 그 외(웹 검색 포함)는 등록·키
+// 저장은 되지만 실제 생성/조회 시 안전한 템플릿 생성기로 자동 전환된다(가짜로 "연동됨"처럼
+// 보이게 하지 않기 위함 - 실제 연동은 추후 단계). 새 공급자를 실제로 연동하면 이 배열이
+// 아니라 bp_ai_provider_is_live()에 코드를 추가해야 여기 배지도 자동으로 맞게 바뀐다.
 $ai_types = array(
-    'openai' => array('label' => '챗GPT', 'live' => true, 'models' => array('gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-5')),
-    'gemini' => array('label' => '제미나이', 'live' => false, 'models' => array('gemini-2.5-pro', 'gemini-2.5-flash')),
-    'anthropic' => array('label' => '클로드', 'live' => false, 'models' => array('claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4')),
-    'deepseek' => array('label' => '딥시크', 'live' => false, 'models' => array('deepseek-chat', 'deepseek-reasoner')),
-    'xai' => array('label' => '그록', 'live' => false, 'models' => array('grok-4', 'grok-3')),
-    'websearch' => array('label' => '웹 검색', 'live' => false, 'models' => array()),
-    'custom' => array('label' => '직접 설정', 'live' => false, 'models' => array()),
+    'openai' => array('label' => '챗GPT', 'models' => array('gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-5')),
+    'gemini' => array('label' => '제미나이', 'models' => array('gemini-2.5-pro', 'gemini-2.5-flash')),
+    'anthropic' => array('label' => '클로드', 'models' => array('claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4')),
+    'deepseek' => array('label' => '딥시크', 'models' => array('deepseek-chat', 'deepseek-reasoner')),
+    'xai' => array('label' => '그록', 'models' => array('grok-4', 'grok-3')),
+    'websearch' => array('label' => '웹 검색', 'models' => array()),
+    'custom' => array('label' => '직접 설정', 'models' => array()),
 );
+foreach ($ai_types as $ai_type_code => &$ai_type_info) {
+    $ai_type_info['live'] = bp_ai_provider_is_live($ai_type_code);
+}
+unset($ai_type_info);
 $current_type = isset($ai_types[$row['provider_code']]) ? $row['provider_code'] : ($id > 0 ? 'custom' : 'openai');
 $return_field = $is_inline ? 'manager' : '';
 ?>
@@ -39,7 +45,7 @@ $return_field = $is_inline ? 'manager' : '';
 .ai-toggle-btn.off.active{border-color:#dc2626;background:#fef2f2;color:#b91c1c;}
 </style>
 <div class="local_desc01 local_desc">
-    <p>실제 외부 API 호출은 현재 <strong>챗GPT(OpenAI)</strong>만 지원합니다. 다른 종류는 등록·키 저장은 되지만, 포스팅 화면에서 실제 생성을 시도하면 조용히 대체되지 않고 챗GPT로 변경할지 템플릿으로 생성할지 먼저 선택하게 됩니다(연동 예정).</p>
+    <p>실제 외부 API 호출은 현재 <strong>챗GPT(OpenAI)</strong>와 <strong>제미나이(Gemini)</strong>만 지원합니다. 다른 종류는 등록·키 저장은 되지만, 포스팅 화면에서 실제 생성을 시도하면 조용히 대체되지 않고 챗GPT로 변경할지 템플릿으로 생성할지 먼저 선택하게 됩니다(연동 예정).</p>
 </div>
 
 <form name="faiproviderform" method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_update.php">
@@ -48,7 +54,17 @@ $return_field = $is_inline ? 'manager' : '';
     <?php if ($id > 0) { ?>
     <input type="hidden" name="id" value="<?php echo (int) $id; ?>">
     <?php } ?>
+    <?php if ($id > 0) { ?>
     <input type="hidden" name="provider_code" id="provider_code_hidden" value="<?php echo get_text($row['provider_code']); ?>">
+<?php } else { ?>
+    <!-- New provider: show input for provider code -->
+    <div class="sf-field" style="margin-bottom:0.75rem;">
+        <label for="provider_code_input"><strong>공급자 코드</strong> (영문 소문자·숫자·밑줄, 30자 이하)</label>
+        <input type="text" name="provider_code" id="provider_code_input" class="frm_input" maxlength="30" placeholder="예: my_custom_ai" required style="width:100%;">
+        <span class="help_txt">새 공급자를 등록할 때만 입력합니다.</span>
+    </div>
+<?php } ?>
+
 
     <div class="tbl_frm01 tbl_wrap">
         <table>
