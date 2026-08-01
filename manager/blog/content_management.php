@@ -361,6 +361,10 @@ include_once(__DIR__ . '/../layout/header.php');
     </form>
 
     <?php
+    // get_admin_token()은 호출할 때마다 세션 값을 새로 덮어쓴다 - 행마다 반복 호출하면
+    // 마지막 행 말고는 전부 페이지에 찍힌 토큰과 세션 값이 어긋나 삭제 시 "올바른 방법으로
+    // 이용해 주십시오" 오류가 난다. 루프 밖에서 한 번만 호출해 모든 행이 재사용해야 한다.
+    $adv_admin_token = get_admin_token();
     $adv_table_rows = array();
     foreach ($adv_list as $row) {
         $adv_table_rows[] = array(
@@ -372,7 +376,7 @@ include_once(__DIR__ . '/../layout/header.php');
             'status' => $row['status'] === 'Y' ? '사용' : '중지',
             'created_at' => htmlspecialchars($row['created_at']),
             'manage' => '<a href="' . SF_MANAGER_URL . '/blog/advertiser_form.php?id=' . (int) $row['id'] . '" class="mgr-btn">수정</a> '
-                . '<a href="' . G5_ADMIN_URL . '/blog/advertiser_delete.php?id=' . (int) $row['id'] . '&token=' . get_admin_token() . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'정말 삭제하시겠습니까?\');">삭제</a>',
+                . '<a href="' . G5_ADMIN_URL . '/blog/advertiser_delete.php?id=' . (int) $row['id'] . '&token=' . $adv_admin_token . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'정말 삭제하시겠습니까?\');">삭제</a>',
         );
     }
     echo mgr_data_table(
@@ -507,6 +511,8 @@ include_once(__DIR__ . '/../layout/header.php');
     </form>
 
     <?php
+    // 광고주 탭과 같은 이유로 루프 밖에서 한 번만 호출한다(get_admin_token() 반복 호출 방지).
+    $kw_admin_token = get_admin_token();
     $kw_table_rows = array();
     foreach ($kw_list as $row) {
         $kw_table_rows[] = array(
@@ -518,7 +524,7 @@ include_once(__DIR__ . '/../layout/header.php');
             'status' => mgr_status_badge($row['status'] === 'Y' ? '활성' : '비활성', $row['status'] === 'Y' ? 'success' : 'muted'),
             'created_at' => htmlspecialchars($row['created_at']),
             'manage' => '<a href="' . G5_ADMIN_URL . '/blog/keyword_form.php?w=u&id=' . (int) $row['id'] . '" class="mgr-btn">수정</a> '
-                . '<a href="' . G5_ADMIN_URL . '/blog/keyword_update.php?mode=delete&id=' . (int) $row['id'] . '&token=' . get_admin_token() . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'이 키워드를 삭제하시겠습니까?\');">삭제</a>',
+                . '<a href="' . G5_ADMIN_URL . '/blog/keyword_update.php?mode=delete&id=' . (int) $row['id'] . '&token=' . $kw_admin_token . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'이 키워드를 삭제하시겠습니까?\');">삭제</a>',
         );
     }
     echo mgr_data_table(
