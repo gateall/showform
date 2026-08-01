@@ -97,7 +97,7 @@ $return_field = $is_inline ? 'manager' : '';
                         <?php if ($id > 0) { ?>
                             <input type="text" value="<?php echo get_text($row['provider_code']); ?>" class="frm_input" readonly style="background:#f5f5f5;">
                         <?php } else { ?>
-                            <input type="text" id="custom_provider_code" value="" class="frm_input" maxlength="30" placeholder="예: my_custom_ai" oninput="document.getElementById('provider_code_hidden').value=this.value.toLowerCase();">
+                            <input type="text" id="custom_provider_code" value="" class="frm_input" maxlength="30" placeholder="예: my_custom_ai" oninput="syncCustomProviderCode(this);">
                             <span class="help_txt">영문 소문자·숫자·밑줄만 사용하세요.</span>
                         <?php } ?>
                     </td></tr>
@@ -256,11 +256,24 @@ var CURRENT_TYPE = <?php echo json_encode($current_type); ?>;
 var CURRENT_MODEL = <?php echo json_encode($row['default_model']); ?>;
 var IS_EDIT = <?php echo $id > 0 ? 'true' : 'false'; ?>;
 
+// 신규 등록 화면은 provider_code를 담는 요소가 두 가지 중 하나다 - 수정 화면은 숨김
+// 필드(provider_code_hidden), 신규 등록 화면은 보이는 입력창(provider_code_input, 다른
+// 프로세스가 최근에 추가함). 어느 쪽이 실제로 DOM에 있는지 몰라도 항상 맞는 걸 찾는다.
+function getProviderCodeField() {
+    return document.getElementById('provider_code_hidden') || document.getElementById('provider_code_input');
+}
+
+function syncCustomProviderCode(el) {
+    var codeField = getProviderCodeField();
+    if (codeField) { codeField.value = el.value.toLowerCase(); }
+}
+
 function selectAiType(code) {
     document.querySelectorAll('#ai_type_grid .ai-type-btn').forEach(function(el) {
         el.classList.toggle('active', el.getAttribute('data-code') === code);
     });
-    document.getElementById('provider_code_hidden').value = code;
+    var codeField = getProviderCodeField();
+    if (codeField) { codeField.value = code; }
     document.getElementById('row_custom_code').style.display = (code === 'custom') ? '' : 'none';
 
     // 공급자명은 AI 종류에서 그대로 가져온다 - "직접 설정"일 때만 사용자가 입력한다.
@@ -444,7 +457,7 @@ if (!IS_EDIT) {
 }
 
 function faiproviderform_submit(f) {
-    if (!f.provider_code_hidden.value.trim()) {
+    if (!f.provider_code.value.trim()) {
         alert('AI 종류를 선택해 주세요.');
         return false;
     }
