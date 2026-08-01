@@ -15,7 +15,10 @@ if ($id < 1) {
 }
 
 $site_cnt = sql_fetch(" select count(*) as cnt from {$sites_table} where advertiser_id = '{$id}' ");
-$project_cnt = sql_fetch(" select count(*) as cnt from {$projects_table} where advertiser_id = '{$id}' ");
+// project_action.php의 mode=delete는 실제로 행을 지우지 않고 deleted_at만 채우는 소프트
+// 삭제라서, 이 조건에 deleted_at is null이 없으면 이미 삭제된(soft-deleted) 프로젝트까지
+// "연결된 프로젝트"로 계속 잡혀 광고주를 영원히 삭제할 수 없게 된다.
+$project_cnt = sql_fetch(" select count(*) as cnt from {$projects_table} where advertiser_id = '{$id}' and deleted_at is null ");
 if ((int)$site_cnt['cnt'] > 0 || (int)$project_cnt['cnt'] > 0) {
     alert('이 광고주와 연결된 사이트 또는 콘텐츠 프로젝트가 있어 삭제할 수 없습니다. 먼저 연결된 항목을 정리해 주세요.');
 }
