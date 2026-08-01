@@ -66,12 +66,16 @@ function bp_mask_secret(string $plain): string
     return $head . '****' . $tail;
 }
 
-// 상태 변경 감사 로그
+// 상태 변경 감사 로그. project_id는 content_projects에 대한 외래키라서, 프로젝트와
+// 무관한 시스템 단위 로그(호출부가 관례적으로 0을 넘김)를 그대로 0으로 저장하려 하면
+// 존재하지 않는 프로젝트를 참조하게 되어 외래키 위반으로 조용히 실패한다(V23으로
+// project_id를 NULL 허용하게 고침 - 그 전 스키마에서는 이 함수도 똑같이 실패한다).
 function bp_log_activity(int $project_id, string $action, string $actor, string $detail = ''): void
 {
     $table = bp_table('content_activity_logs');
+    $project_id_sql = $project_id > 0 ? "'" . (int) $project_id . "'" : 'NULL';
     sql_query(" insert into {$table}
-                    set project_id = '" . (int)$project_id . "',
+                    set project_id = {$project_id_sql},
                         action = '" . sql_real_escape_string($action) . "',
                         actor = '" . sql_real_escape_string($actor) . "',
                         detail = '" . sql_real_escape_string(mb_substr($detail, 0, 500)) . "',

@@ -30,6 +30,18 @@ function bp_install_column_exists(string $prefix, string $table, string $column)
     return $result && sql_num_rows($result) > 0;
 }
 
+function bp_install_column_is_nullable(string $prefix, string $table, string $column): bool
+{
+    $table_name = sql_real_escape_string($prefix . 'blog_' . $table);
+    $col_name = sql_real_escape_string($column);
+    $result = sql_query(" show columns from `{$table_name}` like '{$col_name}' ", false);
+    if (!$result || sql_num_rows($result) === 0) {
+        return false;
+    }
+    $row = sql_fetch_array($result);
+    return isset($row['Null']) && strtoupper($row['Null']) === 'YES';
+}
+
 function bp_install_index_exists(string $prefix, string $table, string $index): bool
 {
     $table_name = sql_real_escape_string($prefix . 'blog_' . $table);
@@ -239,6 +251,11 @@ function bp_install_get_versions(string $table_prefix): array
             'label' => '암호화 키 버전 관리', 'desc' => 'ai_providers encryption_key_version 컬럼 추가(마스터 키 회전 대비)',
             'file' => $sql_dir . '/blog_automation_v22.sql',
             'installed' => bp_install_column_exists($table_prefix, 'ai_providers', 'encryption_key_version'),
+        ),
+        23 => array(
+            'label' => '감사로그 project_id NULL 허용', 'desc' => '프로젝트 무관 로그(키 열람 등)가 외래키 위반으로 조용히 유실되던 문제 수정',
+            'file' => $sql_dir . '/blog_automation_v23.sql',
+            'installed' => bp_install_column_is_nullable($table_prefix, 'content_activity_logs', 'project_id'),
         ),
     );
 }

@@ -41,7 +41,10 @@ function log_ai_test($id, $action, $detail) {
     $action_safe = sql_real_escape_string($action);
     $actor_safe = sql_real_escape_string($actor);
     $detail_safe = sql_real_escape_string($detail);
-    sql_query(" insert into {$table} set project_id = 0, post_id = 0, action = '{$action_safe}', actor = '{$actor_safe}', detail = '{$detail_safe}', created_at = NOW() ");
+    // project_id는 content_projects 외래키라서 0을 넣으면 위반으로 조용히 실패한다(V23으로
+    // NULL 허용). post_id는 애초에 이 테이블에 존재하지 않는 컬럼이라 그것만으로도 매번
+    // 실패하고 있었다 - 둘 다 고쳐야 이 로그가 실제로 저장된다.
+    sql_query(" insert into {$table} set project_id = NULL, action = '{$action_safe}', actor = '{$actor_safe}', detail = '{$detail_safe}', created_at = NOW() ");
 }
 
 if (empty($row['api_key_enc'])) {
