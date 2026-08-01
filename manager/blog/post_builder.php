@@ -12,8 +12,12 @@ include_once(__DIR__ . '/../layout/header.php');
     // builder.js는 /adm/blog/에서 로드되지만 이 페이지는 /manager/blog/에서 서비스된다.
     // fetch()의 상대경로는 <script src>가 아니라 "현재 페이지 URL" 기준으로 풀리므로,
     // post_builder_ajax.php(=/adm/blog/에만 존재)를 상대경로로 부르면 /manager/blog/ 밑에서
-    // 찾다가 실패한다. 그래서 절대경로를 명시적으로 넘겨준다.
-    window.PB_ADMIN_URL = <?php echo json_encode(G5_ADMIN_URL); ?>;
+    // 찾다가 실패한다. 그래서 사이트 루트 기준 절대경로("/adm")를 넘겨준다 - scheme+host까지
+    // 포함한 완전한 URL(G5_ADMIN_URL 그대로)을 쓰면, 서버의 scheme 자동감지(G5_URL)가 현재
+    // 페이지의 실제 scheme과 어긋나는 경우(리버스 프록시 등) fetch()가 cross-origin 요청이
+    // 되어 쿠키가 다르게 취급되고, Gnuboard의 verify_mb_key() 클라이언트 검증이 실패해
+    // 세션이 강제로 끊기는 문제가 있었다(관리자에게 "XSS 공격 알림" 메일까지 발송됨).
+    window.PB_ADMIN_URL = <?php echo json_encode(parse_url(G5_ADMIN_URL, PHP_URL_PATH)); ?>;
 </script>
 <script src="<?php echo G5_ADMIN_URL; ?>/blog/js/builder.js?ver=<?php echo G5_SERVER_TIME; ?>"></script>
 
