@@ -37,6 +37,14 @@ const Builder = {
     },
     _autoTagTimers: {},
 
+    // "키워드 · 해시태그" 두 패널을 한 번에 접고 펼치는 상위 토글 - 패널마다 있는
+    // 개별 접기/펼치기와는 별개로, 그룹 전체를 한 번에 숨길 때 쓴다.
+    tagGroupCollapsed: false,
+    toggleTagGroup: function() {
+        this.tagGroupCollapsed = !this.tagGroupCollapsed;
+        this.renderRightPanel();
+    },
+
     // "업체 정보 삽입" - 1단계 컨트롤 패널에서 상호/주소/전화/이메일/웹사이트/SNS주소 중
     // 무엇을 "방문팁" 마무리 섹션에 넣을지 체크박스로 고른다. 체크 상태는
     // generateAllCards()가 contact_fields로 서버에 넘겨서 post_builder_ajax.php가 그
@@ -1384,13 +1392,20 @@ const Builder = {
         if (this.currentStep === 1) {
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
-                <div class="pb-right-subtitle">키워드 · 해시태그</div>
-                <div id="pb_tags_keywords" class="pb-tags-panel"></div>
-                <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
+                <div class="pb-right-subtitle" style="display:flex; align-items:center; justify-content:space-between;">
+                    <span>키워드 · 해시태그</span>
+                    <button type="button" class="btn btn_02" onclick="Builder.toggleTagGroup()">${this.tagGroupCollapsed ? '펼치기 ▾' : '접기 ▴'}</button>
+                </div>
+                <div id="pb_tags_group" style="${this.tagGroupCollapsed ? 'display:none;' : ''}">
+                    <div id="pb_tags_keywords" class="pb-tags-panel"></div>
+                    <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
+                </div>
                 <div id="pb_contact_panel"></div>
             `;
-            this.renderTagPanel('keywords');
-            this.renderTagPanel('hashtags');
+            if (!this.tagGroupCollapsed) {
+                this.renderTagPanel('keywords');
+                this.renderTagPanel('hashtags');
+            }
             this.renderContactPanel();
             return;
         }
