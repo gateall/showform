@@ -3,6 +3,7 @@
 include_once('./_common.php');
 include_once(G5_ADMIN_PATH . '/blog/lib/blog_ai_service.lib.php');
 include_once(G5_ADMIN_PATH . '/blog/lib/blog_quality.lib.php');
+include_once(G5_ADMIN_PATH . '/blog/lib/blog_image.lib.php');
 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 $project_id = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
@@ -26,6 +27,46 @@ $response = ['ok' => true, 'action' => $action];
 // 강제하는 "최상위는 객체" 제약 때문에 모델이 items가 아닌 다른 키로 감싸거나 그냥
 // 배열만 주는 경우까지 대비해서 실제 목록을 뽑아낸다(generate_tags/generate_image_prompts
 // 둘 다 같은 모양의 응답을 기대하므로 공용으로 뺐다).
+// generate_all_cards가 쓰는 본문 구조 템플릿 목록 - 1단계 컨트롤 패널에서 사용자가
+// 골라서 structure_template으로 넘긴다. 각 항목의 sections는 마지막 "방문팁류" 마무리
+// 섹션을 제외한 본문 섹션들이고, closing_title은 업체 정보가 들어갈 마지막 섹션 제목이다.
+function bp_get_structure_templates(): array
+{
+    return array(
+        'kiseungjeonggyeol' => array(
+            'label' => '기승전결형',
+            'sections' => array(
+                array('type' => 'intro', 'title' => '기(도입부)'),
+                array('type' => 'section', 'title' => '승(전개)'),
+                array('type' => 'section', 'title' => '전(전환)'),
+                array('type' => 'section', 'title' => '결(마무리)'),
+            ),
+            'closing_title' => '방문팁',
+        ),
+        'visit_flow' => array(
+            'label' => '방문형(계기·특징·상세) - 음식점·카페·숙박 등 방문 업종에 적합',
+            'sections' => array(
+                array('type' => 'intro', 'title' => '도입부'),
+                array('type' => 'section', 'title' => '계기'),
+                array('type' => 'section', 'title' => '주요 특징'),
+                array('type' => 'section', 'title' => '상세 내용'),
+                array('type' => 'section', 'title' => '총평'),
+            ),
+            'closing_title' => '방문 팁',
+        ),
+        'problem_solution' => array(
+            'label' => '문제해결형 - 병원·법률·인테리어 등 전문 서비스 업종에 적합',
+            'sections' => array(
+                array('type' => 'intro', 'title' => '문제 제기'),
+                array('type' => 'section', 'title' => '원인·배경'),
+                array('type' => 'section', 'title' => '해결 방법'),
+                array('type' => 'section', 'title' => '사례·근거'),
+            ),
+            'closing_title' => '상담·문의 안내',
+        ),
+    );
+}
+
 function bp_extract_json_item_list(string $raw): ?array
 {
     $parsed = json_decode(trim($raw), true);
@@ -211,23 +252,31 @@ switch($action) {
             }
         }
 
-        // 기승전결(起承轉結) + 방문팁 구조, 전체 약 2000자 목표 - PM 지시로 서론/본론2~3개/결론
-        // 형태의 이전 구조를 대체한다.
+        // 업종별로 글 전개 구도가 다를 수 있어(예: 음식점은 방문형, 병원은 문제해결형) 구조를
+        // bp_get_structure_templates()에서 선택 가능한 샘플로 정의해두고, 1단계 컨트롤 패널에서
+        // 고른 키를 받아 그 구조에 맞춰 섹션 목록과 JSON 예시를 동적으로 만든다. 예전에는
+        // 기승전결 구조 하나만 하드코딩되어 있었다.
+        $structure_templates = bp_get_structure_templates();
+        $structure_key = isset($_POST['structure_template']) ? trim($_POST['structure_template']) : '';
+        if (!isset($structure_templates[$structure_key])) {
+            $structure_key = 'kiseungjeonggyeol';
+        }
+        $structure = $structure_templates[$structure_key];
+
         $sys_prompt = "당신은 블로그 포스팅 초안을 설계하고 작성하는 수석 에디터입니다.\n";
-        $sys_prompt .= "제공된 글감을 분석하여, 아래 \"기승전결 + 방문팁\" 구조로 블로그 포스팅 전체를 한 번에 작성해야 합니다.\n\n";
+        $sys_prompt .= "제공된 글감을 분석하여, 아래 \"{$structure['label']}\" 구조로 블로그 포스팅 전체를 한 번에 작성해야 합니다.\n\n";
         $sys_prompt .= "- 제목 5개 (매력적인 제목 후보)\n";
-        $sys_prompt .= "- 기(도입부): 상부/하부 2개 문단으로 구성\n";
-        $sys_prompt .= "- 승(전개): 상부/하부 2개 문단으로 구성\n";
-        $sys_prompt .= "- 전(전환·핵심 내용): 상부/하부 2개 문단으로 구성\n";
-        $sys_prompt .= "- 결(마무리): 상부/하부 2개 문단으로 구성\n";
-        $sys_prompt .= "- 방문팁: 마지막 안내 멘트 다음에 아래 업체 정보를 자연스럽게 포함\n";
+        foreach ($structure['sections'] as $sec) {
+            $sys_prompt .= "- {$sec['title']}: 상부/하부 2개 문단으로 구성\n";
+        }
+        $sys_prompt .= "- {$structure['closing_title']}: 마지막 안내 멘트 다음에 아래 업체 정보를 자연스럽게 포함\n";
         if ($contact_lines !== "") {
             $sys_prompt .= $contact_lines;
         } else {
             $sys_prompt .= "  (등록된 업체 정보가 없으니 일반적인 방문 안내 멘트로만 마무리하세요)\n";
         }
         $target_length = isset($_POST['target_length']) ? max(200, (int) $_POST['target_length']) : 2000;
-        $sys_prompt .= "\n기/승/전/결/방문팁을 모두 합친 본문 전체 분량은 약 {$target_length}자를 목표로 하세요.\n";
+        $sys_prompt .= "\n제목을 제외한 본문 전체(모든 섹션 + {$structure['closing_title']})의 분량은 약 {$target_length}자를 목표로 하세요.\n";
         if ($locked_info !== "") {
             $sys_prompt .= "단, 다음 잠긴(locked) 내용들은 새 초안에 반드시 포함하고 내용을 덮어쓰지 마십시오.\n{$locked_info}\n";
         }
@@ -236,17 +285,20 @@ switch($action) {
         // {"posts":[...]}) 아래 unwrap 로직(cards 키만 확인)이 못 찾는 경우가 있었다. 예시 자체를
         // {"cards":[...]} 형태로 줘서 모델이 실제로 쓸 키 이름을 명시적으로 고정시킨다.
         // type은 반드시 intro/section/cta 중 하나로 고정한다 - 다른 값을 주면 화면에서
-        // 카드 제목이 "기타"로만 표시되던 문제가 있었다.
+        // 카드 제목이 "기타"로만 표시되던 문제가 있었다. title도 예시와 동일하게 써야
+        // 프론트가 카드 미니맵에서 구조를 구분해 보여줄 수 있다.
         $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요. 최상위는 객체이고, 그 안의 \"cards\" 키에 배열을 담습니다.\n";
-        $sys_prompt .= "type은 반드시 title, intro, section, cta 중 하나여야 합니다(다른 값 금지).\n\n";
+        $sys_prompt .= "type은 반드시 title, intro, section, cta 중 하나여야 합니다(다른 값 금지). 각 카드의 \"title\"은 아래 예시에 쓰인 제목을 그대로 사용하세요.\n\n";
         $sys_prompt .= "{\n";
         $sys_prompt .= "  \"cards\": [\n";
         $sys_prompt .= "    { \"id\": \"t1\", \"type\": \"title\", \"content\": \"매력적인 제목 후보 1\", \"state\": \"primary\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c1\", \"type\": \"intro\", \"title\": \"기(도입부)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c2\", \"type\": \"section\", \"title\": \"승(전개)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c3\", \"type\": \"section\", \"title\": \"전(전환)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c4\", \"type\": \"section\", \"title\": \"결(마무리)\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
-        $sys_prompt .= "    { \"id\": \"c5\", \"type\": \"cta\", \"title\": \"방문팁\", \"content\": \"(마지막 멘트 + 업체 정보)\", \"state\": \"selected\", \"locked\": false }\n";
+        $card_num = 1;
+        foreach ($structure['sections'] as $i => $sec) {
+            $card_type = $i === 0 ? 'intro' : 'section';
+            $sys_prompt .= "    { \"id\": \"c{$card_num}\", \"type\": \"{$card_type}\", \"title\": \"{$sec['title']}\", \"content\": \"(상부 문단)\\n\\n(하부 문단)\", \"state\": \"selected\", \"locked\": false },\n";
+            $card_num++;
+        }
+        $sys_prompt .= "    { \"id\": \"c{$card_num}\", \"type\": \"cta\", \"title\": \"{$structure['closing_title']}\", \"content\": \"(마지막 멘트 + 업체 정보)\", \"state\": \"selected\", \"locked\": false }\n";
         $sys_prompt .= "  ]\n";
         $sys_prompt .= "}\n";
 
@@ -531,6 +583,40 @@ switch($action) {
 
         $items = array_values(array_filter(array_map('trim', $items), function ($v) { return $v !== ''; }));
         $response['prompts'] = array_slice($items, 0, $count);
+        break;
+
+    // 카드 하단 "첨부파일"에서 올린 이미지를 저장한다. 실제 저장/변환/중복검사는
+    // 이미지 라이브러리가 이미 하는 bp_optimize_local_file()을 그대로 재사용한다 -
+    // blog_images에 등록해서 이미지 라이브러리 화면에서도 같이 보인다.
+    case 'upload_card_image':
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            die(json_encode(['ok' => false, 'error' => '파일 업로드에 실패했습니다.']));
+        }
+        $upload = $_FILES['file'];
+        if ($upload['size'] > 10 * 1024 * 1024) {
+            die(json_encode(['ok' => false, 'error' => '파일 크기는 10MB 이하만 가능합니다.']));
+        }
+        $mime = mime_content_type($upload['tmp_name']);
+        if (strpos((string) $mime, 'image/') !== 0) {
+            die(json_encode(['ok' => false, 'error' => '이미지 파일만 첨부할 수 있습니다.']));
+        }
+
+        $tmp_dir = G5_DATA_PATH . '/blog_images';
+        if (!is_dir($tmp_dir)) {
+            @mkdir($tmp_dir, G5_DIR_PERMISSION, true);
+        }
+        $tmp_path = $tmp_dir . '/upload_tmp_' . uniqid() . '_' . basename($upload['name']);
+        if (!move_uploaded_file($upload['tmp_name'], $tmp_path)) {
+            die(json_encode(['ok' => false, 'error' => '파일을 저장하지 못했습니다.']));
+        }
+
+        $result = bp_optimize_local_file($tmp_path, $project_id, $upload['name']);
+        if (!$result['ok']) {
+            die(json_encode(['ok' => false, 'error' => $result['error']]));
+        }
+        $response['image_id'] = $result['image_id'];
+        $response['url'] = $result['url'];
+        $response['filename'] = $upload['name'];
         break;
 
     default:

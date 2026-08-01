@@ -39,8 +39,8 @@ const Builder = {
 
     // "키워드 · 해시태그" 두 패널을 한 번에 접고 펼치는 상위 토글 - 패널마다 있는
     // 개별 접기/펼치기와는 별개로, 그룹 전체를 한 번에 숨길 때 쓴다.
-    // 최종 본문 목표 글자수(기승전결+방문팁 합산) - 1단계/4단계 컨트롤 패널 양쪽에서 같은
-    // 값을 보고 조정한다. generateAllCards()가 서버로 넘겨서 프롬프트의 "약 N자 목표"에
+    // 최종 본문 목표 글자수(선택된 구조의 전체 섹션 합산) - 1단계/4단계 컨트롤 패널 양쪽에서
+    // 같은 값을 보고 조정한다. generateAllCards()가 서버로 넘겨서 프롬프트의 "약 N자 목표"에
     // 그대로 쓰인다.
     targetLength: 2000,
     onTargetLengthChange: function(value) {
@@ -51,8 +51,35 @@ const Builder = {
     _renderTargetLengthControl: function() {
         return `
         <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
-            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:4px;">본문 목표 글자수(기승전결+방문팁 합산)</label>
+            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:4px;">본문 목표 글자수(전체 섹션 합산)</label>
             <input type="number" class="frm_input" style="width:100px;" min="200" step="100" value="${this.targetLength}" onchange="Builder.onTargetLengthChange(this.value)"> 자
+        </div>`;
+    },
+
+    // 업종에 따라 글감의 전개 구도가 달라질 수 있어("기승전결" 하나로는 방문 업종·전문
+    // 서비스 업종 등을 다 담기 어려움) 서버(post_builder_ajax.php의
+    // bp_get_structure_templates())와 키를 맞춘 구조 샘플 목록 - "전체 생성" 시 이 키를
+    // structure_template로 넘겨서 어떤 구도로 초안을 짤지 고른다.
+    STRUCTURE_TEMPLATES: [
+        { key: 'kiseungjeonggyeol', label: '기승전결형', desc: '기·승·전·결 + 방문팁 - 일반적인 서술형 구성' },
+        { key: 'visit_flow', label: '방문형(도입·계기·특징·상세·총평)', desc: '음식점·카페·숙박 등 직접 방문하는 업종에 적합' },
+        { key: 'problem_solution', label: '문제해결형', desc: '병원·법률·인테리어 등 전문 서비스 업종에 적합' }
+    ],
+    structureTemplate: 'kiseungjeonggyeol',
+    onStructureTemplateChange: function(value) {
+        this.structureTemplate = value;
+        this.renderRightPanel();
+    },
+    _renderStructureTemplateControl: function() {
+        const current = this.STRUCTURE_TEMPLATES.find(t => t.key === this.structureTemplate) || this.STRUCTURE_TEMPLATES[0];
+        const options = this.STRUCTURE_TEMPLATES.map(t =>
+            `<option value="${t.key}" ${t.key === this.structureTemplate ? 'selected' : ''}>${t.label}</option>`
+        ).join('');
+        return `
+        <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:4px;">글 전개 구조(업종에 맞게 선택)</label>
+            <select class="frm_input" style="width:100%;" onchange="Builder.onStructureTemplateChange(this.value)">${options}</select>
+            <div style="font-size:0.75rem; color:#888; margin-top:4px;">${current.desc}</div>
         </div>`;
     },
 
@@ -126,7 +153,7 @@ const Builder = {
         container.innerHTML = `
         <div style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">업체 정보 삽입 ("방문팁"에 포함)</span>
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">업체 정보 삽입 (마무리 섹션에 포함)</span>
                 <button type="button" class="btn btn_02" onclick="Builder.toggleContactPanel()">접기 ▴</button>
             </div>
             <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">체크한 항목만 생성 시 마무리 섹션에 포함됩니다. 값이 없는 항목은 "광고주 수정"에서 먼저 등록하세요.</p>
@@ -1090,6 +1117,7 @@ const Builder = {
         payload.append('locked_cards', JSON.stringify(lockedCards));
         payload.append('contact_fields', JSON.stringify(this._contactFields.filter(f => this.contactState.checked[f.key]).map(f => f.key)));
         payload.append('target_length', this.targetLength);
+        payload.append('structure_template', this.structureTemplate);
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
@@ -1212,6 +1240,11 @@ const Builder = {
                 </div>
                 <div class="pb-card-content">
                     <textarea class="pb-card-textarea" id="textarea_${card.id}" onchange="Builder.updateCardContent('${card.id}', this.value)" ${isHidden ? 'disabled' : ''}>${card.content}</textarea>
+                </div>
+                <div class="pb-card-attachments" onclick="event.stopPropagation()">
+                    <div id="attach_list_${card.id}">${this._renderAttachmentList(card)}</div>
+                    <input type="file" id="attach_file_${card.id}" accept="image/*" style="display:none;" onchange="Builder.uploadCardImage('${card.id}')">
+                    <button type="button" class="btn btn_02" style="font-size:0.8rem; padding:3px 10px;" onclick="document.getElementById('attach_file_${card.id}').click()">📎 첨부파일 추가</button>
                 </div>
             </div>`;
         });
@@ -1399,6 +1432,67 @@ const Builder = {
         }
     },
 
+    // 카드 하단 "첨부파일" - 실제 파일은 blog_images 이미지 라이브러리에 저장되고(중복
+    // 검사·WebP 변환 등은 그 라이브러리가 이미 하는 걸 그대로 재사용), card.attachments
+    // 배열에는 참조(image_id/url/filename)만 담아 builder_state JSON과 함께 저장/복원된다.
+    _renderAttachmentList: function(card) {
+        const attachments = card.attachments || [];
+        if (attachments.length === 0) return '';
+        return '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">' +
+            attachments.map((a, i) => `
+                <div style="position:relative; width:70px;">
+                    <img src="${this._escapeAttr(a.url)}" style="width:70px; height:70px; object-fit:cover; border:1px solid #e2e8f0; border-radius:4px;" title="${this._escapeAttr(a.filename)}">
+                    <button type="button" onclick="Builder.removeCardAttachment('${card.id}', ${i})" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; border:1px solid #fee2e2; background:#fef2f2; color:#ef4444; font-size:0.7rem; line-height:1; cursor:pointer;">✕</button>
+                </div>`).join('') +
+            '</div>';
+    },
+
+    uploadCardImage: function(cardId) {
+        const card = this.cards.find(c => c.id === cardId);
+        const fileInput = document.getElementById('attach_file_' + cardId);
+        if (!card || !fileInput || !fileInput.files || !fileInput.files[0]) return;
+        if (!this._requireProject()) return;
+
+        const formData = new FormData();
+        formData.append('action', 'upload_card_image');
+        formData.append('project_id', this.projectId);
+        formData.append('file', fileInput.files[0]);
+
+        const listEl = document.getElementById('attach_list_' + cardId);
+        if (listEl) listEl.insertAdjacentHTML('beforeend', '<span id="attach_uploading_' + cardId + '" style="font-size:0.8rem; color:#94a3b8;">업로드 중...</span>');
+
+        fetch(PB_AJAX_URL, { method: 'POST', body: formData })
+        .then(res => this._parseAjaxJson(res))
+        .then(res => {
+            fileInput.value = '';
+            if (res.ok) {
+                if (!card.attachments) card.attachments = [];
+                card.attachments.push({ image_id: res.image_id, url: res.url, filename: res.filename });
+                this.saveState();
+                this.renderCards();
+            } else {
+                alert('업로드 실패: ' + (res.error || '알 수 없는 오류'));
+                const el = document.getElementById('attach_uploading_' + cardId);
+                if (el) el.remove();
+            }
+        })
+        .catch(err => {
+            alert(err.message === 'LOGIN_REQUIRED' ? '로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.' : '네트워크 오류');
+            const el = document.getElementById('attach_uploading_' + cardId);
+            if (el) el.remove();
+        });
+    },
+
+    // 파일 자체(및 blog_images 등록)는 지우지 않는다 - 이 카드에서 참조만 뗀다(다른
+    // 카드/화면에서 재사용 중일 수 있어서 실제 삭제는 이미지 라이브러리에서 하게 한다).
+    removeCardAttachment: function(cardId, idx) {
+        const card = this.cards.find(c => c.id === cardId);
+        if (!card || !card.attachments) return;
+        card.attachments.splice(idx, 1);
+        this.saveState();
+        this.renderCards();
+    },
+
     /* ==========================================
      * 6. Right Panel Rendering & AI Modify
      * ========================================== */
@@ -1410,6 +1504,7 @@ const Builder = {
         if (this.currentStep === 1) {
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
+                ${this._renderStructureTemplateControl()}
                 ${this._renderTargetLengthControl()}
                 <div class="pb-right-subtitle" style="display:flex; align-items:center; justify-content:space-between;">
                     <span>키워드 · 해시태그</span>
