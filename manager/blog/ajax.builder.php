@@ -69,7 +69,9 @@ if ($action === 'load_project') {
         echo json_encode(array('success' => false, 'error' => '프로젝트를 찾을 수 없습니다.'));
         exit;
     }
-    $advertiser = sql_fetch(" select id, name from {$adv_table} where id = '{$project['advertiser_id']}' ");
+    // post_builder.php 1단계의 "업체 정보 삽입" 체크박스가 실제 값 유무를 판단하는 데
+    // 필요해서 연락처 필드까지 함께 내려준다(이전엔 id, name만 있었음).
+    $advertiser = sql_fetch(" select id, name, phone, email, address, domain, consult_url from {$adv_table} where id = '{$project['advertiser_id']}' ");
     
     // 가장 최근 임시저장 내용(draft)이나 작성된 내용 찾기
     $latest_post = sql_fetch(" select id, title, body, updated_at from {$posts_table} where project_id = '{$project_id}' order by id desc limit 1 ");

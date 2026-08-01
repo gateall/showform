@@ -189,14 +189,26 @@ switch($action) {
                                    from {$project_table} p
                                    join {$adv_table} a on a.id = p.advertiser_id
                                    where p.id = '{$project_id}' ");
+        // 1단계 컨트롤 패널의 "업체 정보 삽입" 체크박스가 고른 항목만 포함한다. 이 파라미터
+        // 자체가 없으면(옛 프론트엔드 캐시 등) 기존처럼 있는 값 전부를 포함해 하위호환을 지킨다.
+        $contact_field_labels = array(
+            'name' => '상호', 'address' => '주소', 'phone' => '전화',
+            'email' => '이메일', 'domain' => '웹사이트', 'consult_url' => '상담/SNS 주소',
+        );
+        if (isset($_POST['contact_fields'])) {
+            $allowed_fields = json_decode($_POST['contact_fields'], true);
+            if (!is_array($allowed_fields)) $allowed_fields = array();
+        } else {
+            $allowed_fields = array_keys($contact_field_labels);
+        }
+
         $contact_lines = "";
         if ($advertiser) {
-            if (!empty($advertiser['name'])) $contact_lines .= "- 상호: {$advertiser['name']}\n";
-            if (!empty($advertiser['address'])) $contact_lines .= "- 주소: {$advertiser['address']}\n";
-            if (!empty($advertiser['phone'])) $contact_lines .= "- 전화: {$advertiser['phone']}\n";
-            if (!empty($advertiser['email'])) $contact_lines .= "- 이메일: {$advertiser['email']}\n";
-            if (!empty($advertiser['domain'])) $contact_lines .= "- 웹사이트: {$advertiser['domain']}\n";
-            if (!empty($advertiser['consult_url'])) $contact_lines .= "- 상담/SNS 주소: {$advertiser['consult_url']}\n";
+            foreach ($contact_field_labels as $field_key => $field_label) {
+                if (!empty($advertiser[$field_key]) && in_array($field_key, $allowed_fields, true)) {
+                    $contact_lines .= "- {$field_label}: {$advertiser[$field_key]}\n";
+                }
+            }
         }
 
         // 기승전결(起承轉結) + 방문팁 구조, 전체 약 2000자 목표 - PM 지시로 서론/본론2~3개/결론

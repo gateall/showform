@@ -37,6 +37,78 @@ const Builder = {
     },
     _autoTagTimers: {},
 
+    // "업체 정보 삽입" - 1단계 컨트롤 패널에서 상호/주소/전화/이메일/웹사이트/SNS주소 중
+    // 무엇을 "방문팁" 마무리 섹션에 넣을지 체크박스로 고른다. 체크 상태는
+    // generateAllCards()가 contact_fields로 서버에 넘겨서 post_builder_ajax.php가 그
+    // 항목만 프롬프트에 포함시킨다. SNS주소는 advertisers 테이블에 아직 별도 컬럼이 없어서
+    // consult_url(상담/SNS 주소로 같이 쓰는 기존 필드)을 그대로 쓴다.
+    advertiserInfo: {},
+    contactState: { collapsed: false, checked: {} },
+    _contactFields: [
+        { key: 'name', label: '상호' },
+        { key: 'address', label: '주소' },
+        { key: 'phone', label: '전화' },
+        { key: 'email', label: '이메일' },
+        { key: 'domain', label: '웹사이트' },
+        { key: 'consult_url', label: 'SNS/상담 주소' }
+    ],
+
+    // advertiserInfo가 새로 채워질 때마다 호출 - 값이 있는 항목은 기본 체크, 없으면 체크 해제.
+    _initContactState: function() {
+        const info = this.advertiserInfo || {};
+        this._contactFields.forEach(f => {
+            this.contactState.checked[f.key] = !!(info[f.key] && String(info[f.key]).trim() !== '');
+        });
+    },
+
+    toggleContactPanel: function() {
+        this.contactState.collapsed = !this.contactState.collapsed;
+        this.renderContactPanel();
+    },
+
+    onContactCheckToggle: function(key, checked) {
+        this.contactState.checked[key] = checked;
+    },
+
+    renderContactPanel: function() {
+        const container = document.getElementById('pb_contact_panel');
+        if (!container) return;
+        const info = this.advertiserInfo || {};
+
+        if (this.contactState.collapsed) {
+            const checkedCount = this._contactFields.filter(f => this.contactState.checked[f.key]).length;
+            container.innerHTML = `
+            <div style="margin-top:12px; padding:10px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">업체 정보 삽입 (${checkedCount}개 선택)</span>
+                <button type="button" class="btn btn_02" onclick="Builder.toggleContactPanel()">펼치기 ▾</button>
+            </div>`;
+            return;
+        }
+
+        let rows = '';
+        this._contactFields.forEach(f => {
+            const value = info[f.key] ? String(info[f.key]) : '';
+            const hasValue = value.trim() !== '';
+            const checked = hasValue && this.contactState.checked[f.key];
+            rows += `
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:${hasValue ? '#334155' : '#94a3b8'}; padding:4px 0;">
+                <input type="checkbox" ${checked ? 'checked' : ''} ${hasValue ? '' : 'disabled'} onchange="Builder.onContactCheckToggle('${f.key}', this.checked)">
+                <span style="width:70px; flex-shrink:0;">${f.label}</span>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${hasValue ? this._escapeAttr(value) : '미등록'}</span>
+            </label>`;
+        });
+
+        container.innerHTML = `
+        <div style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">업체 정보 삽입 ("방문팁"에 포함)</span>
+                <button type="button" class="btn btn_02" onclick="Builder.toggleContactPanel()">접기 ▴</button>
+            </div>
+            <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 8px;">체크한 항목만 생성 시 마무리 섹션에 포함됩니다. 값이 없는 항목은 "광고주 수정"에서 먼저 등록하세요.</p>
+            ${rows}
+        </div>`;
+    },
+
     toggleTagPanel: function(type) {
         this.tagState[type].collapsed = !this.tagState[type].collapsed;
         this.renderTagPanel(type);
@@ -682,6 +754,12 @@ const Builder = {
         if (providerSelect) providerSelect.value = project.ai_provider_id || '';
         this._renderAiToggle(project.ai_disabled === 'Y');
 
+        // "업체 정보 삽입" 체크박스가 실제 값 유무로 기본 체크 여부를 정하므로 광고주
+        // 정보를 저장해둔다 - 값이 있는 항목만 기본 체크, 없는 항목은 비활성으로 둔다.
+        this.advertiserInfo = advertiser || {};
+        this._initContactState();
+        if (this.currentStep === 1) this.renderRightPanel();
+
         this.loadState();
     },
 
@@ -985,6 +1063,7 @@ const Builder = {
         payload.append('project_id', this.projectId);
         payload.append('raw_material', rawMat);
         payload.append('locked_cards', JSON.stringify(lockedCards));
+        payload.append('contact_fields', JSON.stringify(this._contactFields.filter(f => this.contactState.checked[f.key]).map(f => f.key)));
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
@@ -1308,9 +1387,11 @@ const Builder = {
                 <div class="pb-right-subtitle">키워드 · 해시태그</div>
                 <div id="pb_tags_keywords" class="pb-tags-panel"></div>
                 <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
+                <div id="pb_contact_panel"></div>
             `;
             this.renderTagPanel('keywords');
             this.renderTagPanel('hashtags');
+            this.renderContactPanel();
             return;
         }
 
