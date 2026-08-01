@@ -1,0 +1,232 @@
+/* 콘텐츠 프로젝트 등록·수정 화면(project_form.php) 전용 CSS.
+   advertiser-form.css와 같은 디자인(섹션 카드 + 그리드)을 쓰되 클래스는 pf- 접두사로 분리해
+   .projectFormPage 아래로만 적용된다 - 다른 관리자 화면에는 영향을 주지 않는다.
+   PHP 저장 로직, input의 name/id/value, 자바스크립트 이벤트는 이 스타일 시트와 무관하다. */
+
+.projectFormPage {
+    --pf-border: #dce3eb;
+    --pf-text: #1f2937;
+    --pf-muted: #64748b;
+    --pf-primary: #2563eb;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px 20px 30px;
+    color: var(--pf-text);
+}
+
+.projectFormPage *,
+.projectFormPage *::before,
+.projectFormPage *::after {
+    box-sizing: border-box;
+}
+
+.projectFormPage .pf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.projectFormPage .pf-header-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+.projectFormPage .pf-lead {
+    margin: 0 0 14px;
+    color: var(--pf-muted);
+    font-size: 13px;
+}
+
+/* 섹션 카드 */
+.projectFormPage .pf-section {
+    margin-bottom: 12px;
+    padding: 16px;
+    border: 1px solid var(--pf-border);
+    border-radius: 10px;
+}
+.projectFormPage .pf-section--basic { background: #f5f9ff; }
+.projectFormPage .pf-section--publish { background: #f3fbf9; }
+.projectFormPage .pf-section--content { background: #f8f6ff; }
+
+.projectFormPage .pf-section__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    font-size: 15px;
+    font-weight: 700;
+}
+.projectFormPage .pf-section__title::before {
+    width: 4px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--pf-primary);
+    content: "";
+    flex-shrink: 0;
+}
+.projectFormPage .pf-label-note {
+    font-weight: 400;
+    color: var(--pf-muted);
+    font-size: 12px;
+}
+.projectFormPage .pf-required {
+    color: #dc2626;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* 필드 그리드 - PC 2/3열, 태블릿 2열, 모바일 1열 */
+.projectFormPage .pf-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+}
+.projectFormPage .pf-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.projectFormPage .pf-field {
+    min-width: 0;
+}
+.projectFormPage .pf-field--full {
+    grid-column: 1 / -1;
+}
+.projectFormPage .pf-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+.projectFormPage .pf-help {
+    display: block;
+    margin-top: 4px;
+    color: var(--pf-muted);
+    font-size: 12px;
+}
+
+/* 입력창 압축 */
+.projectFormPage input[type="text"],
+.projectFormPage select {
+    width: 100%;
+    max-width: 100%;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 14px;
+}
+.projectFormPage input:focus,
+.projectFormPage select:focus {
+    border-color: var(--pf-primary);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* 발행 사이트 복수선택 체크박스 목록 */
+.projectFormPage .pf-check-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #fff;
+}
+.projectFormPage .pf-check-scroll label {
+    display: block;
+    font-weight: normal;
+    font-size: 13px;
+    padding: 4px 0;
+}
+
+/* 하단 액션바 */
+.projectFormPage .pf-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--pf-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(8px);
+}
+.projectFormPage .pf-btn {
+    display: inline-flex;
+    min-width: 86px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.projectFormPage .pf-btn--primary {
+    border-color: var(--pf-primary);
+    background: var(--pf-primary);
+    color: #fff;
+}
+
+@media (max-width: 1199px) {
+    .projectFormPage .pf-grid--3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .projectFormPage {
+        padding: 16px 16px 30px;
+    }
+}
+
+@media (max-width: 767px) {
+    .projectFormPage {
+        padding: 10px 10px 24px;
+    }
+    .projectFormPage .pf-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .projectFormPage .pf-section {
+        padding: 12px;
+        border-radius: 8px;
+    }
+    .projectFormPage .pf-grid,
+    .projectFormPage .pf-grid--3 {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+    .projectFormPage .pf-field--full {
+        grid-column: auto;
+    }
+    .projectFormPage input[type="text"],
+    .projectFormPage select {
+        height: 42px;
+        font-size: 16px;
+    }
+    .projectFormPage .pf-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 10px;
+    }
+    .projectFormPage .pf-actions .pf-btn {
+        width: 100%;
+        min-width: 0;
+        height: 44px;
+    }
+    .projectFormPage .pf-actions .pf-btn--primary {
+        grid-column: 1 / -1;
+    }
+}

@@ -33,9 +33,14 @@ const Builder = {
     // SEO 편집 폼이 쓰는 기존 저장 형식과 동일 - 새 컬럼/테이블을 만들지 않았다).
     tagState: {
         keywords: { count: 5, values: [], autoGenerate: false, collapsed: false },
-        hashtags: { count: 5, values: [], autoGenerate: false, collapsed: false }
+        // enabled: values와 같은 길이로 유지되는 boolean 배열 - 검수완성(4단계) 패널에서
+        // 체크 해제("미적용")한 항목은 여기서 false가 되고, 최종 조립(finishPost)/검수
+        // 요약에서 제외된다. posts.hashtags 컬럼 자체는 값 목록만 담으므로 이 마스크는
+        // builder_state JSON(gatherData/loadState)에 별도로 실어 보존한다.
+        hashtags: { count: 5, values: [], enabled: [], autoGenerate: false, collapsed: false }
     },
     _autoTagTimers: {},
+    _editingHashtagIdx: null,
 
     // "키워드 · 해시태그" 두 패널을 한 번에 접고 펼치는 상위 토글 - 패널마다 있는
     // 개별 접기/펼치기와는 별개로, 그룹 전체를 한 번에 숨길 때 쓴다.
@@ -272,6 +277,104 @@ const Builder = {
             if (res.ok && res.post_id > 0) this.postId = res.post_id;
         })
         .catch(() => {}); // 자동저장 성격 - 실패해도 카드 작업엔 영향 없고, 다음 입력 시 다시 시도된다.
+    },
+
+    // hashtags.enabled를 values와 같은 길이로 맞춘다 - 새로 추가된 항목은 기본 활성(true),
+    // 삭제로 짧아진 경우엔 뒤쪽 여분을 잘라낸다. 렌더링/토글/추가/삭제 전에 항상 먼저 부른다.
+    _ensureHashtagEnabledLength: function() {
+        const st = this.tagState.hashtags;
+        if (!Array.isArray(st.enabled)) st.enabled = [];
+        while (st.enabled.length < st.values.length) st.enabled.push(true);
+        st.enabled.length = st.values.length;
+    },
+
+    // 검수완성(4단계) 컨트롤 패널의 "최종 해시태그" - 1단계 생성 컨트롤과는 별개로, AI가
+    // 최종 생성한 해시태그를 체크(미적용)/수정/삭제/직접추가로 직접 관리한다.
+    _renderFinalHashtagPanelInto: function() {
+        const container = document.getElementById('pb_final_hashtags');
+        if (container) container.innerHTML = this._renderFinalHashtagPanel();
+    },
+
+    _renderFinalHashtagPanel: function() {
+        this._ensureHashtagEnabledLength();
+        const st = this.tagState.hashtags;
+        const rows = st.values.map((v, i) => {
+            if (!v || v.trim() === '') return '';
+            const enabled = st.enabled[i] !== false;
+            const display = v.charAt(0) === '#' ? v : '#' + v;
+            const body = this._editingHashtagIdx === i
+                ? `<input type="text" class="frm_input" style="flex:1; min-width:0;" value="${this._escapeAttr(v)}"
+                       onkeydown="if(event.key==='Enter'){Builder.commitEditFinalHashtag(${i}, this.value);}"
+                       onblur="Builder.commitEditFinalHashtag(${i}, this.value)">`
+                : `<span style="flex:1; ${enabled ? '' : 'color:#94a3b8; text-decoration:line-through;'}">${this._escapeAttr(display)}</span>`;
+            return `
+            <div style="display:flex; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid #eef2f7;">
+                <input type="checkbox" ${enabled ? 'checked' : ''} title="체크 해제하면 최종 글에서 제외(미적용)" onchange="Builder.toggleFinalHashtag(${i})">
+                ${body}
+                ${this._editingHashtagIdx === i ? '' : `<button type="button" class="btn btn_02" style="padding:2px 8px; font-size:0.75rem;" onclick="Builder.startEditFinalHashtag(${i})">수정</button>`}
+                <button type="button" class="btn btn_02" style="padding:2px 8px; font-size:0.75rem; color:#ef4444;" onclick="Builder.deleteFinalHashtag(${i})">삭제</button>
+            </div>`;
+        }).join('');
+
+        return `
+        <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+            ${rows || '<p style="color:#94a3b8; margin:0 0 8px;">아직 생성된 해시태그가 없습니다. 1단계 컨트롤 패널에서 "AI로 채우기"를 먼저 눌러주세요.</p>'}
+            <div style="display:flex; gap:6px; margin-top:8px;">
+                <input type="text" id="pb_final_hashtag_new" class="frm_input" style="flex:1;" placeholder="새 해시태그 직접입력"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault(); Builder.addFinalHashtag();}">
+                <button type="button" class="btn btn_02" onclick="Builder.addFinalHashtag()">추가</button>
+            </div>
+        </div>`;
+    },
+
+    toggleFinalHashtag: function(idx) {
+        this._ensureHashtagEnabledLength();
+        const st = this.tagState.hashtags;
+        st.enabled[idx] = !(st.enabled[idx] !== false);
+        this._renderFinalHashtagPanelInto();
+        this.saveState();
+    },
+
+    startEditFinalHashtag: function(idx) {
+        this._editingHashtagIdx = idx;
+        this._renderFinalHashtagPanelInto();
+    },
+
+    // Enter로 커밋된 직후 input이 사라지면서 블러도 같이 발생할 수 있어(중복 저장 방지),
+    // 편집 중인 idx가 이미 닫혔으면 두 번째 호출은 조용히 무시한다.
+    commitEditFinalHashtag: function(idx, value) {
+        if (this._editingHashtagIdx !== idx) return;
+        this._editingHashtagIdx = null;
+        const v = value.trim();
+        if (v !== '') this.tagState.hashtags.values[idx] = v;
+        this._renderFinalHashtagPanelInto();
+        this.saveTags('hashtags');
+        this.saveState();
+    },
+
+    deleteFinalHashtag: function(idx) {
+        const st = this.tagState.hashtags;
+        st.values.splice(idx, 1);
+        this._ensureHashtagEnabledLength();
+        if (this._editingHashtagIdx === idx) this._editingHashtagIdx = null;
+        this._renderFinalHashtagPanelInto();
+        this.saveTags('hashtags');
+        this.saveState();
+    },
+
+    addFinalHashtag: function() {
+        const input = document.getElementById('pb_final_hashtag_new');
+        if (!input) return;
+        const v = input.value.trim();
+        if (v === '') return;
+        const st = this.tagState.hashtags;
+        st.values.push(v);
+        this._ensureHashtagEnabledLength();
+        if (st.count < st.values.length) st.count = st.values.length;
+        input.value = '';
+        this._renderFinalHashtagPanelInto();
+        this.saveTags('hashtags');
+        this.saveState();
     },
 
     // useContent=true면 글감(raw_material) 대신 실제 작성된 포스트 내용을 참고한다("포스트
@@ -949,6 +1052,7 @@ const Builder = {
                     // 확인을 눌러도 빈 화면처럼 보였다 - 복원된 카드가 있으면 검토 단계로 바로 넘긴다.
                     this.toggleStep(2);
                 }
+                if (Array.isArray(s.hashtag_enabled)) this.tagState.hashtags.enabled = s.hashtag_enabled;
             }
             if (res.ok && Array.isArray(res.keywords) && res.keywords.length > 0) {
                 this.tagState.keywords.values = res.keywords;
@@ -969,7 +1073,10 @@ const Builder = {
     gatherData: function() {
         return {
             raw_material: document.getElementById('pb_raw_material') ? document.getElementById('pb_raw_material').value : '',
-            cards: this.cards
+            cards: this.cards,
+            // posts.hashtags 컬럼은 값 목록만 담으므로, "미적용" 체크 마스크는 새 컬럼을
+            // 만들지 않고 이 builder_state JSON에 얹어서 같이 저장/복원한다.
+            hashtag_enabled: this.tagState.hashtags.enabled
         };
     },
     
@@ -1526,18 +1633,19 @@ const Builder = {
 
         if (this.currentStep === 4) {
             const kw4 = this.tagState.keywords.values.filter(v => v && v.trim() !== '');
-            const ht4 = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
             panel.innerHTML = `
                 <div class="pb-right-title">⚙️ 컨트롤 패널</div>
                 ${this._renderTargetLengthControl()}
-                <div class="pb-right-subtitle">키워드 · 해시태그</div>
+                <div class="pb-right-subtitle">키워드 <span style="font-weight:normal; font-size:0.75rem; color:#94a3b8;">(생성 요청용 - 1단계에서 편집)</span></div>
                 <div style="margin-bottom:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
                     <div><strong>키워드</strong> (${kw4.length}개): ${kw4.length > 0 ? kw4.join(', ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
-                    <div style="margin-top:6px;"><strong>해시태그</strong> (${ht4.length}개): ${ht4.length > 0 ? ht4.join(' ') : '<span style="color:#94a3b8;">미입력</span>'}</div>
-                    <p style="margin:8px 0 0; color:#94a3b8; font-size:0.75rem;">수정하려면 1단계로 이동해서 편집하세요.</p>
+                    <p style="margin:8px 0 0; color:#94a3b8; font-size:0.75rem;">수정하려면 1단계로 이동해서 편집하세요. 키워드는 본문 글감 안에 자연스럽게 들어가는 용도라 최종 글 하단에는 별도로 붙지 않습니다.</p>
                 </div>
+                <div class="pb-right-subtitle">최종 해시태그 <span style="font-weight:normal; font-size:0.75rem; color:#94a3b8;">(AI로 최종 생성된 해시태그 - 여기서 직접 관리)</span></div>
+                <div id="pb_final_hashtags"></div>
                 <p style="color:#94a3b8; font-size:0.8rem;">목표 글자수를 바꾸면 검수 결과가 그 기준으로 다시 표시됩니다. 실제 본문 길이를 바꾸려면 1단계에서 다시 생성하거나 카드를 직접 수정하세요.</p>
             `;
+            this._renderFinalHashtagPanelInto();
             return;
         }
 
@@ -1828,8 +1936,9 @@ const Builder = {
 
                 // 검수 결과에 체크 항목만 있고 실제 등록된 키워드/해시태그는 안 보인다는
                 // 피드백 - 1단계에서 입력/생성한 값을 그대로 요약해서 보여준다.
+                this._ensureHashtagEnabledLength();
                 const kw = this.tagState.keywords.values.filter(v => v && v.trim() !== '');
-                const ht = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
+                const ht = this.tagState.hashtags.values.filter((v, i) => v && v.trim() !== '' && this.tagState.hashtags.enabled[i] !== false);
                 const bodyLen = bodyText.trim().length;
                 const lenDiff = bodyLen - this.targetLength;
                 html += `<div style="margin-bottom:15px; padding:12px 15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.9rem;">
@@ -1895,7 +2004,8 @@ const Builder = {
         // 해시태그는 실제 블로그 글처럼 맨 아래 붙여준다. 키워드는 여기 따로 나열하지
         // 않는다 - 본문 자체에 자연스럽게 녹아있어야 하는 것이라 별도 목록으로 붙이면
         // 오히려 어색하다(사용자 확인 사항).
-        const hashtagValues = this.tagState.hashtags.values.filter(v => v && v.trim() !== '');
+        this._ensureHashtagEnabledLength();
+        const hashtagValues = this.tagState.hashtags.values.filter((v, i) => v && v.trim() !== '' && this.tagState.hashtags.enabled[i] !== false);
         if (hashtagValues.length > 0) {
             const hashtagLine = hashtagValues.map(v => (v.charAt(0) === '#' ? v : '#' + v)).join(' ');
             htmlOut += `<p>${hashtagLine}</p>\n`;
