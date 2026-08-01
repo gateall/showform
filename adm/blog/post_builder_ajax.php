@@ -119,12 +119,16 @@ switch($action) {
             die(json_encode(['ok' => false, 'error' => '프로젝트 ID가 없습니다.']));
         }
         $proj = sql_fetch(" select advertiser_id, primary_site_id from {$project_table} where id = '{$project_id}' ");
-        $post = sql_fetch(" select builder_state from {$post_table} where project_id = '{$project_id}' ");
-        
+        $post = sql_fetch(" select builder_state, tags, hashtags from {$post_table} where project_id = '{$project_id}' ");
+
         if ($proj && $post) {
             $response['advertiser_id'] = $proj['advertiser_id'];
             $response['site_id'] = $proj['primary_site_id'];
             $response['builder_state'] = $post['builder_state'] ? json_decode($post['builder_state'], true) : [];
+            // tags는 콤마구분(기존 관례), hashtags는 "#태그" 공백구분(기존 관례) - bp_table 등에서
+            // 이미 쓰던 저장 형식 그대로 읽어서 배열로만 풀어준다.
+            $response['keywords'] = $post['tags'] !== '' ? array_values(array_filter(array_map('trim', explode(',', $post['tags'])))) : [];
+            $response['hashtags'] = $post['hashtags'] !== '' ? array_values(array_filter(array_map('trim', explode(' ', $post['hashtags'])))) : [];
         } else {
             $response['ok'] = false;
             $response['error'] = '데이터를 찾을 수 없습니다.';
@@ -321,6 +325,107 @@ switch($action) {
         $response['summary'] = $summary;
         $response['checks'] = $check_results;
         $response['message'] = '품질 검사 완료';
+        break;
+
+    // 키워드(posts.tags, 콤마구분)/해시태그(posts.hashtags, "#태그" 공백구분) 입력창을
+    // 그대로 저장한다 - 두 컬럼 다 project_view.php의 SEO 메타 편집 폼이 이미 쓰던
+    // 기존 저장 형식(v5/v3)을 그대로 따른다.
+    case 'save_tags':
+        if ($project_id === 0) {
+            die(json_encode(['ok' => false, 'error' => '프로젝트 ID가 없습니다.']));
+        }
+        $tag_type = isset($_POST['tag_type']) ? $_POST['tag_type'] : '';
+        if ($tag_type !== 'keywords' && $tag_type !== 'hashtags') {
+            die(json_encode(['ok' => false, 'error' => '알 수 없는 태그 종류입니다.']));
+        }
+        $values = isset($_POST['values']) ? json_decode($_POST['values'], true) : [];
+        if (!is_array($values)) $values = [];
+        $values = array_values(array_filter(array_map('trim', $values), function ($v) { return $v !== ''; }));
+
+        if ($tag_type === 'hashtags') {
+            $values = array_map(function ($v) { return (mb_substr($v, 0, 1) === '#') ? $v : ('#' . $v); }, $values);
+            $joined = implode(' ', $values);
+            $column = 'hashtags';
+        } else {
+            $joined = implode(', ', $values);
+            $column = 'tags';
+        }
+
+        $post = sql_fetch(" select id from {$post_table} where project_id = '{$project_id}' ");
+        if ($post) {
+            $post_id = $post['id'];
+            sql_query(" update {$post_table} set {$column} = '" . sql_real_escape_string($joined) . "', updated_at = '" . G5_TIME_YMDHIS . "' where id = '{$post_id}' ");
+        } else {
+            sql_query(" insert into {$post_table}
+                        set project_id = '{$project_id}', title = '새 포스팅', {$column} = '" . sql_real_escape_string($joined) . "',
+                            created_at = '" . G5_TIME_YMDHIS . "' ");
+            $post_id = sql_insert_id();
+        }
+        $response['post_id'] = $post_id;
+        break;
+
+    // 입력창에 이미 채워진 값(있으면 그대로 유지)을 참고해서, 지정한 개수가 될 때까지
+    // AI가 나머지를 새로 만들어 채운다.
+    case 'generate_tags':
+        if (!function_exists('bp_ai_chat_request')) {
+            die(json_encode(['ok' => false, 'error' => 'AI 서비스가 활성화되지 않았습니다.']));
+        }
+        if (!bp_ai_global_enabled()) {
+            die(json_encode(['ok' => false, 'error' => '관리자가 AI 기능을 전체적으로 꺼두었습니다.']));
+        }
+        $tag_type = isset($_POST['tag_type']) ? $_POST['tag_type'] : '';
+        if ($tag_type !== 'keywords' && $tag_type !== 'hashtags') {
+            die(json_encode(['ok' => false, 'error' => '알 수 없는 태그 종류입니다.']));
+        }
+        $count = isset($_POST['count']) ? max(1, min(10, (int) $_POST['count'])) : 5;
+        $raw_material = isset($_POST['raw_material']) ? trim($_POST['raw_material']) : '';
+        $seed_values = isset($_POST['seed_values']) ? json_decode($_POST['seed_values'], true) : [];
+        if (!is_array($seed_values)) $seed_values = [];
+        $seed_values = array_values(array_filter(array_map('trim', $seed_values), function ($v) { return $v !== ''; }));
+
+        $noun = $tag_type === 'hashtags' ? '해시태그' : '키워드';
+        $sys_prompt = "당신은 블로그 SEO {$noun} 전문가입니다.\n";
+        $sys_prompt .= "반드시 아래 JSON 객체 형식으로만 응답하세요: {\"items\": [\"...\", \"...\"]}\n";
+        $sys_prompt .= "items 배열의 길이는 정확히 {$count}개여야 합니다.\n";
+        if ($tag_type === 'hashtags') {
+            $sys_prompt .= "각 항목은 \"#\"로 시작하는 짧은 해시태그 한 단어/구여야 합니다(공백 없이).\n";
+        } else {
+            $sys_prompt .= "각 항목은 짧은 키워드 한 단어/구여야 합니다.\n";
+        }
+        if (!empty($seed_values)) {
+            $sys_prompt .= "다음은 이미 정해진 항목입니다. 이 값들은 그대로 결과에 포함하고, 부족한 개수만 새로 만들어 채우세요.\n";
+            $sys_prompt .= "[" . implode(', ', $seed_values) . "]\n";
+        }
+        $sys_prompt .= "설명이나 다른 텍스트 없이 위 JSON 객체만 반환하세요.";
+
+        $prompt = "다음 글감을 참고해서 {$noun}을 만들어 주세요.\n\n[글감]\n" . mb_substr($raw_material, 0, 1500);
+
+        $ai_result = bp_ai_chat_request($prompt, $sys_prompt, $project_id);
+        if (!$ai_result['ok']) {
+            die(json_encode(['ok' => false, 'error' => $ai_result['error']]));
+        }
+
+        $parsed = json_decode(trim($ai_result['message']), true);
+        $items = null;
+        if (is_array($parsed) && isset($parsed['items']) && is_array($parsed['items'])) {
+            $items = $parsed['items'];
+        } elseif (is_array($parsed) && array_keys($parsed) === range(0, count($parsed) - 1)) {
+            $items = $parsed; // 모델이 바로 배열로 준 경우
+        } elseif (is_array($parsed)) {
+            foreach ($parsed as $maybe_list) {
+                if (is_array($maybe_list) && ($maybe_list === array() || array_keys($maybe_list) === range(0, count($maybe_list) - 1))) {
+                    $items = $maybe_list;
+                    break;
+                }
+            }
+        }
+
+        if (!is_array($items)) {
+            die(json_encode(['ok' => false, 'error' => 'AI가 올바른 형식을 반환하지 못했습니다.']));
+        }
+
+        $items = array_values(array_filter(array_map('trim', $items), function ($v) { return $v !== ''; }));
+        $response['values'] = array_slice($items, 0, $count);
         break;
 
     default:

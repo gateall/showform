@@ -18,12 +18,110 @@ const Builder = {
     init: function() {
         this.toggleStep(1);
         this.updateProviderStatusUI();
+        this.renderTagPanel('keywords');
+        this.renderTagPanel('hashtags');
 
         const loadProjectId = localStorage.getItem('pb_load_project_id');
         if (loadProjectId) {
             localStorage.removeItem('pb_load_project_id');
             this.onTopProjectChange(loadProjectId);
         }
+    },
+
+    // 키워드/해시태그 입력창 - 개수 선택 + 입력창 N개 + AI로 채우기.
+    // posts.tags(콤마구분)/posts.hashtags("#태그" 공백구분)에 그대로 저장한다(project_view.php의
+    // SEO 편집 폼이 쓰는 기존 저장 형식과 동일 - 새 컬럼/테이블을 만들지 않았다).
+    tagState: {
+        keywords: { count: 5, values: [] },
+        hashtags: { count: 5, values: [] }
+    },
+
+    renderTagPanel: function(type) {
+        const containerId = type === 'hashtags' ? 'pb_tags_hashtags' : 'pb_tags_keywords';
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const label = type === 'hashtags' ? '해시태그' : '키워드';
+        const state = this.tagState[type];
+        const values = state.values;
+
+        let inputs = '';
+        for (let i = 0; i < state.count; i++) {
+            const v = values[i] || '';
+            inputs += `<input type="text" class="frm_input pb-tag-input" style="width:120px;" placeholder="${label} ${i + 1}" value="${this._escapeAttr(v)}" onchange="Builder.onTagInputChange('${type}', ${i}, this.value)">`;
+        }
+
+        container.innerHTML = `
+        <div style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">${label}</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; color:#666;">개수</span>
+                    <select class="frm_input" style="width:60px;" onchange="Builder.onTagCountChange('${type}', this.value)">
+                        ${[3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n === state.count ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}')">AI로 채우기</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">${inputs}</div>
+        </div>`;
+    },
+
+    onTagCountChange: function(type, count) {
+        this.tagState[type].count = parseInt(count, 10);
+        this.renderTagPanel(type);
+    },
+
+    onTagInputChange: function(type, idx, value) {
+        this.tagState[type].values[idx] = value;
+        this.saveTags(type);
+    },
+
+    saveTags: function(type) {
+        if (!this.projectId) return;
+        const payload = new URLSearchParams();
+        payload.append('action', 'save_tags');
+        payload.append('project_id', this.projectId);
+        payload.append('post_id', this.postId);
+        payload.append('tag_type', type);
+        payload.append('values', JSON.stringify(this.tagState[type].values));
+
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
+        .then(res => this._parseAjaxJson(res))
+        .then(res => {
+            if (res.ok && res.post_id > 0) this.postId = res.post_id;
+        })
+        .catch(() => {}); // 자동저장 성격 - 실패해도 카드 작업엔 영향 없고, 다음 입력 시 다시 시도된다.
+    },
+
+    generateTags: function(type) {
+        if (!this._requireProject()) return;
+        const rawMat = document.getElementById('pb_raw_material').value.trim();
+        const state = this.tagState[type];
+        const seeds = state.values.filter(v => v && v.trim() !== '');
+
+        const payload = new URLSearchParams();
+        payload.append('action', 'generate_tags');
+        payload.append('project_id', this.projectId);
+        payload.append('tag_type', type);
+        payload.append('count', state.count);
+        payload.append('raw_material', rawMat);
+        payload.append('seed_values', JSON.stringify(seeds));
+
+        fetch(PB_AJAX_URL, { method: 'POST', body: payload })
+        .then(res => this._parseAjaxJson(res))
+        .then(res => {
+            if (res.ok && Array.isArray(res.values)) {
+                state.values = res.values;
+                this.renderTagPanel(type);
+                this.saveTags(type);
+            } else {
+                alert('생성 실패: ' + (res.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(err => {
+            alert(err.message === 'LOGIN_REQUIRED' ? '로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.' : '네트워크 오류');
+        });
     },
 
     _toast: function(message, tone) {
@@ -586,6 +684,16 @@ const Builder = {
                     // 확인을 눌러도 빈 화면처럼 보였다 - 복원된 카드가 있으면 검토 단계로 바로 넘긴다.
                     this.toggleStep(2);
                 }
+            }
+            if (res.ok && Array.isArray(res.keywords) && res.keywords.length > 0) {
+                this.tagState.keywords.values = res.keywords;
+                this.tagState.keywords.count = Math.max(this.tagState.keywords.count, res.keywords.length);
+                this.renderTagPanel('keywords');
+            }
+            if (res.ok && Array.isArray(res.hashtags) && res.hashtags.length > 0) {
+                this.tagState.hashtags.values = res.hashtags;
+                this.tagState.hashtags.count = Math.max(this.tagState.hashtags.count, res.hashtags.length);
+                this.renderTagPanel('hashtags');
             }
         })
         .catch(err => {
