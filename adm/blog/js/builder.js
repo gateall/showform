@@ -304,26 +304,55 @@ const Builder = {
         });
     },
 
-    // saveState()가 매번 남기는 localStorage 백업으로부터 복구한다. 서버 쪽에 아직
-    // posts 행이 없을 때(자동저장이 한 번도 성공 못 한 경우)만 의미가 있다.
-    _tryRestoreFromLocalBackup: function(projectId) {
-        let backup = null;
+    // 저장된 프로젝트 id로 이 브라우저의 localStorage 백업을 읽어온다(없으면 null).
+    _readLocalBackup: function(projectId) {
         try {
             const raw = localStorage.getItem('pb_backup_' + projectId);
-            if (raw) backup = JSON.parse(raw);
-        } catch (e) { /* 손상된 백업 - 무시 */ }
-
-        if (!backup || !Array.isArray(backup.cards) || backup.cards.length === 0) return;
-
-        if (!confirm("서버에 저장된 초안은 없지만, 이 브라우저에 임시로 남아있는 이전 작업 내용이 있습니다. 불러오시겠습니까?")) {
-            return;
+            if (!raw) return null;
+            const backup = JSON.parse(raw);
+            return (backup && Array.isArray(backup.cards) && backup.cards.length > 0) ? backup : null;
+        } catch (e) {
+            return null; // 손상된 백업 - 무시
         }
+    },
 
+    _applyLocalBackup: function(backup) {
         if (backup.raw_material) document.getElementById('pb_raw_material').value = backup.raw_material;
         this.cards = backup.cards;
         this.toggleStep(2);
         this.saveState(); // 불러온 즉시 서버에도 반영해서 같은 손실이 반복되지 않게 한다.
+    },
+
+    // saveState()가 매번 남기는 localStorage 백업으로부터 복구한다. 서버 쪽에 아직
+    // posts 행이 없을 때(자동저장이 한 번도 성공 못 한 경우)만 의미가 있다 - 프로젝트를
+    // 선택했을 때 자동으로 확인한다.
+    _tryRestoreFromLocalBackup: function(projectId) {
+        const backup = this._readLocalBackup(projectId);
+        if (!backup) return;
+
+        if (!confirm("서버에 저장된 초안은 없지만, 이 브라우저에 임시로 남아있는 이전 작업 내용이 있습니다. 불러오시겠습니까?")) {
+            return;
+        }
+        this._applyLocalBackup(backup);
         this._toast('로컬 백업에서 복구했습니다.', 'success');
+    },
+
+    // "임시저장 불러오기" 버튼 - 서버에 이미 내용이 있어도 언제든 이 브라우저의 임시저장을
+    // 확인하고 불러올 수 있게 한다(자동 복구는 서버에 저장된 게 없을 때만 물어보므로,
+    // 그 외의 경우를 위한 수동 진입점).
+    loadLocalBackup: function() {
+        if (!this._requireProject()) return;
+        const backup = this._readLocalBackup(this.projectId);
+        if (!backup) {
+            alert('이 프로젝트에 저장된 임시저장 내용이 없습니다.');
+            return;
+        }
+        const savedAt = backup.savedAt ? new Date(backup.savedAt).toLocaleString('ko-KR') : '알 수 없음';
+        if (!confirm(`이 브라우저에 ${savedAt}에 임시저장된 내용이 있습니다. 지금 화면 내용을 덮어쓰고 불러오시겠습니까?`)) {
+            return;
+        }
+        this._applyLocalBackup(backup);
+        this._toast('임시저장 내용을 불러왔습니다.', 'success');
     },
 
     // 새로고침/재접속 후에도 마지막 작업 프로젝트를 자동으로 이어서 열 수 있도록 저장한다.

@@ -41,6 +41,7 @@ include_once(__DIR__ . '/../layout/header.php');
         <div class="pb-header-right">
             <span style="font-size: 0.85rem; color: #888;">마지막 저장: <span id="pb-saved-time">-</span></span>
             <button type="button" class="btn btn_02" onclick="Builder.saveState()">임시저장</button>
+            <button type="button" class="btn btn_02" onclick="Builder.loadLocalBackup()">임시저장 불러오기</button>
             <button type="button" class="btn btn_02" id="pb_btn_generate_all_header" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; color:#fff;">✨ 전체 AI 생성</button>
             <button type="button" class="btn btn_01" onclick="Builder.inspectAll()">전체 검수</button>
             <button type="button" class="btn_submit btn" onclick="Builder.finishPost()">최종 조립 및 완성본 보기</button>
