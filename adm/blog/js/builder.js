@@ -248,10 +248,39 @@ const Builder = {
                         this.applyProjectData(res.project, res.advertiser, null);
                         return;
                     }
+                    this.applyProjectData(res.project, res.advertiser, res.latest_post);
+                    return;
                 }
-                this.applyProjectData(res.project, res.advertiser, res.latest_post);
+
+                this.applyProjectData(res.project, res.advertiser, null);
+                // 서버에 저장된 초안이 없어도(자동저장이 세션 만료 등으로 실패했던 경우)
+                // 이 브라우저에 남긴 로컬 백업이 있으면 그걸로 복구를 시도한다 - 실제로
+                // 서버 저장이 조용히 실패해서 생성했던 제목 5개를 통째로 잃어버린 적이 있었다.
+                this._tryRestoreFromLocalBackup(res.project.id);
             }
         });
+    },
+
+    // saveState()가 매번 남기는 localStorage 백업으로부터 복구한다. 서버 쪽에 아직
+    // posts 행이 없을 때(자동저장이 한 번도 성공 못 한 경우)만 의미가 있다.
+    _tryRestoreFromLocalBackup: function(projectId) {
+        let backup = null;
+        try {
+            const raw = localStorage.getItem('pb_backup_' + projectId);
+            if (raw) backup = JSON.parse(raw);
+        } catch (e) { /* 손상된 백업 - 무시 */ }
+
+        if (!backup || !Array.isArray(backup.cards) || backup.cards.length === 0) return;
+
+        if (!confirm("서버에 저장된 초안은 없지만, 이 브라우저에 임시로 남아있는 이전 작업 내용이 있습니다. 불러오시겠습니까?")) {
+            return;
+        }
+
+        if (backup.raw_material) document.getElementById('pb_raw_material').value = backup.raw_material;
+        this.cards = backup.cards;
+        this.toggleStep(2);
+        this.saveState(); // 불러온 즉시 서버에도 반영해서 같은 손실이 반복되지 않게 한다.
+        this._toast('로컬 백업에서 복구했습니다.', 'success');
     },
 
     // 새로고침/재접속 후에도 마지막 작업 프로젝트를 자동으로 이어서 열 수 있도록 저장한다.
@@ -709,19 +738,28 @@ const Builder = {
     },
     
     // 전체 상태 저장 (임시 JSON fallback)
-    saveState: function() {
+    saveState: function(_retryCount) {
         if (!this.projectId) {
             this._toast('프로젝트를 먼저 생성해주세요.', 'error');
             return;
         }
-        
+        _retryCount = _retryCount || 0;
+
         const stateData = this.gatherData();
+
+        // 서버 저장이 실패해도(세션 만료 등) 최소한 이 브라우저에는 남도록 매번 로컬에도
+        // 백업한다 - 실제로 서버 저장 실패로 생성한 제목 5개를 통째로 잃어버린 적이 있어서,
+        // 최후의 보루로 둔다(onTopProjectChange가 서버에 저장된 게 없을 때 이걸로 복구를 물어본다).
+        try {
+            localStorage.setItem('pb_backup_' + this.projectId, JSON.stringify(Object.assign({}, stateData, { savedAt: Date.now() })));
+        } catch (e) { /* storage 꽉 찼거나 비활성화된 경우 - best-effort라 무시 */ }
+
         const payload = new URLSearchParams();
         payload.append('action', 'save_state');
         payload.append('project_id', this.projectId);
         payload.append('post_id', this.postId);
         payload.append('builder_state', JSON.stringify(stateData));
-        
+
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
         .then(res => this._parseAjaxJson(res))
         .then(res => {
@@ -731,17 +769,24 @@ const Builder = {
                 const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                 document.getElementById('pb-saved-time').innerText = timeStr;
                 // this._toast('저장 완료', 'success'); // Too noisy during partial saves
+            } else if (_retryCount < 1) {
+                setTimeout(() => this.saveState(_retryCount + 1), 2000);
             } else {
                 // 실패를 조용히 삼키면 화면엔 카드가 있는데 DB엔 없는 상태로 남는다(실제로
-                // 이렇게 초안 하나를 잃어버린 적이 있다) - 반드시 알려야 한다.
-                this._toast('저장 실패: ' + (res.error || '알 수 없는 오류'), 'error');
+                // 이렇게 초안 하나를 잃어버린 적이 있다) - 반드시 알려야 한다. 로컬 백업은
+                // 남아있으니 완전히 사라지는 건 아니라는 것도 같이 안내한다.
+                this._toast('저장 실패: ' + (res.error || '알 수 없는 오류') + ' (이 브라우저에 임시 백업은 남아있습니다)', 'error');
             }
         })
         .catch(err => {
+            if (_retryCount < 1) {
+                setTimeout(() => this.saveState(_retryCount + 1), 2000);
+                return;
+            }
             if (err.message === 'LOGIN_REQUIRED') {
-                this._toast('로그인이 만료되어 자동저장이 실패했습니다. 새로고침 후 다시 로그인하고, 화면의 내용을 다시 저장해주세요.', 'error');
+                this._toast('로그인이 만료되어 자동저장이 실패했습니다(이 브라우저에 임시 백업은 남아있습니다). 새로고침 후 다시 로그인하고 다시 시도해주세요.', 'error');
             } else {
-                this._toast('자동저장 중 네트워크 오류가 발생했습니다.', 'error');
+                this._toast('자동저장 중 네트워크 오류가 발생했습니다(이 브라우저에 임시 백업은 남아있습니다).', 'error');
             }
         });
     },
