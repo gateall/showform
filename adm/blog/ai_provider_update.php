@@ -32,7 +32,11 @@ $key_sql = '';
 if ($api_key !== '') {
     $enc = bp_encrypt_secret($api_key);
     $hint = bp_mask_secret($api_key);
-    $key_sql = ", api_key_enc = '" . sql_real_escape_string($enc) . "', masked_hint = '" . sql_real_escape_string($hint) . "'";
+    // encryption_key_version은 방금 만든 암호문 자체에서 그대로 뽑는다(별도로 "현재 버전"을
+    // 다시 계산하지 않음 - 두 값이 어긋날 일이 없게 단일 진실 공급원을 그대로 따름).
+    $key_version = bp_crypto_extract_version($enc);
+    $key_version_sql = $key_version !== null ? "'" . (int) $key_version . "'" : 'NULL';
+    $key_sql = ", api_key_enc = '" . sql_real_escape_string($enc) . "', masked_hint = '" . sql_real_escape_string($hint) . "', encryption_key_version = {$key_version_sql}";
 }
 
 // ---- 수정(id 기반) ----

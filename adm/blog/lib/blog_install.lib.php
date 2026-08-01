@@ -235,5 +235,10 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v21.sql',
             'installed' => bp_install_table_exists($table_prefix, 'ai_global_settings'),
         ),
+        22 => array(
+            'label' => '암호화 키 버전 관리', 'desc' => 'ai_providers encryption_key_version 컬럼 추가(마스터 키 회전 대비)',
+            'file' => $sql_dir . '/blog_automation_v22.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'ai_providers', 'encryption_key_version'),
+        ),
     );
 }

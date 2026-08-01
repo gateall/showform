@@ -24,6 +24,7 @@ if (!$row) {
 sql_query(" update {$table}
                 set api_key_enc = '',
                     masked_hint = '',
+                    encryption_key_version = NULL,
                     updated_by = '" . sql_real_escape_string(bp_current_admin_id()) . "',
                     updated_at = '" . G5_TIME_YMDHIS . "'
                 where id = '{$id}' ");

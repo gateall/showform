@@ -53,6 +53,19 @@ if ($tab === 'ai') {
     }
     $ai_global_enabled = bp_ai_global_enabled();
     $ai_global_admin_token = get_admin_token();
+
+    // 마스터 키(BP_CRYPTO_KEY) 회전 후에만 의미 있는 카운트 - 평소에는 항상 0이다.
+    // 암호문 자체의 프리픽스로 판단하므로 encryption_key_version 컬럼(V22) 설치 여부와 무관하게 동작한다.
+    $ai_current_key_version = bp_crypto_current_version();
+    $ai_needs_reencrypt_count = 0;
+    foreach ($ai_providers as $ap) {
+        if ($ap['api_key_enc'] !== '' && bp_crypto_extract_version($ap['api_key_enc']) !== $ai_current_key_version) {
+            $ai_needs_reencrypt_count++;
+        }
+    }
+
+    $ai_reencrypt_result = get_session('bp_reencrypt_result');
+    set_session('bp_reencrypt_result', '');
 }
 
 include_once(__DIR__ . '/../layout/header.php');
@@ -158,6 +171,27 @@ include_once(__DIR__ . '/../layout/header.php');
             <button type="submit" class="btn <?php echo $ai_global_enabled ? 'btn_01' : 'btn_submit'; ?>"><?php echo $ai_global_enabled ? 'AI 기능 끄기' : 'AI 기능 켜기'; ?></button>
         </form>
     </div>
+
+    <?php if (is_array($ai_reencrypt_result)): ?>
+    <div style="padding:1rem;margin-bottom:1.25rem;border:1px solid <?php echo count($ai_reencrypt_result['failed']) > 0 ? '#dc2626' : '#10b981'; ?>;border-radius:8px;background:<?php echo count($ai_reencrypt_result['failed']) > 0 ? '#fef2f2' : '#f0fdf4'; ?>;font-size:0.85rem;">
+        <p style="margin:0 0 0.25rem;font-weight:bold;">재암호화 결과</p>
+        <p style="margin:0;">완료: <?php echo count($ai_reencrypt_result['migrated']); ?>건<?php echo count($ai_reencrypt_result['migrated']) > 0 ? ' (' . get_text(implode(', ', $ai_reencrypt_result['migrated'])) . ')' : ''; ?> · 이미 최신: <?php echo (int) $ai_reencrypt_result['already_current']; ?>건<?php if (count($ai_reencrypt_result['failed']) > 0): ?> · <strong style="color:#b91c1c;">실패: <?php echo count($ai_reencrypt_result['failed']); ?>건 (<?php echo get_text(implode(', ', $ai_reencrypt_result['failed'])); ?>) - 이 공급자는 API 키를 수동으로 다시 입력해 주세요.</strong><?php endif; ?></p>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($ai_needs_reencrypt_count > 0): ?>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem;margin-bottom:1.25rem;border:1px solid #f59e0b;border-radius:8px;background:#fffbeb;">
+        <div>
+            <strong>마스터 키 회전 후 재암호화 필요 (<?php echo $ai_needs_reencrypt_count; ?>건)</strong>
+            <p style="margin:0.25rem 0 0;color:var(--mgr-text-muted);font-size:0.85rem;">BP_CRYPTO_KEY를 교체한 뒤에는, 옛 키로 저장된 API 키들을 새 키로 재암호화해야 계속 사용할 수 있습니다. 옛 키 상수(BP_CRYPTO_KEY_V{n})가 아직 dbconfig.php에 남아있는 동안에만 성공합니다.</p>
+        </div>
+        <form method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/ai_provider_reencrypt_all.php" style="flex-shrink:0;" onsubmit="return confirm('<?php echo $ai_needs_reencrypt_count; ?>건의 API 키를 현재 마스터 키로 재암호화하시겠습니까?');">
+            <input type="hidden" name="token" value="<?php echo get_text($ai_global_admin_token); ?>">
+            <input type="hidden" name="return" value="manager">
+            <button type="submit" class="btn_submit btn">지금 재암호화 실행</button>
+        </form>
+    </div>
+    <?php endif; ?>
 
     <button type="button" class="btn btn_01" style="margin-bottom:1rem;" onclick="loadAiProviderForm(0)">+ 공급자 등록</button>
 
