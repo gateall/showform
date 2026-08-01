@@ -321,10 +321,6 @@ include_once(__DIR__ . '/../layout/header.php');
                     <p style="font-size:0.8rem; color:#94a3b8; margin:8px 0 0;">프로젝트마다 다른 AI 에이전트를 지정하거나, AI 없이 수동으로만 작성할 수 있습니다. 변경 즉시 저장됩니다.</p>
                 </div>
 
-                <!-- 키워드/해시태그 개수 지정 + 입력창 + AI 채우기 (JS가 채움: Builder.renderTagPanel) -->
-                <div id="pb_tags_keywords" class="pb-tags-panel"></div>
-                <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
-
                 <div id="pb_generate_blocked_msg" style="display:none; margin-top:10px; padding:10px 14px; border:1px solid #f59e0b; border-radius:6px; background:#fffbeb; font-size:0.85rem; color:#92400e; text-align:right;"></div>
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
                     <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; color:#fff; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>

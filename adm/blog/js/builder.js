@@ -16,10 +16,10 @@ const Builder = {
     activeCardId: null,
 
     init: function() {
+        // toggleStep(1)이 renderRightPanel()을 통해 키워드/해시태그 패널까지 그려준다
+        // (우측 패널로 옮기면서 여기서 따로 부를 필요가 없어졌다).
         this.toggleStep(1);
         this.updateProviderStatusUI();
-        this.renderTagPanel('keywords');
-        this.renderTagPanel('hashtags');
 
         const loadProjectId = localStorage.getItem('pb_load_project_id');
         if (loadProjectId) {
@@ -1146,7 +1146,20 @@ const Builder = {
      * ========================================== */
     renderRightPanel: function() {
         const panel = document.getElementById('pb_right_panel');
-        
+
+        // 1단계에서는 선택된 카드가 없는 게 당연하므로("클릭하시면 나타납니다" 안내는
+        // 2/3단계용) - 키워드/해시태그 입력 패널을 우측에 보여준다.
+        if (this.currentStep === 1) {
+            panel.innerHTML = `
+                <div class="pb-right-title">키워드 · 해시태그</div>
+                <div id="pb_tags_keywords" class="pb-tags-panel"></div>
+                <div id="pb_tags_hashtags" class="pb-tags-panel"></div>
+            `;
+            this.renderTagPanel('keywords');
+            this.renderTagPanel('hashtags');
+            return;
+        }
+
         if (!this.activeCardId) {
             panel.innerHTML = '<div style="text-align:center; color:#94a3b8; padding-top:150px; font-size:0.95rem;">중앙에서 카드를 클릭하시면<br>이곳에 전용 설정 패널이 나타납니다.</div>';
             return;
