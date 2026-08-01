@@ -31,6 +31,24 @@ const Builder = {
         else alert(message);
     },
 
+    // fetch 응답을 JSON으로 파싱한다. 세션이 끊긴 상태로 /adm/의 AJAX를 부르면 그누보드가
+    // JSON이 아니라 로그인 페이지 전체(HTML)를 200으로 돌려주는데, 그러면 res.json()이
+    // SyntaxError를 던지고 그게 그냥 catch()에서 "네트워크 오류"로 뭉개져서 실제로는 로그인이
+    // 끊겼을 뿐인데도 원인을 알 수 없는 네트워크 문제처럼 보였다(이번 세션에 여러 번 이걸로
+    // 헷갈렸다). 응답 텍스트에서 그누보드 로그인 리다이렉트 흔적을 찾아 구분해준다.
+    _parseAjaxJson: function(res) {
+        return res.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                if (text.indexOf('login.php') !== -1 || text.indexOf('로그인') !== -1) {
+                    throw new Error('LOGIN_REQUIRED');
+                }
+                throw e;
+            }
+        });
+    },
+
     // 준비 중인 공급자로 실제 생성을 시도했을 때, 조용히 템플릿으로 넘어가지 않고
     // 사용자에게 명시적으로 선택지를 준다. onChoice에는 'switch'/'template'/'cancel' 중 하나가 온다.
     _confirmProviderFallback: function(providerLabel, onChoice) {
@@ -692,7 +710,7 @@ const Builder = {
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
-        .then(res => res.json())
+        .then(res => this._parseAjaxJson(res))
         .then(res => {
             btn.disabled = false;
             btn.innerText = origText;
@@ -748,7 +766,11 @@ const Builder = {
             btn.innerText = origText;
             if (headerBtn) headerBtn.disabled = false;
             this._generatingAll = false;
-            this._toast('네트워크 오류', 'error');
+            if (err.message === 'LOGIN_REQUIRED') {
+                this._toast('로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.', 'error');
+            } else {
+                this._toast('네트워크 오류', 'error');
+            }
         });
     },
 
@@ -1021,7 +1043,7 @@ const Builder = {
         if (acceptTemplateFallback) payload.append('accept_template_fallback', '1');
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
-        .then(res => res.json())
+        .then(res => this._parseAjaxJson(res))
         .then(res => {
             if (res.needs_provider_confirm) {
                 card.content = prevContent;
@@ -1053,7 +1075,11 @@ const Builder = {
         .catch(err => {
             card.content = prevContent;
             this.renderCards();
-            alert('네트워크 오류');
+            if (err.message === 'LOGIN_REQUIRED') {
+                alert('로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.');
+            } else {
+                alert('네트워크 오류');
+            }
         });
     },
 
