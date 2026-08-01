@@ -432,6 +432,8 @@ include_once(__DIR__ . '/../layout/header.php');
     </form>
 
     <?php
+    // 광고주/키워드 탭과 같은 이유로 루프 밖에서 한 번만 호출한다(get_admin_token() 반복 호출 방지).
+    $proj_admin_token = get_admin_token();
     $proj_table_rows = array();
     foreach ($proj_list as $row) {
         $st = $row['status'];
@@ -444,7 +446,18 @@ include_once(__DIR__ . '/../layout/header.php');
             }
             $job_summary = implode(', ', $parts);
         }
+        // 삭제는 project_action.php가 초안 상태 + 발행 이력 없음일 때만 허용한다(같은 규칙을
+        // 여기서 미리 판단하지 않고, 그 파일 자신의 검사에 맡긴다 - 다른 탭의 삭제 링크와
+        // 동일하게 "조건에 안 맞으면 목적지가 알림으로 알려준다" 패턴을 따름).
+        // 개별 삭제를 <form>으로 감싸면 아래 "선택 삭제" 폼 안에 폼이 중첩되어(잘못된 HTML,
+        // 브라우저마다 동작이 달라짐) - 이 파일의 발행관리 탭이 이미 쓰는 JS 임시폼 생성
+        // 패턴(mgrPublishJobAction)과 동일한 방식으로 처리한다.
+        $manage = '<a href="' . SF_MANAGER_URL . '/blog/project_form.php?id=' . (int) $row['id'] . '" class="mgr-btn">수정</a> '
+            . '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['id'] . '" class="mgr-btn">열기</a> '
+            . '<button type="button" class="mgr-btn" style="color:var(--mgr-danger);" onclick="mgrDeletePost(' . (int) $row['id'] . ')">삭제</button>';
+
         $proj_table_rows[] = array(
+            'chk' => '<input type="checkbox" class="mgr-row-check" name="ids[]" value="' . (int) $row['id'] . '">',
             'title' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['id'] . '">'
                 . htmlspecialchars($row['post_title'] ? $row['post_title'] : $row['topic']) . '</a>',
             'advertiser' => htmlspecialchars($row['advertiser_name'] ? $row['advertiser_name'] : '-'),
@@ -453,23 +466,65 @@ include_once(__DIR__ . '/../layout/header.php');
             'job_status' => $job_summary,
             'scheduled_at' => $row['next_scheduled_at'] ? htmlspecialchars($row['next_scheduled_at']) : '-',
             'updated_at' => $row['updated_at'] ? htmlspecialchars($row['updated_at']) : htmlspecialchars($row['created_at']),
-            'manage' => '<a href="' . SF_MANAGER_URL . '/blog/project_view.php?id=' . (int) $row['id'] . '" class="mgr-btn">열기</a>',
+            'manage' => $manage,
         );
     }
-    echo mgr_data_table(
-        array(
-            array('key' => 'title', 'label' => '프로젝트/포스팅'),
-            array('key' => 'advertiser', 'label' => '광고주'),
-            array('key' => 'site', 'label' => '대상 사이트'),
-            array('key' => 'status', 'label' => '작성 상태'),
-            array('key' => 'job_status', 'label' => '발행 상태'),
-            array('key' => 'scheduled_at', 'label' => '예약 일시'),
-            array('key' => 'updated_at', 'label' => '최근 수정일'),
-            array('key' => 'manage', 'label' => '관리'),
-        ),
-        $proj_table_rows,
-        array('empty_title' => '조건에 맞는 포스팅 프로젝트가 없습니다')
-    );
+    ?>
+    <form method="post" action="<?php echo G5_ADMIN_URL; ?>/blog/project_bulk_delete.php" onsubmit="return mgrConfirmPostBulkDelete();">
+        <input type="hidden" name="token" value="<?php echo $proj_admin_token; ?>">
+        <div style="margin-bottom:.5rem;">
+            <button type="submit" class="mgr-btn" style="color:var(--mgr-danger);">선택 삭제</button>
+        </div>
+        <?php
+        echo mgr_data_table(
+            array(
+                array('key' => 'chk', 'label' => '<input type="checkbox" id="mgr_post_check_all" onclick="mgrToggleAllPostChecks(this)">', 'raw' => true),
+                array('key' => 'title', 'label' => '프로젝트/포스팅'),
+                array('key' => 'advertiser', 'label' => '광고주'),
+                array('key' => 'site', 'label' => '대상 사이트'),
+                array('key' => 'status', 'label' => '작성 상태'),
+                array('key' => 'job_status', 'label' => '발행 상태'),
+                array('key' => 'scheduled_at', 'label' => '예약 일시'),
+                array('key' => 'updated_at', 'label' => '최근 수정일'),
+                array('key' => 'manage', 'label' => '관리'),
+            ),
+            $proj_table_rows,
+            array('empty_title' => '조건에 맞는 포스팅 프로젝트가 없습니다')
+        );
+        ?>
+    </form>
+    <script>
+    function mgrToggleAllPostChecks(cb) {
+        document.querySelectorAll('.mgr-row-check').forEach(function(el) { el.checked = cb.checked; });
+    }
+    function mgrConfirmPostBulkDelete() {
+        var checked = document.querySelectorAll('.mgr-row-check:checked');
+        if (checked.length === 0) {
+            alert('삭제할 항목을 선택해 주세요.');
+            return false;
+        }
+        return confirm(checked.length + '건을 삭제하시겠습니까? 초안 상태이면서 발행 이력이 없는 항목만 실제로 삭제되고, 나머지는 건너뜁니다.');
+    }
+    // 개별 삭제 - 테이블을 감싼 "선택 삭제" <form> 안에 또 다른 <form>을 중첩할 수 없어서
+    // (유효하지 않은 HTML) 발행관리 탭의 mgrPublishJobAction()과 동일하게 임시 폼을 만들어 제출한다.
+    function mgrDeletePost(id) {
+        if (!confirm('이 콘텐츠 프로젝트를 삭제하시겠습니까?')) return;
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '<?php echo G5_ADMIN_URL; ?>/blog/project_action.php';
+        var fields = { id: id, mode: 'delete', token: '<?php echo $proj_admin_token; ?>' };
+        for (var key in fields) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+    }
+    </script>
+    <?php
 
     $proj_qs = array('tab' => 'posts', 'stx_title' => $proj_stx_title, 'stx_advertiser' => $proj_stx_advertiser, 'status' => $proj_status, 'job_status' => $proj_job_status);
     echo mgr_pagination($proj_page, $proj_total_pages, '?' . http_build_query($proj_qs) . '&page=');
