@@ -319,7 +319,7 @@ include_once(__DIR__ . '/../layout/header.php');
 
                 <div id="pb_generate_blocked_msg" style="display:none; margin-top:10px; padding:10px 14px; border:1px solid #f59e0b; border-radius:6px; background:#fffbeb; font-size:0.85rem; color:#92400e; text-align:right;"></div>
                 <div style="margin-top: 15px; display:flex; gap: 10px; justify-content:flex-end;">
-                    <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
+                    <button type="button" class="btn_submit btn" id="pb_btn_generate_all" onclick="Builder.generateAllCards()" style="background:#4f46e5; border-color:#4338ca; color:#fff; padding:10px 20px; font-size:1.05rem;">✨ 전체 자동 작성 시작</button>
                 </div>
             </div>
 
