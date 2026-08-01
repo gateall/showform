@@ -1302,6 +1302,14 @@ const Builder = {
             return;
         }
 
+        if (this.currentStep === 4) {
+            panel.innerHTML = `
+                <div class="pb-right-title">⚙️ 컨트롤 패널</div>
+                <div style="color:#94a3b8; font-size:0.9rem;">최종 조립 전 설정 항목이 이곳에 추가될 예정입니다.</div>
+            `;
+            return;
+        }
+
         if (!this.activeCardId) {
             panel.innerHTML = '<div style="text-align:center; color:#94a3b8; padding-top:150px; font-size:0.95rem;">중앙에서 카드를 클릭하시면<br>이곳에 전용 설정 패널이 나타납니다.</div>';
             return;
