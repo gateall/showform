@@ -24,4 +24,6 @@ if ((int)$site_cnt['cnt'] > 0 || (int)$project_cnt['cnt'] > 0) {
 }
 
 sql_query(" delete from {$table} where id = '{$id}' ");
-alert('광고주가 삭제되었습니다.', G5_ADMIN_URL . '/blog/advertiser_list.php');
+// advertiser_list.php(옛 화면)로 보내면, 새 manager 화면에서 삭제를 눌러도 옛 화면으로
+// 튕기는 혼란스러운 흐름이 된다 - 실제 목록 화면은 이제 content_management.php다.
+alert('광고주가 삭제되었습니다.', SF_MANAGER_URL . '/blog/content_management.php?tab=advertisers');
