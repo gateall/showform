@@ -32,9 +32,10 @@ const Builder = {
     // posts.tags(콤마구분)/posts.hashtags("#태그" 공백구분)에 그대로 저장한다(project_view.php의
     // SEO 편집 폼이 쓰는 기존 저장 형식과 동일 - 새 컬럼/테이블을 만들지 않았다).
     tagState: {
-        keywords: { count: 5, values: [] },
-        hashtags: { count: 5, values: [] }
+        keywords: { count: 5, values: [], autoGenerate: false },
+        hashtags: { count: 5, values: [], autoGenerate: false }
     },
+    _autoTagTimers: {},
 
     renderTagPanel: function(type) {
         const containerId = type === 'hashtags' ? 'pb_tags_hashtags' : 'pb_tags_keywords';
@@ -51,18 +52,28 @@ const Builder = {
             inputs += `<input type="text" class="frm_input pb-tag-input" style="width:120px;" placeholder="${label} ${i + 1}" value="${this._escapeAttr(v)}" onchange="Builder.onTagInputChange('${type}', ${i}, this.value)">`;
         }
 
+        let countOptions = '';
+        for (let n = 3; n <= 30; n++) {
+            countOptions += `<option value="${n}" ${n === state.count ? 'selected' : ''}>${n}</option>`;
+        }
+
         container.innerHTML = `
         <div style="margin-top:12px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">${label}</span>
-                <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.85rem; font-weight:bold; color:#475569;">${label} (최대 30개)</span>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <span style="font-size:0.8rem; color:#666;">개수</span>
                     <select class="frm_input" style="width:60px;" onchange="Builder.onTagCountChange('${type}', this.value)">
-                        ${[3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n === state.count ? 'selected' : ''}>${n}</option>`).join('')}
+                        ${countOptions}
                     </select>
-                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}')">AI로 채우기</button>
+                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', false)">AI로 채우기</button>
+                    <button type="button" class="btn btn_02" onclick="Builder.generateTags('${type}', true)">포스트 내용에 맞게</button>
                 </div>
             </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#666; margin-bottom:10px;">
+                <input type="checkbox" ${state.autoGenerate ? 'checked' : ''} onchange="Builder.onAutoTagToggle('${type}', this.checked)">
+                포스트 내용이 바뀔 때마다 AI가 자동으로 다시 생성
+            </label>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">${inputs}</div>
         </div>`;
     },
@@ -75,6 +86,34 @@ const Builder = {
     onTagInputChange: function(type, idx, value) {
         this.tagState[type].values[idx] = value;
         this.saveTags(type);
+    },
+
+    onAutoTagToggle: function(type, checked) {
+        this.tagState[type].autoGenerate = checked;
+    },
+
+    // 카드가 바뀔 때마다(saveState 안에서 호출) 자동 생성이 켜진 항목만, 몇 초 안에 연속으로
+    // 편집이 이어지면 계속 미뤄지는 디바운스로 트리거한다 - 매 글자 수정마다 AI를 부르면
+    // 비용도 문제고 응답도 이상해지기 쉽다.
+    scheduleAutoTagGenerate: function() {
+        ['keywords', 'hashtags'].forEach(type => {
+            if (!this.tagState[type].autoGenerate) return;
+            if (this._autoTagTimers[type]) clearTimeout(this._autoTagTimers[type]);
+            this._autoTagTimers[type] = setTimeout(() => {
+                if (this.cards.length > 0) this.generateTags(type, true, true);
+            }, 4000);
+        });
+    },
+
+    // 카드(제목/본문)를 하나의 텍스트로 합친다 - "포스트 내용에 맞게" 생성이 참고할 실제
+    // 작성된 내용(inspectAll()의 조립 로직과 동일한 기준: 대표 제목 + 사용 중인 본문).
+    _assemblePostContentText: function() {
+        const primaryTitle = this.cards.find(c => c.type === 'title' && c.state === 'primary');
+        let text = primaryTitle ? primaryTitle.content : '';
+        this.cards
+            .filter(c => c.type !== 'title' && (c.state === 'selected' || c.state === 'primary'))
+            .forEach(c => { text += '\n' + (c.title ? c.title + '\n' : '') + c.content; });
+        return text;
     },
 
     saveTags: function(type) {
@@ -94,9 +133,12 @@ const Builder = {
         .catch(() => {}); // 자동저장 성격 - 실패해도 카드 작업엔 영향 없고, 다음 입력 시 다시 시도된다.
     },
 
-    generateTags: function(type) {
+    // useContent=true면 글감(raw_material) 대신 실제 작성된 포스트 내용을 참고한다("포스트
+    // 내용에 맞게" 버튼, 그리고 자동 생성도 항상 이 모드를 쓴다). silent=true면 자동 생성
+    // 트리거라서 실패해도 alert 없이 조용히 넘어간다(디바운스로 다시 시도됨).
+    generateTags: function(type, useContent, silent) {
         if (!this._requireProject()) return;
-        const rawMat = document.getElementById('pb_raw_material').value.trim();
+        const source = useContent ? this._assemblePostContentText() : document.getElementById('pb_raw_material').value.trim();
         const state = this.tagState[type];
         const seeds = state.values.filter(v => v && v.trim() !== '');
 
@@ -105,7 +147,7 @@ const Builder = {
         payload.append('project_id', this.projectId);
         payload.append('tag_type', type);
         payload.append('count', state.count);
-        payload.append('raw_material', rawMat);
+        payload.append('raw_material', source);
         payload.append('seed_values', JSON.stringify(seeds));
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })
@@ -115,11 +157,12 @@ const Builder = {
                 state.values = res.values;
                 this.renderTagPanel(type);
                 this.saveTags(type);
-            } else {
+            } else if (!silent) {
                 alert('생성 실패: ' + (res.error || '알 수 없는 오류'));
             }
         })
         .catch(err => {
+            if (silent) return;
             alert(err.message === 'LOGIN_REQUIRED' ? '로그인이 만료되었습니다. 새로고침 후 다시 로그인해주세요.' : '네트워크 오류');
         });
     },
@@ -753,6 +796,8 @@ const Builder = {
         try {
             localStorage.setItem('pb_backup_' + this.projectId, JSON.stringify(Object.assign({}, stateData, { savedAt: Date.now() })));
         } catch (e) { /* storage 꽉 찼거나 비활성화된 경우 - best-effort라 무시 */ }
+
+        if (_retryCount === 0) this.scheduleAutoTagGenerate();
 
         const payload = new URLSearchParams();
         payload.append('action', 'save_state');

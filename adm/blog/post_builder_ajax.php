@@ -344,11 +344,20 @@ switch($action) {
 
         if ($tag_type === 'hashtags') {
             $values = array_map(function ($v) { return (mb_substr($v, 0, 1) === '#') ? $v : ('#' . $v); }, $values);
-            $joined = implode(' ', $values);
+            $glue = ' ';
             $column = 'hashtags';
         } else {
-            $joined = implode(', ', $values);
+            $glue = ', ';
             $column = 'tags';
+        }
+
+        // posts.tags/hashtags는 VARCHAR(500) - 최대 30개까지 입력을 허용하므로 항목이 길면
+        // 넘칠 수 있다. 문자열을 자르면 마지막 항목이 깨진 채로 저장되니, 넘치는 항목을
+        // 뒤에서부터 통째로 빼서 500자 안에 들어오는 만큼만 저장한다.
+        $joined = implode($glue, $values);
+        while (mb_strlen($joined) > 500 && count($values) > 0) {
+            array_pop($values);
+            $joined = implode($glue, $values);
         }
 
         $post = sql_fetch(" select id from {$post_table} where project_id = '{$project_id}' ");
@@ -377,7 +386,7 @@ switch($action) {
         if ($tag_type !== 'keywords' && $tag_type !== 'hashtags') {
             die(json_encode(['ok' => false, 'error' => '알 수 없는 태그 종류입니다.']));
         }
-        $count = isset($_POST['count']) ? max(1, min(10, (int) $_POST['count'])) : 5;
+        $count = isset($_POST['count']) ? max(1, min(30, (int) $_POST['count'])) : 5;
         $raw_material = isset($_POST['raw_material']) ? trim($_POST['raw_material']) : '';
         $seed_values = isset($_POST['seed_values']) ? json_decode($_POST['seed_values'], true) : [];
         if (!is_array($seed_values)) $seed_values = [];
