@@ -11,6 +11,7 @@ $manager_menu = array(
         'id' => 'dashboard',
         'title' => '대시보드',
         'icon' => 'gauge',
+        'icon_emoji' => '📊',
         'items' => array(
             array('title' => '통합 대시보드', 'url' => SF_MANAGER_URL . '/index.php', 'permission' => '370000'),
             array('title' => '운영 상태', 'url' => SF_MANAGER_URL . '/pages/system_status.php', 'permission' => '370100'),
@@ -20,6 +21,7 @@ $manager_menu = array(
         'id' => 'showform',
         'title' => '쇼폼 관리',
         'icon' => 'showform',
+        'icon_emoji' => '🗂️',
         'items' => array(
             array('title' => '쇼폼 목록', 'url' => SF_MANAGER_URL . '/showform/list.php', 'permission' => '700100'),
             array('title' => '쇼폼 신규 등록', 'url' => SF_MANAGER_URL . '/showform/form.php', 'permission' => '700100'),
@@ -29,6 +31,7 @@ $manager_menu = array(
         'id' => 'landing',
         'title' => '랜딩페이지 관리',
         'icon' => 'landing',
+        'icon_emoji' => '🚀',
         'items' => array(
             array('title' => '랜딩페이지 목록', 'url' => SF_MANAGER_URL . '/landing/landing_list.php', 'permission' => '900100'),
             array('title' => '랜딩페이지 등록', 'url' => SF_MANAGER_URL . '/landing/landing_form.php', 'permission' => '900100'),
@@ -40,6 +43,7 @@ $manager_menu = array(
         'id' => 'blog',
         'title' => '블로그 자동화',
         'icon' => 'blog',
+        'icon_emoji' => '📝',
         'items' => array(
             array('title' => '블로그 대시보드', 'url' => SF_MANAGER_URL . '/blog/blog_dashboard.php', 'permission' => '360000'),
             array('title' => '통합 포스팅 제작', 'url' => SF_MANAGER_URL . '/blog/post_builder.php', 'permission' => '360050'),
@@ -76,11 +80,11 @@ $manager_menu = array(
 
 // 모바일 하단 고정 5개(홈/쇼폼/랜딩/블로그/전체) — 각 그룹의 대표(첫 번째) 링크를 그대로 재사용한다.
 $manager_bottom_nav = array(
-    array('id' => 'dashboard', 'label' => '홈', 'icon' => 'gauge', 'url' => SF_MANAGER_URL . '/index.php'),
-    array('id' => 'showform', 'label' => '쇼폼', 'icon' => 'showform', 'url' => G5_ADMIN_URL . '/showform/portfolio_list.php'),
-    array('id' => 'landing', 'label' => '랜딩', 'icon' => 'landing', 'url' => SF_MANAGER_URL . '/landing/landing_list.php'),
-    array('id' => 'blog', 'label' => '블로그', 'icon' => 'blog', 'url' => SF_MANAGER_URL . '/blog/blog_dashboard.php'),
-    array('id' => 'more', 'label' => '전체', 'icon' => 'menu', 'url' => '#', 'action' => 'open-mobile-nav'),
+    array('id' => 'dashboard', 'label' => '홈', 'icon' => 'gauge', 'icon_emoji' => '📊', 'url' => SF_MANAGER_URL . '/index.php'),
+    array('id' => 'showform', 'label' => '쇼폼', 'icon' => 'showform', 'icon_emoji' => '🗂️', 'url' => G5_ADMIN_URL . '/showform/portfolio_list.php'),
+    array('id' => 'landing', 'label' => '랜딩', 'icon' => 'landing', 'icon_emoji' => '🚀', 'url' => SF_MANAGER_URL . '/landing/landing_list.php'),
+    array('id' => 'blog', 'label' => '블로그', 'icon' => 'blog', 'icon_emoji' => '📝', 'url' => SF_MANAGER_URL . '/blog/blog_dashboard.php'),
+    array('id' => 'more', 'label' => '전체', 'icon' => 'menu', 'icon_emoji' => '☰', 'url' => '#', 'action' => 'open-mobile-nav'),
 );
 
 // 각 메뉴 그룹의 URL이 어느 디렉터리 prefix에 속하는지 - 현재 페이지 활성 판정용.

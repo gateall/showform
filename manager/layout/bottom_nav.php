@@ -7,12 +7,12 @@ if (!defined('_GNUBOARD_')) exit;
     <?php foreach ($manager_bottom_nav as $bn): ?>
         <?php if (isset($bn['action']) && $bn['action'] === 'open-mobile-nav'): ?>
         <button type="button" class="mgr-bottom-nav-item" data-mgr-open-mobile>
-            <span class="mgr-nav-icon mgr-icon-<?php echo $bn['icon'] ?>" aria-hidden="true"></span>
+            <span class="mgr-nav-icon mgr-icon-<?php echo $bn['icon'] ?>" aria-hidden="true"><?php echo isset($bn['icon_emoji']) ? $bn['icon_emoji'] : ''; ?></span>
             <span><?php echo get_text($bn['label']) ?></span>
         </button>
         <?php else: ?>
         <a href="<?php echo $bn['url'] ?>" class="mgr-bottom-nav-item<?php echo mgr_group_is_active($bn['id']) ? ' is-current' : ''; ?>">
-            <span class="mgr-nav-icon mgr-icon-<?php echo $bn['icon'] ?>" aria-hidden="true"></span>
+            <span class="mgr-nav-icon mgr-icon-<?php echo $bn['icon'] ?>" aria-hidden="true"><?php echo isset($bn['icon_emoji']) ? $bn['icon_emoji'] : ''; ?></span>
             <span><?php echo get_text($bn['label']) ?></span>
         </a>
         <?php endif; ?>

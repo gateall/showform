@@ -74,7 +74,7 @@ foreach ($manager_menu as $group) {
                 <?php foreach ($mgr_visible_groups as $group): ?>
                 <div class="mgr-nav-group<?php echo $group['is_active'] ? ' is-active' : ''; ?>" data-mgr-group="<?php echo $group['id'] ?>">
                     <button type="button" class="mgr-nav-group-toggle" data-mgr-group-toggle="<?php echo $group['id'] ?>" aria-expanded="<?php echo $group['is_active'] ? 'true' : 'false'; ?>">
-                        <span class="mgr-nav-icon mgr-icon-<?php echo $group['icon'] ?>" aria-hidden="true"></span>
+                        <span class="mgr-nav-icon mgr-icon-<?php echo $group['icon'] ?>" aria-hidden="true"><?php echo isset($group['icon_emoji']) ? $group['icon_emoji'] : ''; ?></span>
                         <span class="mgr-nav-label"><?php echo get_text($group['title']) ?></span>
                         <span class="mgr-nav-group-chevron" aria-hidden="true">&#9662;</span>
                     </button>
