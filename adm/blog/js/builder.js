@@ -713,6 +713,135 @@ const Builder = {
         if (typeof PromptManager !== 'undefined') PromptManager.triggerUpdate();
     },
 
+    // 검수 결과에 나오는 check_key를 사람이 읽는 이름으로. 예전에는 duplicate_sentences
+    // 같은 내부 키가 그대로 화면에 찍혔다.
+    QUALITY_LABELS: {
+        title_length: '제목 길이',
+        body_length: '본문 길이',
+        forbidden_words: '금지어',
+        contact_missing: '연락처 누락',
+        business_mismatch: '업체정보 일치',
+        duplicate_sentences: '중복 문장',
+        keyword_stuffing: '키워드 과다 반복'
+    },
+
+    // 문장 경계를 찾아 {text, start, end}로 돌려준다.
+    // 서버(blog_quality.lib.php)는 /[\.\!\?\n]+/로 무조건 쪼개서 https://showform.kr,
+    // 3.14, "1. 소개" 같은 것이 문장으로 조각났다. 여기서는 마침표 뒤가 공백이나 문장
+    // 끝일 때만 경계로 보고, 앞이 숫자뿐이면(번호 표기) 경계로 치지 않는다.
+    _splitSentencesWithOffsets: function(text) {
+        const out = [];
+        let start = 0;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            let boundary = false;
+            if (ch === '\n') {
+                boundary = true;
+            } else if (ch === '.' || ch === '!' || ch === '?') {
+                const next = text[i + 1];
+                if (next === undefined || /\s/.test(next)) {
+                    // 바로 앞 토큰이 숫자뿐이면 "1." 같은 목록 번호다.
+                    if (!/(^|\s)\d+$/.test(text.slice(start, i))) boundary = true;
+                }
+            }
+            if (boundary) {
+                out.push({ text: text.slice(start, i), start: start, end: i });
+                start = i + 1;
+            }
+        }
+        if (start < text.length) {
+            out.push({ text: text.slice(start), start: start, end: text.length });
+        }
+        return out;
+    },
+
+    // 편집 중인 카드는 this.cards에 아직 반영 안 된 값을 갖고 있을 수 있으므로
+    // textarea의 현재 값을 우선한다.
+    _currentCardText: function(card) {
+        const el = document.getElementById('textarea_' + card.id);
+        if (el && typeof el.value === 'string') return el.value;
+        return card.content || '';
+    },
+
+    // 카드 본문만 대상으로 중복 문장을 찾는다. 카드 제목(card.title)은 제외한다 —
+    // 같은 소제목을 두 카드가 쓴다고 "본문이 반복된다"고 볼 수는 없다.
+    findDuplicateSentences: function() {
+        const cards = (this.cards || []).filter(c =>
+            c.type !== 'title' && (c.state === 'selected' || c.state === 'primary'));
+
+        const map = new Map(); // 문장 -> [{cardId, start, end}]
+        cards.forEach(card => {
+            const text = this._currentCardText(card);
+            this._splitSentencesWithOffsets(text).forEach(seg => {
+                const lead = seg.text.length - seg.text.replace(/^\s+/, '').length;
+                const trimmed = seg.text.trim();
+                // 공백을 뺀 실질 길이로 판단한다(공백만 늘어난 조각이 걸리지 않도록).
+                if (trimmed.replace(/\s/g, '').length <= 5) return;
+                const start = seg.start + lead;
+                if (!map.has(trimmed)) map.set(trimmed, []);
+                map.get(trimmed).push({ cardId: card.id, start: start, end: start + trimmed.length });
+            });
+        });
+
+        const dupes = [];
+        map.forEach((occurrences, sentence) => {
+            // 같은 카드 안에서 두 번 나오는 경우도 있으므로 카드 수가 아니라 발생 수로 센다.
+            if (occurrences.length >= 2) {
+                dupes.push({ sentence: sentence, count: occurrences.length, occurrences: occurrences });
+            }
+        });
+        dupes.sort((a, b) => b.count - a.count);
+        return dupes;
+    },
+
+    // 해당 카드로 스크롤하고 문제 구간만 선택해준다.
+    jumpToSentence: function(cardId, start, end) {
+        const ta = document.getElementById('textarea_' + cardId);
+        if (!ta) {
+            alert('해당 카드를 화면에서 찾지 못했습니다. 카드가 접혀 있거나 삭제되었을 수 있습니다.');
+            return;
+        }
+        ta.focus();
+        try { ta.setSelectionRange(start, end); } catch (e) { /* input 타입 등 선택 불가 */ }
+        ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+
+    // 검수 결과의 "중복 문장" 줄을 눌렀을 때 상세를 펼친다.
+    toggleDuplicateDetail: function(btn) {
+        const panel = document.getElementById('pb_dupe_detail');
+        if (!panel) return;
+        const show = panel.hasAttribute('hidden');
+        if (!show) {
+            panel.setAttribute('hidden', '');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            return;
+        }
+
+        const dupes = this.findDuplicateSentences();
+        let html = '<div class="pb-dupe-head">현재 편집본에서 찾은 중복 문장 '
+                 + '<span class="pb-dupe-note">(카드 제목 제외 · 본문 기준)</span></div>';
+        if (dupes.length === 0) {
+            html += '<div class="pb-dupe-empty">지금 편집 중인 본문에서는 중복 문장이 발견되지 않았습니다. '
+                  + '위 서버 검수 결과는 검수를 실행한 시점의 본문 기준입니다.</div>';
+        } else {
+            dupes.forEach(d => {
+                html += '<div class="pb-dupe-item"><div class="pb-dupe-sentence">'
+                      + this._escapeAttr(d.sentence) + '</div>'
+                      + '<div class="pb-dupe-meta">' + d.count + '회 반복</div>'
+                      + '<div class="pb-dupe-jumps">';
+                d.occurrences.forEach((o, i) => {
+                    html += '<button type="button" class="pb-dupe-jump" onclick="Builder.jumpToSentence('
+                          + JSON.stringify(o.cardId) + ',' + o.start + ',' + o.end + ')">'
+                          + (i + 1) + '번째 위치로 이동</button>';
+                });
+                html += '</div></div>';
+            });
+        }
+        panel.innerHTML = html;
+        panel.removeAttribute('hidden');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    },
+
     renderAdditionalInstructions: function() {
         // UI for inserting additional instructions is a button that opens modal
     },
@@ -4224,10 +4353,26 @@ const Builder = {
                 res.checks.forEach(chk => {
                     let icon = chk.status === 'pass' ? '✅' : (chk.status === 'warn' ? '⚠️' : '❌');
                     let color = chk.status === 'pass' ? '#10b981' : (chk.status === 'warn' ? '#f59e0b' : '#ef4444');
+                    const label = this.QUALITY_LABELS[chk.key] || chk.key;
+
+                    // 중복 문장은 개수만 알려줘서는 고칠 수가 없다. 눌러서 어느 문장이
+                    // 어디에 있는지 펼쳐볼 수 있게 한다. 서버 detail은 검수 실행 시점
+                    // 기준이고 펼쳐지는 목록은 지금 편집 중인 본문 기준이라, 문구로
+                    // 둘을 구분해 둔다.
+                    const expandable = (chk.key === 'duplicate_sentences' && chk.status !== 'pass');
+
                     html += `<li style="padding:10px 0; border-bottom:1px solid #f1f5f9;">
-                                <div><span style="margin-right:10px;">${icon}</span><strong style="color:#334155;">${chk.key}</strong></div>
-                                <div style="color:${color}; font-size:0.9rem; margin-top:5px; padding-left:28px;">${chk.detail}</div>
-                             </li>`;
+                                <div><span style="margin-right:10px;">${icon}</span><strong style="color:#334155;">${label}</strong></div>
+                                <div style="color:${color}; font-size:0.9rem; margin-top:5px; padding-left:28px;">서버 검수: ${chk.detail}</div>`;
+                    if (expandable) {
+                        html += `<div style="padding-left:28px; margin-top:6px;">
+                                    <button type="button" class="pb-dupe-toggle" aria-expanded="false"
+                                        aria-controls="pb_dupe_detail"
+                                        onclick="Builder.toggleDuplicateDetail(this)">어느 문장인지 보기</button>
+                                 </div>
+                                 <div id="pb_dupe_detail" class="pb-dupe-detail" hidden></div>`;
+                    }
+                    html += `</li>`;
                 });
                 html += `</ul>`;
                 

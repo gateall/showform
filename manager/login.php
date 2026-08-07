@@ -5,12 +5,44 @@
 $g5_path = '..';
 include_once(__DIR__ . '/../common.php');
 
-$url = isset($_GET['url']) ? $_GET['url'] : (G5_URL . '/manager/index.php');
-check_url_host($url);
+function mgr_safe_return_url($url)
+{
+    $default = '/manager/blog/dashboard.php';
+
+    $url = trim((string)$url);
+
+    if ($url === '') {
+        return $default;
+    }
+
+    if ($url[0] !== '/') {
+        return $default;
+    }
+
+    if (strpos($url, '//') === 0) {
+        return $default;
+    }
+
+    if (preg_match('#^(https?:)?//#i', $url)) {
+        return $default;
+    }
+
+    return $url;
+}
+
+$url = mgr_safe_return_url(isset($_GET['url']) ? $_GET['url'] : '');
 
 // 이미 로그인 중이면 바로 이동
 if ($is_member) {
-    goto_url($url);
+    if ($is_admin) {
+        goto_url($url);
+    } else {
+        // 로그인은 됐지만 관리자가 아닌 경우. 여기서 다시 login.php로 돌려보내면
+        // 무한 리다이렉트가 되므로 그 자리에서 끊는다.
+        http_response_code(403);
+        header('Content-Type: text/html; charset=utf-8');
+        die('관리자 권한이 없습니다. <a href="' . G5_URL . '/">홈으로 이동</a>');
+    }
 }
 
 $login_action_url = G5_HTTPS_BBS_URL . '/login_check.php';
@@ -22,7 +54,7 @@ $site_title = get_text($config['cf_title']);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>로그인 - <?php echo $site_title; ?> 통합관리자</title>
-<link rel="stylesheet" href="<?php echo G5_URL ?>/manager/assets/css/manager.css">
+<link rel="stylesheet" href="<?php echo G5_URL ?>/manager/assets/css/manager.css?v=<?php echo filemtime(__DIR__.'/assets/css/manager.css'); ?>">
 </head>
 <body class="mgr-login-body">
 <div class="mgr-login-wrap">

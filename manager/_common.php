@@ -15,6 +15,14 @@ if (!$member['mb_id']) {
     goto_url(G5_URL . '/manager/login.php?url=' . urlencode($_SERVER['REQUEST_URI']));
 }
 
+// 로그인은 됐지만 관리자가 아닌 경우. login.php로 되돌리면 login.php가 다시
+// 이리로 보내 무한 리다이렉트가 되므로 여기서 끊는다.
+if (!$is_admin) {
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    die('관리자 권한이 필요합니다. <a href="' . G5_URL . '/">홈으로 이동</a>');
+}
+
 require_once G5_ADMIN_PATH . '/admin.lib.php';
 
 define('SF_MANAGER_URL', G5_URL . '/manager');

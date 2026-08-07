@@ -1,7 +1,15 @@
 <?php
 $sub_menu = '360050';
 include_once('./_common.php');
-auth_check_menu($auth, $sub_menu, 'w');
+$auth_error = auth_check_menu($auth, $sub_menu, 'w', true);
+if ($auth_error) {
+    // auth_check()가 만드는 메시지는 원래 JS alert()에 넣을 목적이라 개행이 리터럴
+    // '\n'으로 들어 있다. 그대로 HTML로 내보내면 화면에 \n이 글자로 보인다.
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    die(str_replace('\n', '<br>', htmlspecialchars($auth_error, ENT_QUOTES, 'UTF-8'))
+        . ' <a href="' . SF_MANAGER_URL . '/">통합관리자 홈으로 이동</a>');
+}
 
 // $g5['table_prefix']는 Gnuboard 코어에 정의돼 있지 않다(코어는 G5_TABLE_PREFIX 상수를
 // 쓴다). 아래 "글 전개 구조 선택" 카테고리 드롭다운이 이 값을 직접 참조해 DB를 조회하는데,
