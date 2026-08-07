@@ -71,33 +71,30 @@ include_once(G5_THEME_PATH . '/head.php');
 :root { --sf-primary: <?php echo get_text($theme_color); ?>; --sf-bg:#f7f7fb; --sf-text:#0f172a; --sf-muted:#64748b; --sf-card:#fff; --sf-border:#e2e8f0; }
 body { background:var(--sf-bg); color:var(--sf-text); overflow-x:hidden; }
 .sf-wrap { width:100%; overflow-x:hidden; }
-.sf-container { width:min(1120px, calc(100% - 24px)); margin:0 auto; }
-.sf-section { padding:28px 0; }
-.sf-hero { background:linear-gradient(135deg, rgba(15,23,42,.94), rgba(15,118,110,.88)); color:#fff; padding:56px 0 34px; position:relative; overflow:hidden; }
+/* 320px에서도 좌우가 붙지 않도록 16px부터 시작해 화면이 커지면 넓힌다. */
+.sf-container { width:calc(100% - 32px); margin:0 auto; }
+.sf-section { padding:22px 0; }
+.sf-hero { background:linear-gradient(135deg, rgba(15,23,42,.94), rgba(15,118,110,.88)); color:#fff; padding:44px 0 28px; position:relative; overflow:hidden; }
 .sf-hero::after { content:''; position:absolute; inset:auto -10% -40% auto; width:280px; height:280px; border-radius:50%; background:rgba(255,255,255,.08); }
 .sf-kicker { display:inline-flex; padding:8px 14px; border-radius:999px; background:rgba(255,255,255,.12); font-size:14px; font-weight:700; margin-bottom:16px; }
 .sf-hero h1 { margin:0; font-size:clamp(28px, 4vw, 48px); line-height:1.15; letter-spacing:-0.03em; }
 .sf-hero p { margin:14px 0 0; color:rgba(255,255,255,.88); line-height:1.7; font-size:16px; }
-.sf-card { background:var(--sf-card); border:1px solid var(--sf-border); border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,.05); }
-.sf-btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 18px; border-radius:14px; text-decoration:none; font-weight:800; transition:transform .15s ease; }
+.sf-card { background:var(--sf-card); border:1px solid var(--sf-border); border-radius:20px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,.05); }
+/* 모바일에서는 버튼이 한 줄을 꽉 채우게 둔다 - 좁은 화면에서 두 개가 나란히 붙으면
+   손가락으로 정확히 누르기 어렵다. 화면이 넓어지면 내용 폭으로 되돌린다. */
+.sf-btn { display:inline-flex; align-items:center; justify-content:center; width:100%; min-height:48px; padding:0 18px; border-radius:14px; text-decoration:none; font-weight:800; transition:transform .15s ease; }
 .sf-btn:hover { transform:translateY(-1px); }
 .sf-btn-primary { background:#fff; color:#0f172a; }
 .sf-btn-dark { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.22); }
 .sf-btn-solid { background:var(--sf-primary); color:#fff; }
 .sf-hero-actions, .sf-cta-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; }
-.sf-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; }
+.sf-grid-2 { display:grid; grid-template-columns:1fr; gap:18px; }
 .sf-image { border-radius:18px; overflow:hidden; background:#e2e8f0; min-height:280px; display:flex; align-items:center; justify-content:center; }
 .sf-image img { width:100%; height:100%; object-fit:cover; display:block; }
 .sf-image .placeholder { color:#94a3b8; font-weight:700; }
 .sf-section-title { margin:0 0 14px; font-size:24px; letter-spacing:-.02em; }
 .sf-section-desc { margin:0 0 18px; color:var(--sf-muted); line-height:1.7; }
-.sf-pill-grid, .sf-review-grid, .sf-gallery-grid, .sf-video-grid, .sf-notice-grid, .sf-step-grid { display:grid; gap:12px; }
-.sf-pill-grid { grid-template-columns:repeat(4,1fr); }
-.sf-review-grid { grid-template-columns:repeat(3,1fr); }
-.sf-gallery-grid { grid-template-columns:repeat(3,1fr); }
-.sf-video-grid { grid-template-columns:repeat(2,1fr); }
-.sf-step-grid { grid-template-columns:repeat(2,1fr); }
-.sf-notice-grid { grid-template-columns:1fr; }
+.sf-pill-grid, .sf-review-grid, .sf-gallery-grid, .sf-video-grid, .sf-notice-grid, .sf-step-grid { display:grid; gap:12px; grid-template-columns:1fr; }
 .sf-pill, .sf-step, .sf-review, .sf-notice { background:#f8fafc; border:1px solid var(--sf-border); border-radius:16px; padding:16px; line-height:1.7; }
 .sf-step b, .sf-notice-title { display:block; margin-bottom:8px; color:var(--sf-primary); font-weight:800; }
 .sf-gallery-item, .sf-video-card { border-radius:18px; overflow:hidden; background:#fff; border:1px solid var(--sf-border); box-shadow:0 8px 24px rgba(15,23,42,.04); }
@@ -118,10 +115,37 @@ body { background:var(--sf-bg); color:var(--sf-text); overflow-x:hidden; }
 .sf-mobile-bar .inquiry { background:#0f172a; color:#fff; }
 .sf-mobile-bar .kakao { background:#f7e600; color:#111827; }
 .sf-spacer { height:88px; }
-@media (max-width: 1200px) { .sf-container { width:min(1120px, calc(100% - 20px)); } }
-@media (max-width: 768px) { .sf-grid-2, .sf-pill-grid, .sf-review-grid, .sf-gallery-grid, .sf-video-grid, .sf-step-grid, .sf-form .sf-form-grid { grid-template-columns:1fr; } .sf-section { padding:22px 0; } }
-@media (max-width: 480px) { .sf-hero { padding:44px 0 28px; } .sf-hero h1 { font-size:28px; } .sf-card { padding:18px; } }
-@media (max-width: 360px) { .sf-container { width:calc(100% - 16px); } .sf-btn { width:100%; } }
+/* 여기부터는 모바일 기본값을 넓은 화면으로 "확장"한다.
+   예전에는 PC 값을 먼저 쓰고 max-width로 줄이는 방식이었는데, 그러면 새 기기 폭이
+   나올 때마다 축소 규칙을 덧붙여야 하고 좁은 화면이 늘 사후 대응이 된다. */
+
+/* 큰 폰 - 좌우 여백을 20px로 넓히고 버튼은 내용 폭으로 되돌린다. */
+@media (min-width: 390px) {
+    .sf-container { width:calc(100% - 40px); }
+    .sf-btn { width:auto; }
+}
+
+/* 작은 태블릿 - 카드형 목록을 2열로. */
+@media (min-width: 600px) {
+    .sf-pill-grid, .sf-review-grid, .sf-gallery-grid, .sf-video-grid, .sf-step-grid,
+    .sf-form .sf-form-grid { grid-template-columns:repeat(2,1fr); }
+}
+
+/* 태블릿 - 본문/이미지 2단 구성이 들어갈 폭이 확보된다. */
+@media (min-width: 768px) {
+    .sf-section { padding:28px 0; }
+    .sf-hero { padding:56px 0 34px; }
+    .sf-card { padding:22px; }
+    .sf-grid-2 { grid-template-columns:1.1fr .9fr; }
+    .sf-video-grid { grid-template-columns:repeat(2,1fr); }
+}
+
+/* PC */
+@media (min-width: 1200px) {
+    .sf-container { width:min(1120px, calc(100% - 48px)); }
+    .sf-pill-grid { grid-template-columns:repeat(4,1fr); }
+    .sf-review-grid, .sf-gallery-grid { grid-template-columns:repeat(3,1fr); }
+}
 </style>
 <div class="sf-wrap">
 <?php
