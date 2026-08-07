@@ -2,6 +2,15 @@
 (function(window) {
     if (!window.Builder) window.Builder = {};
 
+    // 라이브러리(글전개 구조 / AI 생성조건) 액션은 post_builder_ajax.php가 아니라
+    // manager/blog/ajax.builder.php에만 있다. 그쪽을 부르지 않으면 'Unknown action'이
+    // 돌아오고, 두 매니저가 필터 없는 공용 목록으로 폴백해 서로의 카드가 섞여 보인다.
+    // libraryUrl이 없는 옛 페이지에서는 기존처럼 ajaxUrl로 폴백한다.
+    function libraryAjaxUrl() {
+        var cfg = window.POST_BUILDER_CONFIG || {};
+        return cfg.libraryUrl || cfg.ajaxUrl;
+    }
+
     // =========================================================================
     // Structure Manager (글전개 구조 관리)
     // =========================================================================
@@ -74,7 +83,7 @@
         loadItems: function(callback) {
             const formData = new FormData();
             formData.append('action', 'load_structures');
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -90,7 +99,7 @@
         loadCategories: function(callback) {
             const formData = new FormData();
             formData.append('action', 'load_structure_categories');
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -353,7 +362,7 @@
                 return;
             }
 
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -371,7 +380,7 @@
             const formData = new FormData();
             formData.append('action', 'delete_structure');
             formData.append('id', id);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -383,7 +392,7 @@
             const formData = new FormData();
             formData.append('action', 'duplicate_structure');
             formData.append('id', id);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -396,7 +405,7 @@
             formData.append('action', 'toggle_favorite_structure');
             formData.append('id', id);
             formData.append('is_favorite', isFav);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -411,7 +420,7 @@
             formData.append('action', 'save_structure_category');
             formData.append('category_name', catName);
             
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -429,7 +438,7 @@
             formData.append('action', 'delete_structure_category');
             formData.append('id', id);
             
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadCategories();
@@ -513,7 +522,7 @@
         loadItems: function(callback) {
             const formData = new FormData();
             formData.append('action', 'load_ai_conditions');
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -526,7 +535,7 @@
         loadCategories: function(callback) {
             const formData = new FormData();
             formData.append('action', 'load_ai_condition_categories');
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -774,7 +783,7 @@
                 return;
             }
 
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -791,7 +800,7 @@
             const formData = new FormData();
             formData.append('action', 'delete_ai_condition');
             formData.append('id', id);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -803,7 +812,7 @@
             const formData = new FormData();
             formData.append('action', 'duplicate_ai_condition');
             formData.append('id', id);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -816,7 +825,7 @@
             formData.append('action', 'toggle_favorite_ai_condition');
             formData.append('id', id);
             formData.append('is_favorite', isFav);
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
@@ -830,7 +839,7 @@
             formData.append('action', 'save_ai_condition_category');
             formData.append('category_name', catName);
             
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -846,7 +855,7 @@
             formData.append('action', 'delete_ai_condition_category');
             formData.append('id', id);
             
-            fetch(window.POST_BUILDER_CONFIG.ajaxUrl, { method: 'POST', body: formData })
+            fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) this.loadCategories();

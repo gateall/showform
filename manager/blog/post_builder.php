@@ -14,15 +14,26 @@ if (!isset($g5['table_prefix']) || $g5['table_prefix'] === '') {
 $g5['title'] = '쇼폼 AI 스튜디오';
 $page_title = '쇼폼 AI 스튜디오'; // manager/layout/header.php 용 타이틀
 
-// 확정된 AJAX URL (현재 /adm/blog/에 존재)
+// 이 화면은 백엔드를 둘 쓴다. 하나로 합치기 전까지는 어느 쪽이 어떤 액션을 갖고
+// 있는지가 곧 버그의 원인이 되므로 여기서 둘 다 명시한다.
+//
+// - ajaxUrl     : 빌더 본체 액션(단계 이동, 카드 저장, 발행 등). post_builder_ajax.php는
+//                 /adm/blog/에만 존재한다.
+// - libraryUrl  : 글전개 구조 / AI 생성조건 라이브러리 액션. load_ai_conditions 같은
+//                 신규 액션과 instruction_type 필터는 manager/blog/ajax.builder.php에만
+//                 있다. builder_managers.js가 이걸 ajaxUrl로 부르면 post_builder_ajax.php가
+//                 'Unknown action'을 돌려주고, 매니저는 필터 없는 Builder.libraryItems로
+//                 폴백해 AI 생성조건 모달에 글구조 카드가 섞여 나온다.
 $post_builder_ajax_url = G5_ADMIN_URL . '/blog/post_builder_ajax.php';
+$post_builder_library_url = SF_MANAGER_URL . '/blog/ajax.builder.php';
 
 include_once(__DIR__ . '/../layout/header.php');
 ?>
 <link rel="stylesheet" href="<?php echo G5_ADMIN_URL; ?>/blog/css/builder.css?ver=<?php echo G5_SERVER_TIME; ?>">
 <script>
 window.POST_BUILDER_CONFIG = Object.freeze({
-    ajaxUrl: <?= json_encode($post_builder_ajax_url, JSON_UNESCAPED_SLASHES) ?>
+    ajaxUrl: <?= json_encode($post_builder_ajax_url, JSON_UNESCAPED_SLASHES) ?>,
+    libraryUrl: <?= json_encode($post_builder_library_url, JSON_UNESCAPED_SLASHES) ?>
 });
 </script>
 <script src="<?php echo G5_ADMIN_URL; ?>/blog/js/builder.js?ver=<?php echo G5_SERVER_TIME; ?>"></script>
