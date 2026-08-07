@@ -104,17 +104,24 @@ body { background:var(--sf-bg); color:var(--sf-text); overflow-x:hidden; }
 .sf-gallery-desc, .sf-video-desc, .sf-notice-content { color:var(--sf-muted); line-height:1.6; font-size:14px; }
 .sf-video-frame { position:relative; padding-top:56.25%; background:#0f172a; }
 .sf-video-frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
-.sf-form .sf-form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+/* 입력창은 모바일에서 한 줄에 하나만 둔다. 좁은 화면에서 두 칸으로 쪼개면
+   글자가 잘리고 키패드가 올라왔을 때 어느 칸을 쓰는지 알기 어렵다.
+   600px부터 두 칸으로 벌어진다(아래 min-width 규칙). */
+.sf-form .sf-form-grid { display:grid; grid-template-columns:1fr; gap:14px; }
 .sf-form label { display:block; }
 .sf-form span { display:block; margin-bottom:6px; font-weight:700; }
 .sf-form input, .sf-form textarea { width:100%; box-sizing:border-box; border:1px solid var(--sf-border); border-radius:14px; padding:14px; background:#fff; }
 .sf-form .sf-full { grid-column:1/-1; }
-.sf-mobile-bar { position:fixed; left:0; right:0; bottom:0; z-index:99; display:grid; grid-template-columns:1fr 1fr <?php echo $kakao_url ? '1fr' : '0'; ?>; gap:8px; padding:10px 12px; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-top:1px solid var(--sf-border); }
+/* 아이폰 홈 인디케이터 영역만큼 아래쪽을 더 띄운다. 안 그러면 버튼이 인디케이터에
+   깔려 눌리지 않는다. */
+.sf-mobile-bar { position:fixed; left:0; right:0; bottom:0; z-index:99; display:grid; grid-template-columns:1fr 1fr <?php echo $kakao_url ? '1fr' : '0'; ?>; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-top:1px solid var(--sf-border); }
 .sf-mobile-bar a { text-align:center; border-radius:14px; padding:14px 10px; font-weight:800; text-decoration:none; }
 .sf-mobile-bar .tel { background:var(--sf-primary); color:#fff; }
 .sf-mobile-bar .inquiry { background:#0f172a; color:#fff; }
 .sf-mobile-bar .kakao { background:#f7e600; color:#111827; }
-.sf-spacer { height:88px; }
+/* 하단 고정바가 본문 마지막을 가리지 않도록 그만큼 자리를 비워둔다.
+   실측 바 높이가 100px이라 88px로는 12px이 가려졌다. 안전영역도 함께 더한다. */
+.sf-spacer { height:calc(112px + env(safe-area-inset-bottom)); }
 /* 여기부터는 모바일 기본값을 넓은 화면으로 "확장"한다.
    예전에는 PC 값을 먼저 쓰고 max-width로 줄이는 방식이었는데, 그러면 새 기기 폭이
    나올 때마다 축소 규칙을 덧붙여야 하고 좁은 화면이 늘 사후 대응이 된다. */
