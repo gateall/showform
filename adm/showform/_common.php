@@ -2,28 +2,12 @@
 define('G5_IS_ADMIN', true);
 require_once '../../common.php';
 
-if (!$is_member) {
-    $return_url = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/manager/';
-    goto_url(G5_URL . '/manager/login.php?url=' . urlencode($return_url));
-}
-
-if (!$is_admin) {
-    alert('관리자 권한이 필요합니다.', G5_URL . '/');
-}
-
-require_once G5_ADMIN_PATH . '/admin.lib.php';
-// 외부 사이트 URL은 http/https만 허용한다 — javascript:/data: 등 위험한 스킴 차단.
-function sf_is_safe_external_url(string $url): bool
-{
-    if ($url === '') {
-        return true;
-    }
-    $scheme = parse_url($url, PHP_URL_SCHEME);
-    return $scheme === 'http' || $scheme === 'https';
-}
-
 // 구주소 호환 계층. 제작 사례 CRUD의 유일한 진입점은 /manager/showform/ 이고,
 // /adm/showform/ 는 예전 북마크·링크를 받아 넘겨주는 역할만 남긴다.
+//
+// 인증 검사보다 앞에 둔다. 어느 경로로 들어왔는지는 로그인 여부와 무관한 라우팅
+// 문제이고, 뒤에 두면 비로그인 요청이 301/405 대신 로그인 화면으로 새기 때문에
+// 구주소가 실제로 막혔는지 밖에서 HTTP로 확인할 수가 없다.
 $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
 $current_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
 $new_uri = preg_replace('#/adm/showform/#', '/manager/showform/', $current_uri, 1);
@@ -43,4 +27,24 @@ if ($method === 'GET' || $method === 'HEAD') {
     }
     http_response_code(405);
     exit('Method Not Allowed');
+}
+
+if (!$is_member) {
+    $return_url = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/manager/';
+    goto_url(G5_URL . '/manager/login.php?url=' . urlencode($return_url));
+}
+
+if (!$is_admin) {
+    alert('관리자 권한이 필요합니다.', G5_URL . '/');
+}
+
+require_once G5_ADMIN_PATH . '/admin.lib.php';
+// 외부 사이트 URL은 http/https만 허용한다 — javascript:/data: 등 위험한 스킴 차단.
+function sf_is_safe_external_url(string $url): bool
+{
+    if ($url === '') {
+        return true;
+    }
+    $scheme = parse_url($url, PHP_URL_SCHEME);
+    return $scheme === 'http' || $scheme === 'https';
 }
