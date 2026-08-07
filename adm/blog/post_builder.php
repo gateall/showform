@@ -337,5 +337,211 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <button type="button" class="btn_submit btn" onclick="Builder.nextStep()">다음 단계</button>
 </div>
 
+<!-- 발행 모달 -->
+<div id="pb-publish-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9000;"></div>
+<div id="pb-publish-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+     z-index:9001; width:min(580px,92vw); max-height:80vh; overflow-y:auto;
+     background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.25); flex-direction:column;">
+  <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 22px 14px; border-bottom:1px solid #e2e8f0;">
+    <h3 style="margin:0; font-size:17px;">🚀 발행 설정</h3>
+    <button onclick="Builder.closePublishModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#718096;">✕</button>
+  </div>
+  <div style="display:flex; border-bottom:2px solid #e2e8f0; padding:12px 22px 0;">
+    <button id="pb-pub-tab-imm" onclick="Builder.switchPubTab('immediate')" style="border:none; border-bottom:3px solid #3182ce; background:none; color:#3182ce; font-weight:700; padding:6px 14px; cursor:pointer;">⚡ 즉시</button>
+    <button id="pb-pub-tab-sch" onclick="Builder.switchPubTab('scheduled')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:6px 14px; cursor:pointer;">🕐 예약</button>
+  </div>
+  <div id="pb-pub-panel-imm" style="padding:18px 22px;">
+    <p style="font-size:13px;color:#718096;margin:0 0 12px;">지금 바로 각 사이트에 발행합니다.</p>
+    <div id="pb-pub-targets-imm"><span style="color:#999;">로딩 중...</span></div>
+  </div>
+  <div id="pb-pub-panel-sch" style="display:none; padding:18px 22px;">
+    <p style="font-size:13px;color:#718096;margin:0 0 12px;">지정 시각에 자동으로 발행됩니다.</p>
+    <div id="pb-pub-targets-sch"><span style="color:#999;">로딩 중...</span></div>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <label style="font-size:13px;font-weight:600;">예약 시각</label>
+      <input type="datetime-local" id="pb-pub-scheduled-at" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid #cbd5e0;border-radius:6px;font-size:14px;">
+      <span style="font-size:11px;color:#718096;width:100%;">현재보다 미래 시각만 가능합니다.</span>
+    </div>
+  </div>
+  <div id="pb-pub-result" style="display:none; margin:0 22px 14px; padding:12px 14px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:8px;"></div>
+  <div style="display:flex; justify-content:flex-end; gap:8px; padding:14px 22px 18px; border-top:1px solid #e2e8f0;">
+    <button class="btn btn_02" onclick="Builder.closePublishModal()" id="pb-pub-cancel-btn">취소</button>
+    <button class="btn btn_01" id="pb-pub-submit-btn" onclick="Builder.submitPublish()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;font-weight:700;">발행 시작</button>
+  </div>
+</div>
+
+<script>
+(function() {
+    var _pbTab     = 'immediate';
+    var _pbTargets = [];
+    var _pbBusy    = false;
+    var _pbPostId  = 0;
+
+    Builder.showPublishModal = function() {
+        _pbBusy   = false;
+        _pbTab    = 'immediate';
+        _pbPostId = (typeof Builder.getPostId === 'function') ? Builder.getPostId() : 0;
+        Builder.switchPubTab('immediate');
+        // 예약 시각 기본값: 1시간 뒤
+        var d = new Date(Date.now() + 3600000);
+        var p = function(n){ return ('0'+n).slice(-2); };
+        document.getElementById('pb-pub-scheduled-at').value =
+            d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':00';
+        document.getElementById('pb-pub-result').style.display = 'none';
+        var btn = document.getElementById('pb-pub-submit-btn');
+        btn.disabled = false; btn.textContent = '발행 시작';
+        _pbLoadTargets();
+        document.getElementById('pb-publish-overlay').style.display = '';
+        document.getElementById('pb-publish-modal').style.display = 'flex';
+    };
+
+    Builder.closePublishModal = function() {
+        if (_pbBusy) return;
+        document.getElementById('pb-publish-overlay').style.display = 'none';
+        document.getElementById('pb-publish-modal').style.display = 'none';
+    };
+
+    Builder.switchPubTab = function(type) {
+        _pbTab = type;
+        var isImm = (type === 'immediate');
+        var ti = document.getElementById('pb-pub-tab-imm');
+        var ts = document.getElementById('pb-pub-tab-sch');
+        ti.style.borderBottomColor = isImm ? '#3182ce' : 'transparent';
+        ti.style.color = isImm ? '#3182ce' : '#718096';
+        ts.style.borderBottomColor = isImm ? 'transparent' : '#3182ce';
+        ts.style.color = isImm ? '#718096' : '#3182ce';
+        document.getElementById('pb-pub-panel-imm').style.display = isImm ? '' : 'none';
+        document.getElementById('pb-pub-panel-sch').style.display = isImm ? 'none' : '';
+        document.getElementById('pb-pub-result').style.display = 'none';
+    };
+
+    function _pbAjaxUrl() {
+        return (typeof SF_MANAGER_URL !== 'undefined') ?
+            SF_MANAGER_URL + '/blog/post_builder_ajax.php' :
+            'post_builder_ajax.php';
+    }
+
+    function _pbStatusBadge(s) {
+        var m = {draft:'작성중',ready:'승인대기',queued:'발행대기',publishing:'발행중',scheduled:'예약됨',published:'발행완료',failed:'실패',cancelled:'취소됨'};
+        var bg = s==='published' ? '#d1fae5' : s==='failed' ? '#fee2e2' : (s==='publishing'||s==='queued') ? '#e0e7ff' : '#fef3c7';
+        return '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:'+bg+';">'+(m[s]||s)+'</span>';
+    }
+
+    function _pbLoadTargets() {
+        if (!_pbPostId) {
+            ['pb-pub-targets-imm','pb-pub-targets-sch'].forEach(function(id){
+                document.getElementById(id).innerHTML = '<span style="color:red;">포스트를 먼저 완성해주세요.</span>';
+            });
+            return;
+        }
+        $.post(_pbAjaxUrl(), { action: 'get_post_targets', post_id: _pbPostId }, function(res) {
+            _pbTargets = res.ok ? (res.targets||[]) : [];
+            _pbRenderTargets('pb-pub-targets-imm');
+            _pbRenderTargets('pb-pub-targets-sch');
+        }, 'json');
+    }
+
+    function _pbRenderTargets(elId) {
+        var el = document.getElementById(elId);
+        if (!_pbTargets.length) { el.innerHTML = '<p style="color:#718096;text-align:center;">연결된 사이트가 없습니다.</p>'; return; }
+        var html = '';
+        _pbTargets.forEach(function(t) {
+            var busy = t.has_active_job;
+            var pub  = (t.publish_status === 'published');
+            var chk  = (!busy && !pub) ? 'checked' : '';
+            var dis  = (busy || pub)   ? 'disabled' : '';
+            var note = busy ? '<small style="color:#e6a817;">처리중</small>' : '';
+            if (pub && t.published_url) note = '<a href="'+t.published_url+'" target="_blank" style="font-size:11px;">발행URL</a>';
+            html += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;font-size:14px;cursor:pointer;'+
+                    (dis?'opacity:.6;cursor:default;':'')+'">'+
+                    '<input type="checkbox" class="pb-pub-chk" value="'+t.site_id+'" '+chk+' '+dis+'>'+
+                    '<strong>'+t.site_name+'</strong> <small style="color:#718096;">('+t.platform+')</small>'+
+                    _pbStatusBadge(t.publish_status)+note+'</label>';
+        });
+        el.innerHTML = html;
+    }
+
+    Builder.submitPublish = function() {
+        if (_pbBusy) return;
+        var panelSel = (_pbTab==='immediate') ? '#pb-pub-panel-imm .pb-pub-chk:checked' : '#pb-pub-panel-sch .pb-pub-chk:checked';
+        var checks = document.querySelectorAll(panelSel);
+        if (!checks.length) { alert('발행할 사이트를 선택해주세요.'); return; }
+        var schedType = (_pbTab==='immediate') ? 'immediate' : 'scheduled';
+        var schedAt   = '';
+        if (schedType === 'scheduled') {
+            schedAt = document.getElementById('pb-pub-scheduled-at').value;
+            if (!schedAt) { alert('예약 시각을 입력해주세요.'); return; }
+            schedAt = schedAt.replace('T',' ')+':00';
+        }
+        _pbBusy = true;
+        var submitBtn = document.getElementById('pb-pub-submit-btn');
+        submitBtn.disabled = true; submitBtn.textContent = '발행 중...';
+        var resultEl = document.getElementById('pb-pub-result');
+        resultEl.style.display = ''; resultEl.innerHTML = '⏳ 발행 요청 중...';
+        var tlist = Array.prototype.slice.call(checks);
+        var total = tlist.length, results = [];
+        
+        // 1. assemble_final (조립 후 버전 ID 획득)
+        var postTitle = document.getElementById('pb_post_title') ? document.getElementById('pb_post_title').value : '새 포스팅';
+        $.post(_pbAjaxUrl(), {
+            action:'assemble_final', post_id:_pbPostId,
+            title: postTitle, cards: JSON.stringify(Builder.cards || [])
+        }, function(assemRes) {
+            if (!assemRes.ok) {
+                resultEl.innerHTML = '❌ 본문 조립 실패: ' + (assemRes.error || '알 수 없는 오류');
+                _pbBusy = false;
+                submitBtn.disabled = false; submitBtn.textContent = '발행 시작';
+                return;
+            }
+            var versionId = assemRes.version_id;
+            // 2. publish (각 사이트별 발행/예약 등록)
+            tlist.forEach(function(chk) {
+                var siteId = parseInt(chk.value, 10);
+                $.post(_pbAjaxUrl(), {
+                    action:'publish', post_id:_pbPostId,
+                    site_id:siteId, schedule_type:schedType, scheduled_at:schedAt,
+                    version_id:versionId
+                }, function(res) {
+                    results.push({siteId:siteId, ok:res.ok, data:res});
+                    _pbRenderResults(results, total);
+                }, 'json').fail(function(xhr){
+                    var e=''; try{ e=JSON.parse(xhr.responseText).error; }catch(x){}
+                    results.push({siteId:siteId, ok:false, data:{error:e||'서버 오류'}});
+                    _pbRenderResults(results, total);
+                });
+            });
+        }, 'json').fail(function(xhr){
+            var e=''; try{ e=JSON.parse(xhr.responseText).error; }catch(x){}
+            resultEl.innerHTML = '❌ 본문 조립 통신 실패: ' + (e || '서버 오류');
+            _pbBusy = false;
+            submitBtn.disabled = false; submitBtn.textContent = '발행 시작';
+        });
+    };
+
+    function _pbRenderResults(results, total) {
+        var html = '<ul style="margin:0;padding:0;list-style:none;">';
+        results.forEach(function(r) {
+            var t = _pbTargets.find(function(pt){ return pt.site_id === r.siteId; });
+            var name = t ? t.site_name : 'Site #'+r.siteId;
+            if (r.ok) {
+                var lbl = r.data.job_status==='published' ? '✅ 발행 완료' :
+                          r.data.job_status==='scheduled' ? '🕐 예약 등록됨' : '⏳ 처리 중';
+                var url = r.data.published_url ? ' — <a href="'+r.data.published_url+'" target="_blank">바로가기</a>' : '';
+                html += '<li style="color:#065f46;background:#d1fae5;padding:6px 10px;border-radius:6px;margin-bottom:4px;">'+lbl+': <b>'+name+'</b>'+url+'</li>';
+            } else {
+                html += '<li style="color:#991b1b;background:#fee2e2;padding:6px 10px;border-radius:6px;margin-bottom:4px;">❌ 실패: <b>'+name+'</b> — '+(r.data.error||'오류')+'</li>';
+            }
+        });
+        html += '</ul>';
+        if (results.length >= total) {
+            _pbBusy = false;
+            var btn = document.getElementById('pb-pub-submit-btn');
+            btn.disabled = false; btn.textContent = '발행 시작';
+        }
+        document.getElementById('pb-pub-result').innerHTML = html;
+    }
+}());
+</script>
+
 <?php
 include_once(G5_ADMIN_PATH . '/admin.tail.php');
