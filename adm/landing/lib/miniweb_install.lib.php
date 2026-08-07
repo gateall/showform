@@ -12,6 +12,28 @@ if (!defined('_GNUBOARD_')) exit;
 
 define('MW_SQL_DIR', __DIR__ . '/../sql');
 
+// 이 저장소의 lib/common.lib.php:2322 check_token()은 본문이 `return true` 하나뿐이라
+// POST 토큰과 세션 토큰을 비교하지 않는다(원본 그누보드5는 비교한다). 그대로 쓰면
+// CSRF 방어가 없는 것과 같으므로, 미니웹은 여기서 직접 비교한다.
+// 코어를 고치면 토큰을 보내지 않는 기존 폼이 전부 막힐 수 있어 손대지 않았다.
+// $consume=true  : 한 번 쓰면 무효화한다. 설치처럼 되돌리기 어려운 단발 요청용.
+// $consume=false : 검증만 한다. 빌더는 한 번 연 화면에서 디자인 교체·저장을 여러 번
+//                  호출하므로, 첫 요청에서 토큰을 없애면 두 번째부터 전부 실패한다.
+function mw_verify_token($consume = true)
+{
+    $posted = isset($_POST['token']) ? trim((string) $_POST['token']) : '';
+    $saved = (string) get_session('ss_token');
+
+    if ($consume) {
+        set_session('ss_token', '');
+    }
+
+    if ($posted === '' || $saved === '') {
+        return false;
+    }
+    return hash_equals($saved, $posted);
+}
+
 // 미니웹이 쓰는 테이블 목록. 접두어를 붙이기 전의 이름이다.
 function mw_install_tables()
 {

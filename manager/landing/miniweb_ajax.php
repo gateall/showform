@@ -23,7 +23,12 @@ $auth_error = auth_check_menu($auth, $sub_menu, 'w', true);
 if ($auth_error) {
     mw_json(array('success' => false, 'error' => str_replace('\n', ' ', $auth_error)));
 }
-if (!check_token()) {
+// 코어 check_token()은 이 저장소에서 `return true` 하나로 대체돼 있어 검사를 하지 않는다.
+// 미니웹은 직접 비교한다(mw_verify_token). 자세한 사정은 그 함수의 주석 참고.
+require_once G5_ADMIN_PATH . '/landing/lib/miniweb_install.lib.php';
+
+// 빌더는 한 화면에서 여러 번 호출하므로 토큰을 소모하지 않고 검증만 한다.
+if (!mw_verify_token(false)) {
     mw_json(array('success' => false, 'error' => '요청이 만료되었습니다. 새로고침 후 다시 시도해 주세요.'));
 }
 

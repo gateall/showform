@@ -28,7 +28,7 @@ $msg_type = 'info';
 
 // ─── 설치 실행. 반드시 POST + 관리자 토큰이 있어야 한다. ───
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!check_token()) {
+    if (!mw_verify_token()) {
         $msg = '잘못된 접근입니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.';
         $msg_type = 'error';
     } else {
@@ -127,7 +127,9 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         </div>
 
         <form method="post" class="mw-actions">
-            <?php echo get_token(); ?>
+            <?php // get_token()은 토큰 "값"을 돌려줄 뿐이라 그대로 echo하면 화면에 글자로 찍힌다.
+                  // hidden 필드는 직접 만들어야 한다. ?>
+            <input type="hidden" name="token" value="<?php echo get_token(); ?>">
             <button type="submit" name="do" value="schema" class="primary"
                 onclick="return confirm('미니웹 테이블을 생성합니다. 계속할까요?');">
                 미니웹 DB 설치
