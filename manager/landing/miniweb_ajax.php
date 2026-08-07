@@ -50,7 +50,10 @@ if ($action === 'ensure_project') {
             mw_json(array('success' => true, 'pid' => $pid, 'created' => false));
         }
     }
-    $name = isset($_POST['project_name']) ? trim($_POST['project_name']) : '새 미니웹';
+    // $_POST 는 common.php 에서 이미 addslashes 된 상태다. 아래에서 다시
+    // sql_real_escape_string 을 걸므로, 여기서 되돌리지 않으면 백슬래시가 두 번 붙어
+    // 저장된다.
+    $name = isset($_POST['project_name']) ? trim(stripslashes($_POST['project_name'])) : '새 미니웹';
     sql_query(" insert into {$prj_table}
                 set project_name = '" . sql_real_escape_string($name) . "',
                     status = 'draft',
@@ -94,7 +97,12 @@ if ($action === 'change_block') {
 
 // 콘텐츠 저장. block_id 는 건드리지 않는다.
 if ($action === 'save_content') {
-    $raw = isset($_POST['content']) ? $_POST['content'] : '';
+    // common.php:120 이 모든 $_POST 에 sql_escape_string(=addslashes)을 걸어 둔다.
+    // 그래서 브라우저가 보낸 {"title":"..."} 가 {\"title\":\"...\"} 로 도착하고
+    // json_decode 가 null 을 돌려준다("콘텐츠 형식이 올바르지 않습니다"의 원인).
+    // 아래에서 다시 json_encode + sql_real_escape_string 하므로 여기서 되돌려도
+    // 저장 시점의 이스케이프는 그대로 유지된다.
+    $raw = isset($_POST['content']) ? stripslashes($_POST['content']) : '';
     $content = json_decode($raw, true);
     if (!is_array($content)) {
         mw_json(array('success' => false, 'error' => '콘텐츠 형식이 올바르지 않습니다.'));
