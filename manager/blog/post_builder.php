@@ -475,7 +475,7 @@ window.POST_BUILDER_CONFIG = Object.freeze({
                             <span style="font-size:0.85rem; font-weight:bold; color:#475569;">AI 글 생성 조건 <span style="font-weight:normal; color:#94a3b8; font-size:0.78rem;">- 체크한 조건만 AI 지시문으로 전달됩니다</span></span>
                             <button type="button" class="btn btn_02" style="font-size:0.8rem;" onclick="Builder.AIConditionManager.openModal('manage')">+ 생성 조건 등록/관리</button>
                         </div>
-                        <div id="pb_generation_condition_list" class="pb-check-scroll" style="max-height:200px;">
+                        <div id="pb_generation_condition_list" class="pb-check-scroll">
                             <!-- JS에서 동적 추가 -->
                             <div style="color:#94a3b8; font-size:0.85rem;">로딩 중...</div>
                         </div>

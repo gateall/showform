@@ -1086,3 +1086,33 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* ==========================================================================
+   체크박스 목록의 이중 스크롤 제거 (모바일)
+   ========================================================================== */
+
+/* .pb-check-scroll은 안쪽에 고정 높이와 자체 스크롤을 갖는다. 좁은 화면에서는
+   페이지 스크롤과 목록 스크롤이 겹쳐, 손가락이 어디에 닿았느냐에 따라 다른 것이
+   움직인다. 목록 끝까지 내려가기가 특히 어려워지므로 모바일에서는 안쪽 높이를
+   풀어 스크롤을 페이지 하나로 만든다. */
+@media (max-width: 767px) {
+    .pb-check-scroll {
+        max-height: none;
+        overflow: visible;
+    }
+
+    /* 손가락 터치 최소 44px */
+    .ai-condition-item {
+        min-height: 44px;
+        align-items: center;
+    }
+}
+
+/* 넓은 화면에서는 우측 패널이 세로로 길어지지 않도록 다시 자체 스크롤을 준다.
+   조건이 수십 개로 늘어도 패널 높이가 화면을 넘기지 않게 220px보다 넉넉히 잡는다. */
+@media (min-width: 1200px) {
+    #pb_generation_condition_list.pb-check-scroll {
+        max-height: 420px;
+        overflow-y: auto;
+    }
+}
