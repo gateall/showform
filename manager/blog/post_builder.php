@@ -731,9 +731,9 @@ window.POST_BUILDER_CONFIG = Object.freeze({
 <!-- ============================================== -->
 <!-- 1. 글전개 구조 전용 모달 (Structure Manager Modal) -->
 <!-- ============================================== -->
-<div id="structureManagerModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-     z-index:9001; width:min(760px,92vw); max-height:85vh; overflow-y:auto;
-     background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.25); flex-direction:column;">
+<div id="structureManagerModal" class="pb-manager-modal pb-manager-modal--structure"
+     style="display:none; position:fixed; z-index:9001; background:#fff;
+     box-shadow:0 20px 60px rgba(0,0,0,0.25); flex-direction:column;">
   <div style="display:flex; flex-direction:column; background:#fff; border-bottom:1px solid #e2e8f0; border-radius:12px 12px 0 0;">
     <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 22px 10px;">
         <h3 style="margin:0; font-size:17px; display:flex; gap:10px; align-items:center;">
@@ -860,7 +860,7 @@ window.POST_BUILDER_CONFIG = Object.freeze({
                 <option value="recent_added">최근 등록순</option>
             </select>
         </div>
-        <div id="sm_list" style="display:flex; flex-direction:column; gap:10px;">
+        <div id="sm_list" class="pb-library-grid">
         </div>
     </div>
     <div id="sm_tab_category" style="display:none; padding:10px;">
@@ -877,9 +877,9 @@ window.POST_BUILDER_CONFIG = Object.freeze({
 <!-- ============================================== -->
 <!-- 2. AI 글 생성 조건 전용 모달 (AI Condition Manager Modal) -->
 <!-- ============================================== -->
-<div id="aiConditionManagerModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-     z-index:9001; width:min(760px,92vw); max-height:85vh; overflow-y:auto;
-     background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.25); flex-direction:column;">
+<div id="aiConditionManagerModal" class="pb-manager-modal pb-manager-modal--condition"
+     style="display:none; position:fixed; z-index:9001; background:#fff;
+     box-shadow:0 20px 60px rgba(0,0,0,0.25); flex-direction:column;">
   <div style="display:flex; flex-direction:column; background:#fff; border-bottom:1px solid #e2e8f0; border-radius:12px 12px 0 0;">
     <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 22px 10px;">
         <h3 style="margin:0; font-size:17px; display:flex; gap:10px; align-items:center;">
@@ -988,7 +988,7 @@ window.POST_BUILDER_CONFIG = Object.freeze({
                 <option value="recent_added">최근 등록순</option>
             </select>
         </div>
-        <div id="aic_list" style="display:flex; flex-direction:column; gap:10px;">
+        <div id="aic_list" class="pb-library-grid pb-library-grid--wide">
         </div>
     </div>
     <div id="aic_tab_category" style="display:none; padding:10px;">
