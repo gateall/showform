@@ -473,7 +473,11 @@ window.POST_BUILDER_CONFIG = Object.freeze({
                     <div class="pb-ai-panel" style="padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:12px;">
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                             <span style="font-size:0.85rem; font-weight:bold; color:#475569;">AI 글 생성 조건 <span style="font-weight:normal; color:#94a3b8; font-size:0.78rem;">- 체크한 조건만 AI 지시문으로 전달됩니다</span></span>
-                            <button type="button" class="btn btn_02" style="font-size:0.8rem;" onclick="Builder.AIConditionManager.openModal('manage')">+ 생성 조건 등록/관리</button>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <button type="button" class="btn btn_02" style="font-size:0.78rem;" onclick="Builder.toggleAllGenerationConditions(true)">전체 선택</button>
+                                <button type="button" class="btn btn_02" style="font-size:0.78rem;" onclick="Builder.toggleAllGenerationConditions(false)">선택 해제</button>
+                                <button type="button" class="btn btn_02" style="font-size:0.8rem;" onclick="Builder.AIConditionManager.openModal('manage')">+ 생성 조건 등록/관리</button>
+                            </div>
                         </div>
                         <div id="pb_generation_condition_list" class="pb-check-scroll">
                             <!-- JS에서 동적 추가 -->
