@@ -30,6 +30,16 @@ header("Cache-Control: no-cache"); // HTTP/1.1
 header("Expires: 0"); // rfc2616 - Section 14.21
 header("Pragma: no-cache"); // HTTP/1.0
 */
+if (isset($g5['meta_description']) && trim($g5['meta_description']) !== '') {
+    echo '<meta name="description" content="' . htmlspecialchars($g5['meta_description'], ENT_QUOTES, 'UTF-8') . '">' . PHP_EOL;
+} else {
+    echo '<meta name="description" content="AI 랜딩페이지 자동생성 플랫폼">' . PHP_EOL;
+}
+if (isset($g5['meta_keywords']) && trim($g5['meta_keywords']) !== '') {
+    echo '<meta name="keywords" content="' . htmlspecialchars($g5['meta_keywords'], ENT_QUOTES, 'UTF-8') . '">' . PHP_EOL;
+} else {
+    echo '<meta name="keywords" content="AI 랜딩페이지 자동생성, 랜딩페이지 제작, 문의폼, AI 문구 생성">' . PHP_EOL;
+}
 ?>
 <!doctype html>
 <html lang="ko">
@@ -37,8 +47,16 @@ header("Pragma: no-cache"); // HTTP/1.0
 <meta charset="utf-8">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <?php
+// viewport는 기기 판정과 무관하게 항상 내보낸다.
+// 예전에는 G5_IS_MOBILE일 때만 출력했는데, 그 판정은 서버가 User-Agent를 보고
+// 내리는 것이라 목록에 없는 기기·브라우저이거나 ck_mobile 쿠키가 PC로 잡혀 있으면
+// 폰에서도 meta가 빠진다. 그러면 브라우저가 980px 레이아웃 뷰포트를 잡고 화면을
+// 축소해 보여주기 때문에, 모바일 기준으로 쓴 CSS가 통째로 무력화된다
+// (360px 창에서 innerWidth가 980으로 측정되던 원인).
+// 데스크톱에서는 width=device-width가 곧 창 너비라 달라지는 것이 없다.
+echo '<meta name="viewport" id="meta_viewport" content="width=device-width,initial-scale=1.0,minimum-scale=0,maximum-scale=10">'.PHP_EOL;
+
 if (G5_IS_MOBILE) {
-    echo '<meta name="viewport" id="meta_viewport" content="width=device-width,initial-scale=1.0,minimum-scale=0,maximum-scale=10">'.PHP_EOL;
     echo '<meta name="HandheldFriendly" content="true">'.PHP_EOL;
     echo '<meta name="format-detection" content="telephone=no">'.PHP_EOL;
 } else {
@@ -46,12 +64,8 @@ if (G5_IS_MOBILE) {
     echo '<meta http-equiv="X-UA-Compatible" content="IE=edge">'.PHP_EOL;
 }
 
-if($config['cf_add_meta'])
-    echo $config['cf_add_meta'].PHP_EOL;
 ?>
-<meta name="description" content="AI 랜딩페이지 자동생성 플랫폼">
-<meta name="keywords" content="AI 랜딩페이지 자동생성, 랜딩페이지 제작, 문의폼, AI 문구 생성">
-<title>ShowForm - AI 랜딩페이지 자동생성 플랫폼</title>
+<title>ShowForm MediaLink - AI 랜딩페이지 자동생성 플랫폼</title>
 <?php
 $shop_css = '';
 if (defined('_SHOP_')) $shop_css = '_shop';
