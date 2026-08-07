@@ -11,6 +11,33 @@
         return cfg.libraryUrl || cfg.ajaxUrl;
     }
 
+    // 세션이 풀리면 AJAX 엔드포인트가 JSON 대신 로그인 화면 HTML을 돌려준다.
+    // 그대로 r.json()에 넘기면 조용히 reject되고, 아무도 그 rejection을 받지 않아서
+    // 버튼을 눌러도 화면에 아무 변화가 없다("안 열린다"의 정체). 여기서 본문을
+    // 먼저 읽어보고 무슨 일이 났는지 말이 되는 메시지로 바꿔 던진다.
+    function pbReadJson(response) {
+        return response.text().then(function(text) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                if (/<!doctype|<html/i.test(text)) {
+                    throw new Error('로그인이 풀렸거나 접근 권한이 없습니다. 새로고침 후 다시 로그인해 주세요.');
+                }
+                throw new Error('서버 응답을 해석할 수 없습니다: ' + text.slice(0, 80));
+            }
+        });
+    }
+
+    // 목록을 못 불러왔다고 모달을 닫아버리면 사용자는 이유를 알 수 없다.
+    // 모달은 열어둔 채 그 자리에 이유를 적는다.
+    function pbShowLoadError(containerId, message) {
+        var el = document.getElementById(containerId);
+        if (!el) { alert(message); return; }
+        el.innerHTML = '<div style="padding:24px; text-align:center; color:#b91c1c; font-size:14px; line-height:1.6;">'
+            + '목록을 불러오지 못했습니다.<br><span style="color:#64748b; font-size:13px;">'
+            + String(message).replace(/</g, '&lt;') + '</span></div>';
+    }
+
     // =========================================================================
     // Structure Manager (글전개 구조 관리)
     // =========================================================================
@@ -32,19 +59,27 @@
         openModal: function(defaultTab = 'select') {
             this.state.selectedIds = [];
             this.state.filter = { category: '', status: '1', search: '', favOnly: false, sort: 'sort_asc' };
-            
-            // UI 초기화
-            document.getElementById('sm_filter_search').value = '';
-            document.getElementById('sm_filter_category').value = '';
-            document.getElementById('sm_filter_status').value = '1';
-            document.getElementById('sm_filter_fav').checked = false;
-            document.getElementById('sm_filter_sort').value = 'sort_asc';
-            
+
+            // AIConditionManager.openModal과 같은 이유로 모달을 먼저 띄운다.
+            const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+            const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
+            setVal('sm_filter_search', '');
+            setVal('sm_filter_category', '');
+            setVal('sm_filter_status', '1');
+            setChecked('sm_filter_fav', false);
+            setVal('sm_filter_sort', 'sort_asc');
+
+            const formWrap = document.getElementById('sm_form_wrap');
+            if (formWrap) formWrap.style.display = 'none';
+
+            const overlay = document.getElementById('pb-library-overlay');
+            if (overlay) overlay.style.display = 'block';
+            const modal = document.getElementById('structureManagerModal');
+            if (modal) modal.style.display = 'flex';
+            this.switchTab(defaultTab);
+
             this.loadCategories(() => {
-                document.getElementById('sm_form_wrap').style.display = 'none';
                 this.loadItems(() => {
-                    this.switchTab(defaultTab);
-                    
                     // 기 적용된 구조가 있다면 로드
                     const idsStr = document.getElementById('pb_selected_structure_ids');
                     if (idsStr && idsStr.value) {
@@ -54,9 +89,6 @@
                     }
                     this.renderAccordion();
                     this.renderList();
-                    
-                    document.getElementById('pb-library-overlay').style.display = 'block';
-                    document.getElementById('structureManagerModal').style.display = 'flex';
                 });
             });
         },
@@ -84,30 +116,37 @@
             const formData = new FormData();
             formData.append('action', 'load_structures');
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.state.items = res.items || [];
-                        if(callback) callback();
+                        if (callback) callback();
                     } else {
-                        alert(res.error || '목록을 불러오지 못했습니다.');
+                        pbShowLoadError('sm_list', res.error || '알 수 없는 오류');
                     }
                 })
-                .catch(err => { console.error(err); alert('통신 오류가 발생했습니다.'); });
+                .catch(err => {
+                    console.error('[StructureManager] 구조 목록 로드 실패:', err);
+                    pbShowLoadError('sm_list', err.message || err);
+                });
         },
 
         loadCategories: function(callback) {
             const formData = new FormData();
             formData.append('action', 'load_structure_categories');
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.state.categories = res.categories || [];
                         this.updateCategorySelects();
-                        if(callback) callback();
+                    } else {
+                        console.error('[StructureManager] 카테고리 로드 실패:', res.error);
                     }
-                });
+                })
+                .catch(err => { console.error('[StructureManager] 카테고리 로드 실패:', err); })
+                // 카테고리 실패가 구조 목록까지 막지 않도록 성공/실패 무관하게 넘긴다.
+                .then(() => { if (callback) callback(); });
         },
 
         updateCategorySelects: function() {
@@ -363,7 +402,7 @@
             }
 
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.hideForm();
@@ -381,7 +420,7 @@
             formData.append('action', 'delete_structure');
             formData.append('id', id);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                     else alert(res.error || '삭제 실패');
@@ -393,7 +432,7 @@
             formData.append('action', 'duplicate_structure');
             formData.append('id', id);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                     else alert(res.error || '복사 실패');
@@ -406,7 +445,7 @@
             formData.append('id', id);
             formData.append('is_favorite', isFav);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                 });
@@ -421,7 +460,7 @@
             formData.append('category_name', catName);
             
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         document.getElementById('sm_new_cat_name').value = '';
@@ -439,7 +478,7 @@
             formData.append('id', id);
             
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadCategories();
                     else alert(res.error || '실패');
@@ -476,26 +515,38 @@
 
         openModal: function(defaultTab = 'select') {
             this.state.selectedIds = [];
-            
-            document.getElementById('aic_filter_search').value = '';
-            document.getElementById('aic_filter_category').value = '';
-            document.getElementById('aic_filter_status').value = '1';
-            document.getElementById('aic_filter_fav').checked = false;
-            document.getElementById('aic_filter_sort').value = 'sort_asc';
-            
+
+            // 모달을 먼저 띄우고 목록은 그 다음에 채운다. 예전에는 로딩이 전부 끝난
+            // 뒤에야 표시했는데, 중간 어느 단계든 실패하면 콜백 사슬이 끊겨 버튼을
+            // 눌러도 화면에 아무 변화가 없었다. 창이 먼저 떠 있으면 최소한 실패
+            // 사실을 그 안에 적을 수 있다.
+            // getElementById 결과도 전부 확인한다 - 마크업이 한 버전 뒤처져 있으면
+            // 여기서 TypeError가 나면서 역시 조용히 안 열린다.
+            const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+            const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
+            setVal('aic_filter_search', '');
+            setVal('aic_filter_category', '');
+            setVal('aic_filter_status', '1');
+            setChecked('aic_filter_fav', false);
+            setVal('aic_filter_sort', 'sort_asc');
+
+            const formWrap = document.getElementById('aic_form_wrap');
+            if (formWrap) formWrap.style.display = 'none';
+
+            const overlay = document.getElementById('pb-library-overlay');
+            if (overlay) overlay.style.display = 'block';
+            const modal = document.getElementById('aiConditionManagerModal');
+            if (modal) modal.style.display = 'flex';
+            this.switchTab(defaultTab);
+
             this.loadCategories(() => {
-                document.getElementById('aic_form_wrap').style.display = 'none';
                 this.loadItems(() => {
-                    this.switchTab(defaultTab);
-                    
                     // 기 적용된 조건 로드
-                    this.state.selectedIds = [...Builder.generationConditions.map(c => c.id.toString())];
-                    
+                    const applied = Builder.generationConditions || [];
+                    this.state.selectedIds = applied.map(c => c.id.toString());
+
                     this.renderAccordion();
                     this.renderList();
-                    
-                    document.getElementById('pb-library-overlay').style.display = 'block';
-                    document.getElementById('aiConditionManagerModal').style.display = 'flex';
                 });
             });
         },
@@ -523,12 +574,18 @@
             const formData = new FormData();
             formData.append('action', 'load_ai_conditions');
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.state.items = res.items || [];
-                        if(callback) callback();
-                    } else alert(res.error || '목록 로드 실패');
+                        if (callback) callback();
+                    } else {
+                        pbShowLoadError('aic_list', res.error || '알 수 없는 오류');
+                    }
+                })
+                .catch(err => {
+                    console.error('[AIConditionManager] 조건 목록 로드 실패:', err);
+                    pbShowLoadError('aic_list', err.message || err);
                 });
         },
 
@@ -536,14 +593,19 @@
             const formData = new FormData();
             formData.append('action', 'load_ai_condition_categories');
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.state.categories = res.categories || [];
                         this.updateCategorySelects();
-                        if(callback) callback();
+                    } else {
+                        console.error('[AIConditionManager] 카테고리 로드 실패:', res.error);
                     }
-                });
+                })
+                .catch(err => { console.error('[AIConditionManager] 카테고리 로드 실패:', err); })
+                // 카테고리는 필터 드롭다운 채우기용이다. 못 불러왔다고 조건 목록까지
+                // 막으면 모달이 통째로 비어버리므로, 성공/실패 무관하게 다음으로 넘긴다.
+                .then(() => { if (callback) callback(); });
         },
 
         updateCategorySelects: function() {
@@ -784,7 +846,7 @@
             }
 
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         this.hideForm();
@@ -801,7 +863,7 @@
             formData.append('action', 'delete_ai_condition');
             formData.append('id', id);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                     else alert(res.error || '삭제 실패');
@@ -813,7 +875,7 @@
             formData.append('action', 'duplicate_ai_condition');
             formData.append('id', id);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                     else alert(res.error || '복사 실패');
@@ -826,7 +888,7 @@
             formData.append('id', id);
             formData.append('is_favorite', isFav);
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadItems(() => { this.renderList(); });
                 });
@@ -840,7 +902,7 @@
             formData.append('category_name', catName);
             
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) {
                         document.getElementById('aic_new_cat_name').value = '';
@@ -856,7 +918,7 @@
             formData.append('id', id);
             
             fetch(libraryAjaxUrl(), { method: 'POST', body: formData })
-                .then(r => r.json())
+                .then(pbReadJson)
                 .then(res => {
                     if (res.success) this.loadCategories();
                     else alert(res.error || '실패');
