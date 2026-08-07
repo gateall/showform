@@ -1329,3 +1329,11 @@
         min-height: 42px;
     }
 }
+
+/* 어느 카드가 지목됐는지 잠깐 강조한다(카드 제목은 편집 필드가 없어 문자열 선택이
+   불가능하므로, 카드 자체를 눈에 띄게 하는 것으로 대신한다). */
+.pb-card-flash {
+    outline: 3px solid #f59e0b;
+    outline-offset: 2px;
+    transition: outline-color .3s ease;
+}

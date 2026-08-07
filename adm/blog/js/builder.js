@@ -794,6 +794,52 @@ const Builder = {
         return dupes;
     },
 
+    // 서버(blog_quality.lib.php)가 쓰는 규칙을 그대로 재현한다.
+    // 서버는 카드 제목까지 본문에 붙여서(builder.js의 조립부와 동일) 마침표 단위로
+    // 무조건 쪼갠다. 그래서 본문에는 중복이 없는데 경고만 뜨는 일이 생긴다 —
+    // 무엇이 잡힌 건지 화면에서 짚어주려면 서버와 똑같이 계산해봐야 한다.
+    findServerRuleDuplicates: function() {
+        const cards = (this.cards || []).filter(c =>
+            c.type !== 'title' && (c.state === 'selected' || c.state === 'primary'));
+
+        const parts = [];
+        cards.forEach(card => {
+            const title = card.title ? String(card.title) : '';
+            if (title) parts.push({ cardId: card.id, from: 'title', text: title });
+            parts.push({ cardId: card.id, from: 'body', text: this._currentCardText(card) });
+        });
+
+        const map = new Map();
+        parts.forEach(p => {
+            // 서버와 동일: /[\.\!\?\n]+/ 로 자르고 5자 초과만 남긴다.
+            p.text.split(/[.!?\n]+/).forEach(raw => {
+                const s = raw.trim();
+                if (s.length <= 5) return;
+                if (!map.has(s)) map.set(s, []);
+                map.get(s).push({ cardId: p.cardId, from: p.from });
+            });
+        });
+
+        const out = [];
+        map.forEach((sources, sentence) => {
+            if (sources.length >= 2) out.push({ sentence: sentence, count: sources.length, sources: sources });
+        });
+        return out.sort((a, b) => b.count - a.count);
+    },
+
+    // 카드 자체로 데려간다. 카드 제목은 편집 필드가 따로 없어 문장 선택이 불가능하므로
+    // 카드를 잠깐 강조해 어느 카드인지 눈에 띄게 한다.
+    scrollToCard: function(cardId) {
+        const el = document.getElementById('card_' + cardId);
+        if (!el) {
+            alert('해당 카드를 화면에서 찾지 못했습니다.');
+            return;
+        }
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('pb-card-flash');
+        setTimeout(function() { el.classList.remove('pb-card-flash'); }, 1600);
+    },
+
     // 해당 카드로 스크롤하고 문제 구간만 선택해준다.
     jumpToSentence: function(cardId, start, end) {
         const ta = document.getElementById('textarea_' + cardId);
@@ -821,8 +867,41 @@ const Builder = {
         let html = '<div class="pb-dupe-head">현재 편집본에서 찾은 중복 문장 '
                  + '<span class="pb-dupe-note">(카드 제목 제외 · 본문 기준)</span></div>';
         if (dupes.length === 0) {
-            html += '<div class="pb-dupe-empty">지금 편집 중인 본문에서는 중복 문장이 발견되지 않았습니다. '
-                  + '위 서버 검수 결과는 검수를 실행한 시점의 본문 기준입니다.</div>';
+            html += '<div class="pb-dupe-empty">지금 편집 중인 <strong>본문</strong>에서는 중복 문장이 발견되지 않았습니다.</div>';
+
+            // 본문은 깨끗한데 서버는 경고를 냈다면, 서버 규칙(카드 제목 포함 + 마침표
+            // 단위 분리)이 무엇을 잡았는지 그대로 재현해 짚어준다. 여기까지 안 보여주면
+            // "그래서 어디를 고치라는 거지?"에서 막힌다.
+            const serverSide = this.findServerRuleDuplicates();
+            const fromTitleOnly = serverSide.filter(d => d.sources.some(s => s.from === 'title'));
+            const show = fromTitleOnly.length > 0 ? fromTitleOnly : serverSide;
+
+            if (show.length > 0) {
+                html += '<div class="pb-dupe-head" style="margin-top:12px;">서버 검수가 잡은 항목 '
+                      + '<span class="pb-dupe-note">(서버는 카드 제목도 본문에 포함해 계산합니다)</span></div>';
+                show.forEach(d => {
+                    const labels = d.sources.map(s => s.from === 'title' ? '카드 제목' : '본문');
+                    html += '<div class="pb-dupe-item"><div class="pb-dupe-sentence">'
+                          + this._escapeAttr(d.sentence) + '</div>'
+                          + '<div class="pb-dupe-meta">' + d.count + '회 — ' + labels.join(' / ') + '</div>'
+                          + '<div class="pb-dupe-jumps">';
+                    d.sources.forEach((s, i) => {
+                        const where = s.from === 'title' ? '제목' : '본문';
+                        html += '<button type="button" class="pb-dupe-jump" onclick="Builder.scrollToCard('
+                              + JSON.stringify(s.cardId) + ')">' + (i + 1) + '번째 카드로 이동 (' + where + ')</button>';
+                    });
+                    html += '</div></div>';
+                });
+                if (fromTitleOnly.length > 0) {
+                    html += '<div class="pb-dupe-empty" style="margin-top:8px;">'
+                          + '카드 <strong>제목(소제목)</strong>이 겹쳐서 잡힌 것입니다. 본문 내용 중복이 아니므로 '
+                          + '소제목만 서로 다르게 바꾸면 다음 검수에서 사라집니다.</div>';
+                }
+            } else {
+                html += '<div class="pb-dupe-empty" style="margin-top:8px;">'
+                      + '서버 규칙으로 다시 계산해도 지금은 걸리는 항목이 없습니다. '
+                      + '위 결과는 검수를 실행한 시점의 본문 기준이므로, 이후 편집으로 이미 해소된 것으로 보입니다.</div>';
+            }
         } else {
             dupes.forEach(d => {
                 html += '<div class="pb-dupe-item"><div class="pb-dupe-sentence">'
