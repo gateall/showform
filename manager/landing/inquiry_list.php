@@ -143,7 +143,7 @@ include_once(__DIR__ . '/../layout/header.php');
                 <td data-label="등록일"><?php echo get_text($row['created_at']); ?></td>
                 <td data-label="관리">
                     <div class="inq-actions">
-                        <a class="mgr-btn" href="<?php echo G5_ADMIN_URL; ?>/landing/inquiry_view.php?id=<?php echo (int)$row['id']; ?>">상세</a>
+                        <a class="mgr-btn" href="./inquiry_view.php?id=<?php echo (int)$row['id']; ?>">상세</a>
                         <a class="mgr-btn mgr-btn-danger" href="<?php echo G5_ADMIN_URL; ?>/landing/inquiry_delete.php?id=<?php echo (int)$row['id']; ?>" onclick="return confirm('이 문의를 삭제하시겠습니까?\n삭제하면 되돌릴 수 없습니다.');">삭제</a>
                     </div>
                 </td>
