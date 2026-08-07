@@ -1187,3 +1187,28 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* ==========================================================================
+   라이브러리 관리 모달 탭 바
+   ========================================================================== */
+
+/* 탭 바는 원래 display:none이라 화면에 나온 적이 없었다(함수는 있는데 누를 버튼이
+   없는 상태). 이제 노출하되, 좁은 화면에서 탭이 줄바꿈되어 헤더가 두 줄로
+   불어나지 않도록 가로 스크롤로 흘린다. */
+.pb-manager-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pb-manager-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.pb-manager-tab {
+    flex: 0 0 auto;
+    min-height: 42px;
+    white-space: nowrap;
+}

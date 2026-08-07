@@ -745,10 +745,12 @@ window.POST_BUILDER_CONFIG = Object.freeze({
         </h3>
         <button onclick="Builder.StructureManager.closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#718096;">✕</button>
     </div>
-    <div id="sm_tabs" style="display:none; padding:0 22px;">
-        <button id="sm_tab_btn_select" onclick="Builder.StructureManager.switchTab('select')" style="border:none; border-bottom:3px solid #3182ce; background:none; color:#3182ce; font-weight:700; padding:8px 14px; cursor:pointer; font-size:14px;">글 구조 선택</button>
-        <button id="sm_tab_btn_manage" onclick="Builder.StructureManager.switchTab('manage')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">글 구조 관리</button>
-        <button id="sm_tab_btn_category" onclick="Builder.StructureManager.switchTab('category')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">카테고리 관리</button>
+    <!-- 글 전개 구조는 세 탭을 그대로 둔다. 조건과 달리 메인 화면에 구조를 고르는
+         전용 UI가 따로 없어, 선택 탭이 실제 진입점 역할을 한다. -->
+    <div id="sm_tabs" class="pb-manager-tabs" style="padding:0 22px;">
+        <button id="sm_tab_btn_select" class="pb-manager-tab" onclick="Builder.StructureManager.switchTab('select')" style="border:none; border-bottom:3px solid #3182ce; background:none; color:#3182ce; font-weight:700; padding:8px 14px; cursor:pointer; font-size:14px;">글 구조 선택</button>
+        <button id="sm_tab_btn_manage" class="pb-manager-tab" onclick="Builder.StructureManager.switchTab('manage')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">글 구조 관리</button>
+        <button id="sm_tab_btn_category" class="pb-manager-tab" onclick="Builder.StructureManager.switchTab('category')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">카테고리 관리</button>
     </div>
   </div>
   
@@ -891,10 +893,12 @@ window.POST_BUILDER_CONFIG = Object.freeze({
         </h3>
         <button onclick="Builder.AIConditionManager.closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#718096;">✕</button>
     </div>
-    <div id="aic_tabs" style="display:none; padding:0 22px;">
-        <button id="aic_tab_btn_select" onclick="Builder.AIConditionManager.switchTab('select')" style="border:none; border-bottom:3px solid #3182ce; background:none; color:#3182ce; font-weight:700; padding:8px 14px; cursor:pointer; font-size:14px;">조건 선택</button>
-        <button id="aic_tab_btn_manage" onclick="Builder.AIConditionManager.switchTab('manage')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">조건 관리</button>
-        <button id="aic_tab_btn_category" onclick="Builder.AIConditionManager.switchTab('category')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">카테고리 관리</button>
+    <!-- 조건을 "고르는" 일은 메인 화면의 체크박스가 이미 하고 있다. 여기에 선택 탭을
+         또 두면 같은 일을 하는 화면이 둘이 되어 어느 쪽 체크가 진짜인지 헷갈린다.
+         이 모달은 라이브러리 관리만 맡는다. -->
+    <div id="aic_tabs" class="pb-manager-tabs" style="padding:0 22px;">
+        <button id="aic_tab_btn_manage" class="pb-manager-tab" onclick="Builder.AIConditionManager.switchTab('manage')" style="border:none; border-bottom:3px solid #3182ce; background:none; color:#3182ce; font-weight:700; padding:8px 14px; cursor:pointer; font-size:14px;">조건 관리</button>
+        <button id="aic_tab_btn_category" class="pb-manager-tab" onclick="Builder.AIConditionManager.switchTab('category')" style="border:none; border-bottom:3px solid transparent; background:none; color:#718096; font-weight:600; padding:8px 14px; cursor:pointer; font-size:14px;">카테고리 관리</button>
     </div>
   </div>
   

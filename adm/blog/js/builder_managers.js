@@ -513,7 +513,9 @@
             currentTab: 'select'
         },
 
-        openModal: function(defaultTab = 'select') {
+        // 이 모달에는 선택 탭이 없다(조건 고르기는 메인 화면 체크박스 담당) —
+        // 기본값을 'select'로 두면 어느 탭도 활성화되지 않은 빈 화면이 뜬다.
+        openModal: function(defaultTab = 'manage') {
             this.state.selectedIds = [];
 
             // 모달을 먼저 띄우고 목록은 그 다음에 채운다. 예전에는 로딩이 전부 끝난
