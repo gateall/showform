@@ -42,6 +42,23 @@ function bp_install_column_is_nullable(string $prefix, string $table, string $co
     return isset($row['Null']) && strtoupper($row['Null']) === 'YES';
 }
 
+// 컬럼의 선언 길이가 최소 $min 이상인지 확인한다(예: varchar(191) >= 191).
+// v31처럼 "컬럼을 더 넓게 바꾸는" 마이그레이션의 적용 여부를 판정하는 데 쓴다.
+function bp_install_column_length_at_least(string $prefix, string $table, string $column, int $min): bool
+{
+    $table_name = sql_real_escape_string($prefix . 'blog_' . $table);
+    $col_name = sql_real_escape_string($column);
+    $result = sql_query(" show columns from `{$table_name}` like '{$col_name}' ", false);
+    if (!$result || sql_num_rows($result) === 0) {
+        return false;
+    }
+    $row = sql_fetch_array($result);
+    if (empty($row['Type']) || !preg_match('/\((\d+)\)/', $row['Type'], $m)) {
+        return false;
+    }
+    return (int)$m[1] >= $min;
+}
+
 function bp_install_index_exists(string $prefix, string $table, string $index): bool
 {
     $table_name = sql_real_escape_string($prefix . 'blog_' . $table);
@@ -82,6 +99,15 @@ function bp_install_run_sql_file(string $path, string $prefix): array
         if ($result === false) {
             $link = isset($g5['connect_db']) ? $g5['connect_db'] : null;
             $error_code = $link ? mysqli_errno($link) : 0;
+            
+            // 1050: Table already exists
+            // 1060: Duplicate column name
+            // 1061: Duplicate key name
+            // 재설치(업데이트) 시 이미 있는 테이블/컬럼/인덱스 생성 시도는 안전하게 무시 (멱등성 보장)
+            if (in_array($error_code, array(1050, 1060, 1061))) {
+                continue;
+            }
+            
             $error_msg = $link ? mysqli_error($link) : 'Unknown error';
             $sqlstate = $link ? mysqli_sqlstate($link) : '';
             
@@ -131,12 +157,49 @@ function bp_install_diagnostics(): array
     );
 }
 
-// 버전 번호 => array('label'=>표시명, 'desc'=>설명, 'file'=>SQL 파일 절대경로, 'installed'=>bool)
+// SQL 파일 첫머리의 설명 주석에서 한 줄 요약을 뽑아낸다.
+// (예: "-- BLOG AUTOMATION: V31 active_lock_key 컬럼 폭 정정" → "active_lock_key 컬럼 폭 정정")
+// 자동 발견된 버전의 설명으로 쓰며, 못 읽으면 빈 문자열을 반환한다.
+function bp_install_read_sql_title(string $path): string
+{
+    $fp = @fopen($path, 'r');
+    if (!$fp) {
+        return '';
+    }
+    $title = '';
+    $line_no = 0;
+    while (($line = fgets($fp)) !== false && $line_no < 10) {
+        $line_no++;
+        $line = trim($line);
+        if ($line === '' || strpos($line, '--') !== 0) {
+            continue;
+        }
+        $line = trim(ltrim($line, '-'));
+        if ($line === '') {
+            continue;
+        }
+        // "BLOG AUTOMATION: V31 ..." 형태의 접두사를 떼어낸다.
+        $line = preg_replace('/^BLOG\s+AUTOMATION\s*:\s*V\d+\s*/i', '', $line);
+        $title = $line;
+        break;
+    }
+    fclose($fp);
+    return $title;
+}
+
+// 버전 번호 => array('label'=>표시명, 'desc'=>설명, 'file'=>SQL 파일 절대경로, 'installed'=>bool|null)
+// installed 가 null 이면 "적용 여부를 코드로 판정하지 않는(등록되지 않은) 버전"을 뜻한다.
+//
+// 아래 목록에 없는 blog_automation_v*.sql 파일이 새로 추가되면 자동으로 목록에 나타난다.
+// (예전에는 이 배열에 직접 추가하지 않으면 설치 화면에 아예 표시되지 않아서, 새 마이그레이션이
+//  있는지조차 알 수 없었다.) 다만 "설치됨/미설치" 판정은 버전마다 확인 대상이 달라 자동 유추가
+// 불가능하므로, 자동 발견된 항목은 installed=null(확인 불가)로 두고 실행만 가능하게 한다.
+// 정확한 판정이 필요하면 아래 배열에 해당 버전을 명시적으로 추가하면 된다.
 function bp_install_get_versions(string $table_prefix): array
 {
     $sql_dir = G5_ADMIN_PATH . '/blog/sql';
 
-    return array(
+    $versions = array(
         1 => array(
             'label' => 'Phase 1', 'desc' => '광고주/사이트 기본 테이블',
             'file' => $sql_dir . '/blog_automation_v1.sql',
@@ -221,6 +284,15 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v15.sql',
             'installed' => bp_install_column_exists($table_prefix, 'posts', 'builder_state'),
         ),
+        16 => array(
+            'label' => '프론트 스튜디오 (Phase 1)', 'desc' => '단락/프롬프트 이력/콘텐츠 태그 테이블',
+            'file' => $sql_dir . '/blog_automation_v16.sql',
+            // blog_automation_v16.sql이 만드는 세 테이블이 모두 있어야 적용된 것으로 본다.
+            // 판정이 없어 "확인 불가"로만 표시되던 유일한 버전이었다(1~15, 17~31은 등록돼 있음).
+            'installed' => bp_install_table_exists($table_prefix, 'post_sections')
+                && bp_install_table_exists($table_prefix, 'ai_prompts')
+                && bp_install_table_exists($table_prefix, 'content_tags'),
+        ),
         17 => array(
             'label' => '새 프로젝트 등록 화면 개편', 'desc' => 'advertisers 대표자/업종, content_projects 목적/타깃/유형 다중선택 컬럼',
             'file' => $sql_dir . '/blog_automation_v17.sql',
@@ -267,5 +339,61 @@ function bp_install_get_versions(string $table_prefix): array
             'file' => $sql_dir . '/blog_automation_v25.sql',
             'installed' => bp_install_table_exists($table_prefix, 'generation_rules'),
         ),
+        26 => array(
+            'label' => '발행 작업 확장 및 스냅샷', 'desc' => 'publish_jobs에 스냅샷 및 스케줄러 상태 컬럼 추가',
+            'file' => $sql_dir . '/blog_automation_v26.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'publish_jobs', 'snapshot_title'),
+        ),
+        27 => array(
+            'label' => '포스트 버전 관리 추가', 'desc' => 'post_versions 테이블 및 타겟 버전 ID 추가',
+            'file' => $sql_dir . '/blog_automation_v27.sql',
+            'installed' => bp_install_table_exists($table_prefix, 'post_versions'),
+        ),
+        28 => array(
+            'label' => '중복 방지 락 재설계', 'desc' => 'active_lock_key 기반 Idempotency 발행 방어 및 상태 정리',
+            'file' => $sql_dir . '/blog_automation_v28.sql',
+            'installed' => bp_install_column_exists($table_prefix, 'publish_jobs', 'active_lock_key')
+                && bp_install_index_exists($table_prefix, 'publish_jobs', 'uq_active_lock_key'),
+        ),
+        29 => array(
+            'label' => '발행 락 통합 완성', 'desc' => 'lock_hash 컬럼 제거 및 active_lock_key 단일화, 중복 방어 완성',
+            'file' => $sql_dir . '/blog_automation_v29.sql',
+            'installed' => !bp_install_column_exists($table_prefix, 'publish_jobs', 'lock_hash')
+                && bp_install_index_exists($table_prefix, 'publish_jobs', 'uq_publish_jobs_active_lock_key'),
+        ),
+        30 => array(
+            'label' => '단계별 누적 프롬프트 저장', 'desc' => 'blog_post_prompts 테이블 추가(PromptManager 저장/불러오기/작업지시문 생성용)',
+            'file' => $sql_dir . '/blog_automation_v30.sql',
+            'installed' => bp_install_table_exists($table_prefix, 'post_prompts'),
+        ),
+        31 => array(
+            'label' => '발행 락 키 폭 정정', 'desc' => 'publish_jobs.active_lock_key 를 varchar(191)로 확장 + 종료 상태의 잔여 락 해제(선택 적용 - 코드 수정만으로도 동작함)',
+            'file' => $sql_dir . '/blog_automation_v31.sql',
+            'installed' => bp_install_column_length_at_least($table_prefix, 'publish_jobs', 'active_lock_key', 191),
+        ),
     );
+
+    // 위 목록에 등록되지 않은 SQL 파일을 자동으로 찾아 덧붙인다.
+    $files = glob($sql_dir . '/blog_automation_v*.sql');
+    if (is_array($files)) {
+        foreach ($files as $path) {
+            if (!preg_match('/blog_automation_v(\d+)\.sql$/i', basename($path), $m)) {
+                continue;
+            }
+            $v = (int)$m[1];
+            if (isset($versions[$v])) {
+                continue; // 이미 명시적으로 등록된 버전 - 판정 로직을 그대로 쓴다
+            }
+            $desc = bp_install_read_sql_title($path);
+            $versions[$v] = array(
+                'label'     => '자동 감지',
+                'desc'      => $desc !== '' ? $desc : basename($path),
+                'file'      => $path,
+                'installed' => null, // 판정 로직이 등록되지 않음 → 화면에 "확인 불가"로 표시
+            );
+        }
+    }
+
+    ksort($versions);
+    return $versions;
 }
