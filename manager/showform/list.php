@@ -73,8 +73,8 @@ while ($row = sql_fetch_array($result)) {
         'sort' => (int) $row['sort_order'],
         'updated' => htmlspecialchars($row['updated_at'] ? $row['updated_at'] : $row['created_at']),
         'action' => '<a href="' . $edit_url . '" class="mgr-btn">수정</a> '
-            . '<a href="' . G5_ADMIN_URL . '/showform/portfolio_duplicate.php?id=' . (int) $row['id'] . '&return=manager&token=' . $token . '" class="mgr-btn">복제</a> '
-            . '<a href="' . G5_ADMIN_URL . '/showform/portfolio_delete.php?id=' . (int) $row['id'] . '&return=manager&token=' . $token . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'삭제하시겠습니까?\');">삭제</a>',
+            . '<a href="' . SF_MANAGER_URL . '/showform/portfolio_duplicate.php?id=' . (int) $row['id'] . '&return=manager&token=' . $token . '" class="mgr-btn">복제</a> '
+            . '<a href="' . SF_MANAGER_URL . '/showform/portfolio_delete.php?id=' . (int) $row['id'] . '&return=manager&token=' . $token . '" class="mgr-btn" style="color:var(--mgr-danger);" onclick="return confirm(\'삭제하시겠습니까?\');">삭제</a>',
     );
 }
 

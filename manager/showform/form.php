@@ -27,7 +27,7 @@ include __DIR__ . '/../layout/header.php';
     가격/기간은 확정형 문구 대신 상담 유도형 문구를 권장합니다.
 </div>
 
-<form name="fmgrportfolio" method="post" action="<?php echo G5_ADMIN_URL ?>/showform/portfolio_update.php" onsubmit="return fmgrportfolio_submit(this);">
+<form name="fmgrportfolio" method="post" action="<?php echo SF_MANAGER_URL ?>/showform/portfolio_update.php" onsubmit="return fmgrportfolio_submit(this);">
     <input type="hidden" name="token" value="<?php echo get_admin_token(); ?>">
     <input type="hidden" name="return" value="manager">
     <?php if ($id > 0): ?>

@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `{prefix}sf_portfolio` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(200) NOT NULL DEFAULT '',
+  `slug` VARCHAR(200) NOT NULL DEFAULT '',
+  `industry` VARCHAR(100) NOT NULL DEFAULT '',
+  `summary` VARCHAR(500) NOT NULL DEFAULT '',
+  `thumbnail` VARCHAR(255) NOT NULL DEFAULT '',
+  `body` TEXT NULL,
+  `site_url` VARCHAR(255) NOT NULL DEFAULT '',
+  `build_type` VARCHAR(50) NOT NULL DEFAULT '',
+  `price_note` VARCHAR(500) NOT NULL DEFAULT '',
+  `is_featured` CHAR(1) NOT NULL DEFAULT 'N',
+  `is_display` CHAR(1) NOT NULL DEFAULT 'Y',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `updated_by` VARCHAR(20) NOT NULL DEFAULT '',
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NULL,
+  `deleted_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sf_portfolio_slug` (`slug`),
+  KEY `idx_sf_portfolio_display` (`is_display`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
