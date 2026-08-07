@@ -4377,6 +4377,12 @@ const Builder = {
         let bodyText = '';
         bodyCards.forEach(c => { bodyText += (c.title ? c.title + '\n' : '') + c.content + '\n\n'; });
 
+        // 중복 문장 검사용으로는 카드 제목을 뺀 본문을 따로 보낸다. 위 bodyText는 소제목을
+        // 본문에 섞기 때문에, 같은 소제목을 쓴 카드가 둘이면 "반복 문장"으로 잡혔다.
+        // 길이·금지어·키워드 밀도는 소제목까지 포함하는 게 맞으므로 bodyText를 그대로 둔다.
+        let duplicateCheckBody = '';
+        bodyCards.forEach(c => { duplicateCheckBody += this._currentCardText(c) + '\n\n'; });
+
         // CTA 블록은 finishPost()에서 최종 조립 시에만 본문에 붙는데, 검수(run_quality_check)는
         // 그 이전(카드 상태)에서 실행된다. CTA에 전화번호를 넣기로 설정해놓고도 검수 시점엔
         // 아직 본문에 안 들어가 있어 "연락처 누락"이 항상 뜨는 문제가 있었다 - 검수용
@@ -4403,6 +4409,7 @@ const Builder = {
         payload.append('post_id', this.postId);
         payload.append('title_text', titleText);
         payload.append('body_text', bodyText);
+        payload.append('duplicate_check_body', duplicateCheckBody);
         payload.append('expected_phone', expectedPhone);
 
         fetch(PB_AJAX_URL, { method: 'POST', body: payload })

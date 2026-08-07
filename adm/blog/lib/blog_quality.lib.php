@@ -103,22 +103,80 @@ function bp_quality_check_business_mismatch(string $body, int $currentAdvertiser
     return array('status' => 'pass', 'detail' => '업체 정보 혼입 없음');
 }
 
+// 문장 경계를 찾아 배열로 돌려준다.
+// 예전에는 preg_split('/[\.\!\?\n]+/u')로 마침표마다 무조건 잘랐다. 그래서
+// https://showform.kr, 3.14, "1. 소개" 같은 것이 여러 조각으로 쪼개졌고, 그 조각이
+// 우연히 두 번 나오면 "중복 문장"으로 잡혔다.
+// 마침표류는 뒤가 공백이거나 문장 끝일 때만 경계로 보고, 바로 앞 토큰이 숫자뿐이면
+// 목록 번호로 보아 자르지 않는다. builder.js의 _splitSentencesWithOffsets와 같은 규칙이라
+// 화면에 펼쳐 보이는 목록과 서버 판정이 어긋나지 않는다.
+//
+// 구분자(. ! ? \n)는 모두 ASCII이고 UTF-8은 자기동기적이므로 바이트 단위로 훑어도
+// 한글이 중간에서 잘리지 않는다.
+function bp_quality_split_sentences(string $text): array
+{
+    $out = array();
+    $start = 0;
+    $len = strlen($text);
+
+    for ($i = 0; $i < $len; $i++) {
+        $ch = $text[$i];
+        $boundary = false;
+
+        if ($ch === "\n") {
+            $boundary = true;
+        } elseif ($ch === '.' || $ch === '!' || $ch === '?') {
+            $next = ($i + 1 < $len) ? $text[$i + 1] : '';
+            if ($next === '' || preg_match('/\s/', $next)) {
+                if (!preg_match('/(^|\s)\d+$/', substr($text, $start, $i - $start))) {
+                    $boundary = true;
+                }
+            }
+        }
+
+        if ($boundary) {
+            $out[] = substr($text, $start, $i - $start);
+            $start = $i + 1;
+        }
+    }
+    if ($start < $len) {
+        $out[] = substr($text, $start);
+    }
+    return $out;
+}
+
+// 중복 문장 검사 v2 — 카드 제목 제외 + 문장 분리 규칙 개선.
+// 넘어오는 $body는 카드 제목을 뺀 본문이다(bp_quality_check 참고). 같은 소제목을 쓴
+// 카드가 두 개 있다는 이유로 "본문이 반복된다"고 경고하던 것이 v1의 주된 오탐이었다.
 function bp_quality_check_duplicate_sentences(string $body): array
 {
-    $sentences = preg_split('/[\.\!\?\n]+/u', $body);
+    $sentences = bp_quality_split_sentences($body);
     $sentences = array_filter(array_map('trim', $sentences), function ($s) {
-        return mb_strlen($s) > 5;
+        // 공백을 뺀 실질 길이로 판단한다(들여쓰기만 다른 조각이 걸리지 않도록).
+        return mb_strlen(preg_replace('/\s+/u', '', $s)) > 5;
     });
     $counts = array_count_values($sentences);
     $dupes = array_filter($counts, function ($c) {
         return $c >= 2;
     });
     if (empty($dupes)) {
-        return array('status' => 'pass', 'detail' => '중복 문장 없음');
+        return array('status' => 'pass', 'detail' => '중복 문장 없음 [v2·카드 제목 제외]');
     }
     $max_repeat = max($dupes);
     $status = $max_repeat >= 3 ? 'fail' : 'warn';
-    return array('status' => $status, 'detail' => '반복 문장 ' . count($dupes) . '건(최대 ' . $max_repeat . '회 반복)');
+
+    // 개수만 남기면 어디를 고쳐야 하는지 알 수 없다 - 실제 문장도 함께 적는다.
+    // detail은 저장 시 500자로 잘리므로 앞 3건만, 각 40자까지.
+    $samples = array_slice(array_keys($dupes), 0, 3);
+    foreach ($samples as $k => $s) {
+        $samples[$k] = mb_strimwidth($s, 0, 40, '…');
+    }
+
+    return array(
+        'status' => $status,
+        'detail' => '반복 문장 ' . count($dupes) . '건(최대 ' . $max_repeat . '회 반복) — '
+                  . implode(' / ', $samples) . ' [v2·카드 제목 제외]',
+    );
 }
 
 function bp_quality_check_keyword_stuffing(string $body, string $keyword): array
@@ -146,13 +204,21 @@ function bp_quality_check(array $post, array $advertiser, array $project): array
     $body = isset($post['body']) ? (string) $post['body'] : '';
     $title = isset($post['title']) ? (string) $post['title'] : '';
 
+    // 중복 문장만 카드 제목을 뺀 본문으로 검사한다. 호출부가 $post['duplicate_check_body']를
+    // 넘기지 않으면(project_action.php 등 예전 경로) 기존처럼 $body를 그대로 쓴다.
+    // 나머지 검사는 제목을 포함한 본문이 맞다 - 길이·금지어·키워드 밀도는 독자가 실제로
+    // 읽는 글 전체가 대상이기 때문이다.
+    $duplicate_body = isset($post['duplicate_check_body']) && $post['duplicate_check_body'] !== ''
+        ? (string) $post['duplicate_check_body']
+        : $body;
+
     return array(
         'title_length' => bp_quality_check_title_length($title),
         'body_length' => bp_quality_check_body_length($body),
         'forbidden_words' => bp_quality_check_forbidden_words($body, isset($advertiser['forbidden_words']) ? (string) $advertiser['forbidden_words'] : ''),
         'contact_missing' => bp_quality_check_contact_missing($body, isset($advertiser['phone']) ? (string) $advertiser['phone'] : '', isset($advertiser['consult_url']) ? (string) $advertiser['consult_url'] : ''),
         'business_mismatch' => bp_quality_check_business_mismatch($body, (int) $advertiser['id']),
-        'duplicate_sentences' => bp_quality_check_duplicate_sentences($body),
+        'duplicate_sentences' => bp_quality_check_duplicate_sentences($duplicate_body),
         'keyword_stuffing' => bp_quality_check_keyword_stuffing($body, isset($project['primary_keyword']) ? (string) $project['primary_keyword'] : ''),
     );
 }

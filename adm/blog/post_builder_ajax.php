@@ -9,6 +9,12 @@ $is_ajax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTT
         || (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
         || (isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
 
+if ($is_ajax) {
+    // PHP 8.4 Warning/Deprecated 로그가 JSON 응답에 혼입되어 프론트엔드 파싱이 깨지는 것을 방지
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL); // 로그로는 남긴다
+}
+
 // 세션이 끊긴 AJAX 요청은 여기서 JSON 401로 끝낸다. 아래 _common.php가 로드되면
 // admin.lib.php의 verify_mb_key() 실패 경로가 alert_close() HTML을 출력해 버려서,
 // 프런트의 response.json()이 깨지고 원인 파악이 불가능해지기 때문이다.
@@ -958,7 +964,14 @@ switch($action) {
             'title' => $title_text,
             'body' => $body_text
         );
-        
+
+        // 중복 문장 검사에만 쓰는, 카드 제목을 뺀 본문. 클라이언트가 보내지 않으면
+        // bp_quality_check()가 $body로 폴백하므로 이 액션을 거치지 않는 예전 호출부
+        // (project_action.php 등)는 그대로 동작한다.
+        if (isset($request['duplicate_check_body'])) {
+            $post_data['duplicate_check_body'] = (string) $request['duplicate_check_body'];
+        }
+
         $checks = bp_run_and_save_quality_check($project_id, $post_id, $post_data, $advertiser, $proj ? $proj : array());
         
         $pass_count = 0;
