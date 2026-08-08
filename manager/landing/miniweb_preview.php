@@ -53,7 +53,10 @@ if (trim($parts['html']) === '') {
 }
 ?>
 <?php if (trim($parts['js']) !== '') { ?>
-<script><?php echo $parts['js']; ?></script>
+<?php // 블록의 js_code 에 스크립트 종료 태그가 들어 있으면 HTML 파서가 여기서 script 를
+      // 닫아버려, 나머지 코드가 화면에 글자로 쏟아진다. 종료로 읽히지 않게 끊어 준다
+      // (자바스크립트 문자열 안에서는 <\/ 가 / 와 같으므로 동작은 그대로다). ?>
+<script><?php echo str_replace('</script', '<\/script', $parts['js']); ?></script>
 <?php } ?>
 </body>
 </html>

@@ -549,8 +549,11 @@ if ($mw_ready) {
         var pid = <?php echo (int) $mw_pid; ?>;
         var sec = <?php echo json_encode($mw_sec); ?>;
 
-        // 블록별 입력 항목 정의. JSON_HEX_TAG 를 주는 이유는 값 안의 "</script>" 가
-        // 스크립트를 여기서 끊어버리지 않게 하기 위해서다.
+        // 블록별 입력 항목 정의. JSON_HEX_TAG 를 주는 이유는 값 안에 스크립트 종료 태그가
+        // 섞여 들어와도 이 script 요소가 거기서 끊기지 않게 하기 위해서다.
+        // (그 태그는 이 주석 안에도 적으면 안 된다. HTML 파서는 주석인지 따지지 않고
+        //  종료 태그를 만나는 즉시 script 를 닫아버려, 그 아래 코드가 전부 화면에
+        //  글자로 쏟아진다. 실제로 그렇게 배포해서 빌더가 통째로 멈춘 적이 있다.)
         var SCHEMAS = <?php echo json_encode($mw_schemas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         // 저장돼 있던 값 전체. 지금 화면에 안 보이는 키도 여기 남아 있어야 유지된다.
         var content = <?php echo json_encode((object) $mw_section['content'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
@@ -594,7 +597,7 @@ if ($mw_ready) {
             var el;
             if (type === 'repeater') {
                 var groupKey = key;
-                // 반복 항목에는 'mwf_<key>' 요소가 없다. label 의 for 를 그대로 두면
+                // 반복 항목에는 mwf_ + key 로 만든 요소가 없다. label 의 for 를 그대로 두면
                 // 존재하지 않는 요소를 가리키게 되므로 지운다.
                 label.removeAttribute('for');
                 if (!Array.isArray(content[groupKey])) { content[groupKey] = []; }
@@ -747,7 +750,7 @@ if ($mw_ready) {
             for (var i = 0; i < list.length; i++) {
                 var f = list[i];
                 if (!f.required) { continue; }
-                // 반복 항목은 입력칸이 하나가 아니라 배열이다. 'mwf_<key>' 요소가 없어
+                // 반복 항목은 입력칸이 하나가 아니라 배열이다. mwf_ + key 요소가 없어
                 // 아래 검사로는 항상 통과해버리므로 항목 수로 판정한다.
                 if (String(f.type) === 'repeater') {
                     if (!Array.isArray(content[f.key]) || !content[f.key].length) {
