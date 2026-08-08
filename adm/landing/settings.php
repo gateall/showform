@@ -9,7 +9,10 @@
 // 상태 표시는 SELECT/SHOW 만 하고, CREATE/ALTER 는 아래 POST 분기에서만 실행한다.
 // _common.php는 $sub_menu를 세팅하지 않는다. 여기서 지정하지 않으면 auth_check_menu가
 // 빈 코드로 검사해 권한 판정이 무의미해진다(같은 폴더의 ai_setting.php 등과 같은 방식).
-$sub_menu = '900900'; // 랜딩 > 미니웹 설정
+// 900900은 adm/sms_admin/num_book_file*.php가 이미 쓰는 코드라 그대로 두면 미니웹
+// 설치 권한이 SMS 번호북 권한과 한 몸이 된다. 전용 코드로 바꾸고
+// adm/admin.menu900.php에 등록해 관리자 메뉴에서 들어올 수 있게 했다.
+$sub_menu = '900060'; // 랜딩 > 미니웹 설정
 
 include_once('./_common.php');
 

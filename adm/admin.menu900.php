@@ -9,6 +9,11 @@ $menu['menu900'] = array(
     array('900300', '<i class="fa-solid fa-wand-magic-sparkles"></i> AI 자동생성', G5_ADMIN_URL.'/landing/ai_generate.php', 'ai_generate'),
     array('900400', '<i class="fa-solid fa-images"></i> 갤러리관리', G5_ADMIN_URL.'/landing/gallery_list.php', 'gallery_list'),
     array('990050', '<i class="fa-solid fa-tags"></i> 업종관리', G5_ADMIN_URL.'/landing/category_list.php', 'category_list'),
+    // 900060: 미니웹 설치/설정 화면 전용 코드. settings.php가 쓰던 900900은
+    // adm/sms_admin/num_book_file*.php가 이미 쓰고 있어(= 권한을 SMS 번호북과 공유),
+    // 여기에 등록하면 auth_list.php의 900900 라벨까지 "미니웹 설정"으로 덮어썼다.
+    // 랜딩 설치 화면(install.php)이 쓰는 900050 바로 옆의 빈 코드를 새로 잡았다.
+    array('900060', '<i class="fa-solid fa-cubes"></i> 미니웹 설정', G5_ADMIN_URL.'/landing/settings.php', 'miniweb_settings'),
 );
 
 $menu['menu910'] = array(

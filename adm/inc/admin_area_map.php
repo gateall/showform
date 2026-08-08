@@ -68,6 +68,7 @@ function bp_sf_content_vertical_map(): array
         'category_list' => '랜딩페이지',
         'sf_inquiry' => '랜딩페이지',
         'sf_ai' => '랜딩페이지',
+        'miniweb_settings' => '랜딩페이지',
         'ai_prompt' => '랜딩페이지',
         'ai_log' => '랜딩페이지',
         'ai_setting' => '랜딩페이지',
