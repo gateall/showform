@@ -1,3 +1,13 @@
+-- MINIWEB-SEED-ID: hero
+-- MINIWEB-SEED-LABEL: Hero 기본 블록
+-- MINIWEB-SECTION-TYPE: hero
+-- MINIWEB-SEED-VERSION: 1
+-- MINIWEB-SEED-BLOCKS: 3
+--
+-- 위 다섯 줄은 설치 화면이 읽는다. 설치 목록에 시드를 하나 늘릴 때 PHP를 고치지 않고
+-- 이 파일만 추가하면 되도록 하기 위한 것이다(형식: "-- MINIWEB-<키>: <값>").
+-- SEED-BLOCKS 는 이 파일이 넣는 블록 수. 설치 상태를 '일부 설치'까지 구분하는 데 쓴다.
+
 -- MINIWEB: Hero 기본 샘플 3종 (PoC용)
 --
 -- 세 블록 모두 schema_json의 key 집합이 동일하다(title / description / phone / cta_text / cta_url).

@@ -52,10 +52,141 @@ function mw_table_exists($prefix, $table)
     return $res && sql_num_rows($res) > 0;
 }
 
+// ─── 시드 자동 탐색 ────────────────────────────────────────────────────────
+// 시드를 하나 늘릴 때마다 이 파일과 설치 화면을 고치는 구조를 만들지 않는다.
+// sql/ 에 miniweb_seed_*.sql 을 두면 설치 목록에 저절로 나타난다.
+//
+// 관리자가 보낸 문자열을 경로로 쓰지 않는다. 실행 대상은 아래에서 찾아낸 목록뿐이다.
+// basename() 은 경로를 다듬을 뿐 보안 검증이 아니므로, 형식 검사와 폴더 확인을 함께 한다.
+function mw_seed_files()
+{
+    $dir = realpath(MW_SQL_DIR);
+    if ($dir === false) {
+        return array();
+    }
+
+    $out = array();
+    foreach ((array) glob($dir . '/miniweb_seed_*.sql') as $path) {
+        if (!preg_match('/^miniweb_seed_[a-zA-Z0-9_-]+\.sql$/', basename($path))) continue;
+        $real = realpath($path);
+        if ($real === false || !is_file($real)) continue;
+        if (strpos($real, $dir . DIRECTORY_SEPARATOR) !== 0) continue; // 폴더 밖은 제외
+        $out[] = $real;
+    }
+    sort($out);
+    return $out;
+}
+
+// 파일 앞머리의 "-- MINIWEB-키: 값" 줄을 읽는다. 없으면 파일명에서 유추한다.
+function mw_seed_meta($path)
+{
+    $meta = array('file' => basename($path), 'path' => $path, 'id' => '', 'label' => '',
+                  'section_type' => '', 'version' => '', 'blocks' => 0);
+
+    $fp = @fopen($path, 'r');
+    if ($fp) {
+        $read = 0;
+        while ($read < 40 && ($line = fgets($fp)) !== false) {
+            $read++;
+            if (!preg_match('/^\s*--\s*MINIWEB-([A-Za-z-]+)\s*:\s*(.+?)\s*$/', $line, $m)) continue;
+            switch (strtoupper($m[1])) {
+                case 'SEED-ID':      $meta['id'] = $m[2]; break;
+                case 'SEED-LABEL':   $meta['label'] = $m[2]; break;
+                case 'SECTION-TYPE': $meta['section_type'] = $m[2]; break;
+                case 'SEED-VERSION': $meta['version'] = $m[2]; break;
+                case 'SEED-BLOCKS':  $meta['blocks'] = (int) $m[2]; break;
+            }
+        }
+        fclose($fp);
+    }
+
+    // metadata 가 없거나 id 형식이 틀린 파일도 목록에서 조용히 사라지지 않게 파일명으로 채운다.
+    // id 는 화면에 뿌리고 POST 로 돌아오는 값이라 형식을 좁게 제한한다.
+    $from_file = preg_match('/^miniweb_seed_(.+)\.sql$/', $meta['file'], $m) ? $m[1] : '';
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', (string) $meta['id'])) {
+        $meta['id'] = $from_file;
+    }
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', (string) $meta['id'])) {
+        $meta['id'] = '';
+    }
+    if ($meta['label'] === '') {
+        $meta['label'] = $meta['id'];
+    }
+    return $meta;
+}
+
+// 섹션 타입별 블록 수. 설치 여부는 "파일이 있으니 설치된 것"이 아니라 DB 로만 판단한다.
+function mw_section_block_count($prefix, $section_type)
+{
+    $section_type = trim((string) $section_type);
+    if ($section_type === '') {
+        return -1; // 셀 기준이 없다
+    }
+    $row = sql_fetch(" select count(*) as cnt from {$prefix}miniweb_block
+                       where section_type = '" . sql_real_escape_string($section_type) . "' ", false);
+    return $row ? (int) $row['cnt'] : 0;
+}
+
+// 성공 메시지에 무엇이 들어갔는지 보여주기 위한 목록.
+function mw_section_block_names($prefix, $section_type, $limit = 10)
+{
+    $section_type = trim((string) $section_type);
+    if ($section_type === '') {
+        return array();
+    }
+    $limit = (int) $limit;
+    $res = sql_query(" select block_name from {$prefix}miniweb_block
+                       where section_type = '" . sql_real_escape_string($section_type) . "'
+                       order by sort_order asc, id asc limit {$limit} ", false);
+    $out = array();
+    if ($res) {
+        while ($row = sql_fetch_array($res)) { $out[] = $row['block_name']; }
+    }
+    return $out;
+}
+
+// 기대 개수를 모르면 '일부 설치'라고 단정하지 않는다. 0개면 미설치, 있으면 설치됨.
+function mw_seed_state($count, $expected)
+{
+    if ($count < 0)  return 'unknown';
+    if ($count === 0) return 'none';
+    if ($expected > 0 && $count < $expected) return 'partial';
+    return 'installed';
+}
+
+function mw_seed_list($prefix, $block_table_ready)
+{
+    $list = array();
+    foreach (mw_seed_files() as $path) {
+        $meta = mw_seed_meta($path);
+        if ($meta['id'] === '') continue;
+        $meta['count'] = $block_table_ready ? mw_section_block_count($prefix, $meta['section_type']) : -1;
+        $meta['state'] = mw_seed_state($meta['count'], (int) $meta['blocks']);
+        $list[$meta['id']] = $meta;
+    }
+    return $list;
+}
+
+// POST 로 온 id 로 파일을 고른다. 경로 문자열은 받지 않는다.
+function mw_seed_find($id)
+{
+    $id = (string) $id;
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', $id)) {
+        return null;
+    }
+    foreach (mw_seed_files() as $path) {
+        $meta = mw_seed_meta($path);
+        if ($meta['id'] === $id) {
+            return $meta;
+        }
+    }
+    return null;
+}
+
 // 화면이 보여줄 상태. 조회만 한다.
 function mw_install_status($prefix)
 {
-    $status = array('tables' => array(), 'all_tables' => true, 'hero_seed' => 0, 'hero_expected' => 3);
+    $status = array('tables' => array(), 'all_tables' => true, 'seeds' => array());
 
     foreach (mw_install_tables() as $table => $label) {
         $exists = mw_table_exists($prefix, $table);
@@ -65,11 +196,8 @@ function mw_install_status($prefix)
         }
     }
 
-    // 블록 테이블이 있을 때만 시드 개수를 센다.
-    if ($status['tables']['miniweb_block']['installed']) {
-        $row = sql_fetch(" select count(*) as cnt from {$prefix}miniweb_block where section_type = 'hero' ", false);
-        $status['hero_seed'] = $row ? (int) $row['cnt'] : 0;
-    }
+    // 블록 테이블이 있을 때만 DB 를 센다.
+    $status['seeds'] = mw_seed_list($prefix, $status['tables']['miniweb_block']['installed']);
 
     return $status;
 }

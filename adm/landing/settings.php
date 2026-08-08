@@ -47,17 +47,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $msg_type = 'error';
             }
         } elseif ($action === 'seed') {
-            // 시드는 블록 테이블이 있어야 넣을 수 있다.
-            if (!mw_table_exists($prefix, 'miniweb_block')) {
+            // 실행할 파일은 관리자가 보낸 경로가 아니라, 서버가 sql/ 에서 찾아낸 목록에서 고른다.
+            $seed = mw_seed_find(isset($_POST['seed_id']) ? $_POST['seed_id'] : '');
+
+            if (!$seed) {
+                $msg = '알 수 없는 시드입니다. 화면을 새로고침한 뒤 다시 시도해 주세요.';
+                $msg_type = 'error';
+            } elseif (!mw_table_exists($prefix, 'miniweb_block')) {
                 $msg = '블록 테이블이 아직 없습니다. 미니웹 DB 설치를 먼저 실행해 주세요.';
                 $msg_type = 'error';
             } else {
-                $r = mw_install_run_sql_file(mw_install_sql_path('miniweb_seed_v1.sql'), $prefix);
+                $before = mw_section_block_count($prefix, $seed['section_type']);
+                $r = mw_install_run_sql_file($seed['path'], $prefix);
+
                 if ($r['ok']) {
-                    $msg = "Hero 기본 샘플을 설치했습니다. (실행 {$r['ran']}건)";
+                    $after = mw_section_block_count($prefix, $seed['section_type']);
+                    $names = mw_section_block_names($prefix, $seed['section_type']);
+                    $msg = $seed['label'] . ' 설치 완료';
+                    if ($after >= 0) {
+                        $added = ($before >= 0) ? max(0, $after - $before) : 0;
+                        $msg .= " · 현재 블록 {$after}개(새로 추가 {$added}개)";
+                    }
+                    if ($names) {
+                        $msg .= ' · ' . implode(' / ', $names);
+                    }
                     $msg_type = 'ok';
                 } else {
-                    $msg = '샘플 설치 중 오류가 발생했습니다: ' . implode(' / ', $r['errors']);
+                    // 무엇을 실행하다 실패했는지는 알리되 SQL 전문이나 접속 정보는 내보내지 않는다.
+                    $msg = $seed['label'] . ' 설치 실패 (' . $seed['file'] . ') — ' . implode(' / ', $r['errors']);
                     $msg_type = 'error';
                 }
             }
@@ -96,6 +113,20 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 .mw-actions button[disabled] { opacity:.5; cursor:not-allowed; }
 .mw-note { margin-top:10px; font-size:13px; color:#64748b; line-height:1.6; }
 
+.mw-seed { border-top:1px solid #f1f5f9; padding:14px 0; }
+.mw-seed__head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.mw-seed__name { font-weight:700; font-size:14px; }
+.mw-seed__meta { margin-top:6px; font-size:12px; color:#64748b; line-height:1.7; word-break:break-all; }
+.mw-seed__form { margin-top:10px; }
+.mw-seed__form button { width:100%; min-height:44px; padding:10px 16px; border-radius:10px;
+                        border:1px solid #cbd5e1; background:#fff; font-weight:700; cursor:pointer; }
+.mw-seed__form button.primary { background:#0f766e; border-color:#0f766e; color:#fff; }
+.mw-seed__form button[disabled] { opacity:.5; cursor:not-allowed; }
+
+@media (min-width: 768px) {
+    .mw-seed__form button { width:auto; min-width:200px; }
+}
+
 @media (min-width: 768px) {
     .mw-actions { grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
@@ -107,7 +138,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
     <?php } ?>
 
     <div class="mw-card">
-        <h2>미니웹 DB 상태</h2>
+        <h2>미니웹 DB</h2>
         <div class="mw-rows">
             <?php foreach ($status['tables'] as $table => $info) { ?>
                 <div class="mw-row">
@@ -119,14 +150,6 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     </span>
                 </div>
             <?php } ?>
-            <div class="mw-row">
-                <span>Hero 기본 샘플
-                    <span style="color:#94a3b8;font-size:12px;">(<?php echo (int) $status['hero_seed']; ?>/<?php echo (int) $status['hero_expected']; ?>)</span>
-                </span>
-                <span class="mw-badge <?php echo $status['hero_seed'] >= $status['hero_expected'] ? 'on' : 'off'; ?>">
-                    <?php echo $status['hero_seed'] >= $status['hero_expected'] ? '설치됨' : '미설치'; ?>
-                </span>
-            </div>
         </div>
 
         <form method="post" class="mw-actions">
@@ -137,19 +160,65 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 onclick="return confirm('미니웹 테이블을 생성합니다. 계속할까요?');">
                 미니웹 DB 설치
             </button>
-            <button type="submit" name="do" value="seed"
-                <?php echo $status['tables']['miniweb_block']['installed'] ? '' : 'disabled'; ?>
-                onclick="return confirm('Hero 기본 샘플 3종을 등록합니다. 계속할까요?');">
-                Hero 기본 샘플 설치
-            </button>
         </form>
 
         <p class="mw-note">
-            이 화면을 여는 것만으로는 DB가 변경되지 않습니다. 위 버튼을 눌렀을 때만
-            <code>adm/landing/sql/</code> 의 SQL이 실행됩니다.
-            <br>두 SQL 모두 여러 번 실행해도 안전합니다
-            (<code>CREATE TABLE IF NOT EXISTS</code> · <code>ON DUPLICATE KEY UPDATE</code>).
+            이 화면을 여는 것만으로는 DB가 변경되지 않습니다. 버튼을 눌렀을 때만
+            <code>adm/landing/sql/</code> 의 SQL이 실행됩니다
+            (<code>CREATE TABLE IF NOT EXISTS</code>이라 여러 번 눌러도 안전합니다).
         </p>
+    </div>
+
+    <div class="mw-card">
+        <h2>블록 시드</h2>
+        <p class="mw-note" style="margin-top:0;">
+            <code>adm/landing/sql/</code> 의 <code>miniweb_seed_*.sql</code> 을 그대로 읽어 만든 목록입니다.
+            시드 파일을 추가하면 이 화면에 저절로 나타납니다 — PHP를 고칠 필요가 없습니다.
+            <br>설치 여부는 파일이 아니라 <strong>DB에 실제로 들어 있는 블록 수</strong>로 판단합니다.
+        </p>
+
+        <?php if (!$status['seeds']) { ?>
+            <div class="mw-msg info" style="margin:12px 0 0;">
+                설치할 시드 파일이 없습니다. <code>adm/landing/sql/miniweb_seed_*.sql</code> 형식으로 올려 주세요.
+            </div>
+        <?php } ?>
+
+        <?php foreach ($status['seeds'] as $seed) {
+            $state = $seed['state'];
+            $badge = array('installed' => array('on', '설치됨'),
+                           'partial'   => array('off', '일부 설치'),
+                           'none'      => array('off', '미설치'),
+                           'unknown'   => array('off', '확인 불가'));
+            list($badge_class, $badge_text) = isset($badge[$state]) ? $badge[$state] : $badge['unknown'];
+            $ready = $status['tables']['miniweb_block']['installed'];
+        ?>
+            <div class="mw-seed">
+                <div class="mw-seed__head">
+                    <span class="mw-seed__name"><?php echo get_text($seed['label']); ?></span>
+                    <span class="mw-badge <?php echo $badge_class; ?>"><?php echo $badge_text; ?></span>
+                </div>
+                <div class="mw-seed__meta">
+                    <code><?php echo get_text($seed['file']); ?></code>
+                    <?php if ($seed['section_type'] !== '') { ?>
+                        · section_type <code><?php echo get_text($seed['section_type']); ?></code>
+                    <?php } ?>
+                    <?php if ($seed['count'] >= 0) { ?>
+                        · DB 블록 <?php echo (int) $seed['count']; ?><?php echo $seed['blocks'] > 0 ? '/' . (int) $seed['blocks'] : ''; ?>개
+                    <?php } ?>
+                </div>
+                <form method="post" class="mw-seed__form">
+                    <input type="hidden" name="token" value="<?php echo get_token(); ?>">
+                    <input type="hidden" name="seed_id" value="<?php echo get_text($seed['id']); ?>">
+                    <button type="submit" name="do" value="seed" <?php echo $ready ? '' : 'disabled'; ?>
+                        class="<?php echo $state === 'installed' ? '' : 'primary'; ?>"
+                        <?php // 라벨은 시드 파일이 준 값이다. 따옴표가 들어 있어도 JS 문자열이
+                              // 깨지지 않게 addslashes 를 먼저 걸고 HTML 이스케이프한다. ?>
+                        onclick="return confirm('<?php echo get_text(addslashes($seed['label'])); ?> 을(를) 설치합니다. 계속할까요?');">
+                        <?php echo $state === 'installed' ? '다시 설치(덮어쓰기)' : '설치'; ?>
+                    </button>
+                </form>
+            </div>
+        <?php } ?>
     </div>
 
     <div class="mw-card">

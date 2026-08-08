@@ -55,26 +55,9 @@ $mw_pid = isset($_GET['mwpid']) ? (int) $_GET['mwpid'] : 0;
 $mw_sec = isset($_GET['sec']) ? preg_replace('/[^a-z_]/', '', $_GET['sec']) : 'hero';
 if ($mw_sec === '') { $mw_sec = 'hero'; }
 
-// 설치 전이면 아무 것도 조회하지 않는다(없는 테이블을 건드리지 않기 위해).
-$mw_chk = sql_query(" show tables like '" . sql_real_escape_string($mw_prefix . 'miniweb_block') . "' ", false);
-if ($mw_chk && sql_num_rows($mw_chk) > 0) {
-    $mw_ready = true;
-
-    // 섹션 목록도 블록 라이브러리에서 읽는다. 화면에 하드코딩하면 시드로 섹션을 추가해도
-    // 좌측 목록에는 나타나지 않아, SQL만 넣으면 되는 구조가 반쪽이 된다.
-    $mw_sec_res = sql_query(" select section_type, min(sort_order) as ord
-                              from {$mw_prefix}miniweb_block
-                              where is_active = 1
-                              group by section_type
-                              order by ord asc, section_type asc ", false);
-    if ($mw_sec_res) {
-        while ($mw_sr = sql_fetch_array($mw_sec_res)) { $mw_sections[] = $mw_sr['section_type']; }
-    }
-    // 블록이 없는 섹션을 고르면 디자인 목록이 빈 화면이 된다. 있는 것 중 첫째로 되돌린다.
-    if ($mw_sections && !in_array($mw_sec, $mw_sections, true)) { $mw_sec = $mw_sections[0]; }
-}
-
-// 섹션 코드 → 화면 이름. 매핑이 없으면 코드를 그대로 보여준다(빠졌다는 사실이 드러나도록).
+// 섹션 코드 → 화면 이름. 순서도 이 배열 순서를 따른다(MINIWEB_BLOCK_STANDARD 의 카테고리 순).
+// 블록의 sort_order 로 섹션을 정렬하면 시드마다 번호를 어떻게 매겼느냐에 따라
+// Benefits 가 Hero 위로 올라오는 식으로 뒤집힌다. 매핑이 없는 코드는 뒤에 붙인다.
 $mw_sec_labels = array(
     'header' => '헤더', 'hero' => 'Hero 비주얼', 'visual' => '비주얼',
     'primary_cta' => '메인 CTA', 'benefits' => 'Benefits 특징', 'service' => '서비스',
@@ -82,6 +65,36 @@ $mw_sec_labels = array(
     'faq' => 'FAQ', 'contact_form' => '상담 폼', 'footer' => '푸터',
     'mobile_fixed_cta' => '모바일 고정 CTA',
 );
+
+// 설치 전이면 아무 것도 조회하지 않는다(없는 테이블을 건드리지 않기 위해).
+$mw_chk = sql_query(" show tables like '" . sql_real_escape_string($mw_prefix . 'miniweb_block') . "' ", false);
+if ($mw_chk && sql_num_rows($mw_chk) > 0) {
+    $mw_ready = true;
+
+    // 섹션 목록도 블록 라이브러리에서 읽는다. 화면에 하드코딩하면 시드로 섹션을 추가해도
+    // 좌측 목록에는 나타나지 않아, SQL만 넣으면 되는 구조가 반쪽이 된다.
+    $mw_sec_res = sql_query(" select section_type
+                              from {$mw_prefix}miniweb_block
+                              where is_active = 1
+                              group by section_type ", false);
+    if ($mw_sec_res) {
+        while ($mw_sr = sql_fetch_array($mw_sec_res)) { $mw_sections[] = $mw_sr['section_type']; }
+    }
+
+    $mw_sec_order = array_keys($mw_sec_labels);
+    usort($mw_sections, function ($a, $b) use ($mw_sec_order) {
+        $ia = array_search($a, $mw_sec_order, true);
+        $ib = array_search($b, $mw_sec_order, true);
+        if ($ia === false) { $ia = PHP_INT_MAX; }
+        if ($ib === false) { $ib = PHP_INT_MAX; }
+        if ($ia === $ib) { return strcmp($a, $b); }
+        return ($ia < $ib) ? -1 : 1;
+    });
+    // 블록이 없는 섹션을 고르면 디자인 목록이 빈 화면이 된다. 있는 것 중 첫째로 되돌린다.
+    if ($mw_sections && !in_array($mw_sec, $mw_sections, true)) { $mw_sec = $mw_sections[0]; }
+}
+
+// 매핑이 없으면 코드를 그대로 보여준다(빠졌다는 사실이 드러나도록).
 $mw_sec_label = function ($code) use ($mw_sec_labels) {
     return isset($mw_sec_labels[$code]) ? $mw_sec_labels[$code] : $code;
 };
