@@ -85,6 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ─── 여기서부터는 조회만 한다 ───
 $status = mw_install_status($prefix);
 
+// 토큰은 화면당 한 번만 만든다.
+// lib/common.lib.php:2312 의 get_token() 은 값을 돌려주는 함수가 아니라 매번 새 토큰을
+// 만들어 세션(ss_token)을 덮어쓴다. 그래서 폼마다 부르면 마지막에 그려진 폼의 토큰만
+// 세션과 맞고 나머지 폼은 전부 "잘못된 접근입니다"로 막힌다.
+// 설치 화면을 시드별 폼으로 나누면서 실제로 그 일이 났다(Benefits 설치가 눌리지 않음).
+$mw_token = get_token();
+
 $g5['title'] = '미니웹 설정';
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 ?>
@@ -153,9 +160,9 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         </div>
 
         <form method="post" class="mw-actions">
-            <?php // get_token()은 토큰 "값"을 돌려줄 뿐이라 그대로 echo하면 화면에 글자로 찍힌다.
-                  // hidden 필드는 직접 만들어야 한다. ?>
-            <input type="hidden" name="token" value="<?php echo get_token(); ?>">
+            <?php // 위에서 한 번 만든 토큰을 모든 폼이 같이 쓴다(여기서 get_token()을 다시
+                  // 부르면 세션이 바뀌어 다른 폼들이 전부 막힌다). ?>
+            <input type="hidden" name="token" value="<?php echo $mw_token; ?>">
             <button type="submit" name="do" value="schema" class="primary"
                 onclick="return confirm('미니웹 테이블을 생성합니다. 계속할까요?');">
                 미니웹 DB 설치
@@ -207,7 +214,7 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                     <?php } ?>
                 </div>
                 <form method="post" class="mw-seed__form">
-                    <input type="hidden" name="token" value="<?php echo get_token(); ?>">
+                    <input type="hidden" name="token" value="<?php echo $mw_token; ?>">
                     <input type="hidden" name="seed_id" value="<?php echo get_text($seed['id']); ?>">
                     <button type="submit" name="do" value="seed" <?php echo $ready ? '' : 'disabled'; ?>
                         class="<?php echo $state === 'installed' ? '' : 'primary'; ?>"
