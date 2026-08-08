@@ -45,6 +45,55 @@ foreach ($defaults as $key => $value) {
     }
 }
 
+// ── 미니웹: 화면보다 먼저 정해져야 하는 값들 ────────────────────────────────
+// 좌측 섹션 목록은 이 아래 HTML에서 바로 출력되므로 블록 라이브러리 조회를 여기서 한다.
+// 빌더 블록(파일 하단)에서 조회하면 이미 사이드바가 출력된 뒤라 목록에 반영할 수 없다.
+$mw_prefix = G5_TABLE_PREFIX;
+$mw_ready = false;
+$mw_sections = array();
+$mw_pid = isset($_GET['mwpid']) ? (int) $_GET['mwpid'] : 0;
+$mw_sec = isset($_GET['sec']) ? preg_replace('/[^a-z_]/', '', $_GET['sec']) : 'hero';
+if ($mw_sec === '') { $mw_sec = 'hero'; }
+
+// 설치 전이면 아무 것도 조회하지 않는다(없는 테이블을 건드리지 않기 위해).
+$mw_chk = sql_query(" show tables like '" . sql_real_escape_string($mw_prefix . 'miniweb_block') . "' ", false);
+if ($mw_chk && sql_num_rows($mw_chk) > 0) {
+    $mw_ready = true;
+
+    // 섹션 목록도 블록 라이브러리에서 읽는다. 화면에 하드코딩하면 시드로 섹션을 추가해도
+    // 좌측 목록에는 나타나지 않아, SQL만 넣으면 되는 구조가 반쪽이 된다.
+    $mw_sec_res = sql_query(" select section_type, min(sort_order) as ord
+                              from {$mw_prefix}miniweb_block
+                              where is_active = 1
+                              group by section_type
+                              order by ord asc, section_type asc ", false);
+    if ($mw_sec_res) {
+        while ($mw_sr = sql_fetch_array($mw_sec_res)) { $mw_sections[] = $mw_sr['section_type']; }
+    }
+    // 블록이 없는 섹션을 고르면 디자인 목록이 빈 화면이 된다. 있는 것 중 첫째로 되돌린다.
+    if ($mw_sections && !in_array($mw_sec, $mw_sections, true)) { $mw_sec = $mw_sections[0]; }
+}
+
+// 섹션 코드 → 화면 이름. 매핑이 없으면 코드를 그대로 보여준다(빠졌다는 사실이 드러나도록).
+$mw_sec_labels = array(
+    'header' => '헤더', 'hero' => 'Hero 비주얼', 'visual' => '비주얼',
+    'primary_cta' => '메인 CTA', 'benefits' => 'Benefits 특징', 'service' => '서비스',
+    'process' => '진행 과정', 'pricing' => '가격', 'trust' => '신뢰 요소',
+    'faq' => 'FAQ', 'contact_form' => '상담 폼', 'footer' => '푸터',
+    'mobile_fixed_cta' => '모바일 고정 CTA',
+);
+$mw_sec_label = function ($code) use ($mw_sec_labels) {
+    return isset($mw_sec_labels[$code]) ? $mw_sec_labels[$code] : $code;
+};
+// 섹션을 바꿔도 편집 중인 랜딩(id)과 미니웹 프로젝트(mwpid)를 잃지 않게 한다.
+$mw_sec_url = function ($code) use ($id, $mw_pid) {
+    $q = array();
+    if ($id) { $q['id'] = $id; }
+    if ($mw_pid) { $q['mwpid'] = $mw_pid; }
+    $q['sec'] = $code;
+    return '?' . http_build_query($q);
+};
+
 include_once(dirname(__FILE__) . '/../layout/header.php');
 ?>
 <link rel="stylesheet" href="<?php echo SF_MANAGER_URL; ?>/landing/landing_admin.css">
@@ -95,10 +144,20 @@ include_once(dirname(__FILE__) . '/../layout/header.php');
 <div class="sf-3col-wrapper">
     <!-- 좌측 네비게이션 (플레이스홀더) -->
     <aside class="sf-left-sidebar">
-        <h3 style="margin-top:0; font-size:1rem; color:#0f172a;">메뉴</h3>
-        <ul style="list-style:none; padding:0; margin:0;">
-            <li><a href="<?php echo SF_MANAGER_URL; ?>/landing/landing_list.php" style="color:#334155; text-decoration:none;">목록</a></li>
-            <li><a href="<?php echo SF_MANAGER_URL; ?>/landing/landing_form.php" style="color:#334155; text-decoration:none;">새 랜딩</a></li>
+        <h3 style="margin-top:0; font-size:1rem; color:#0f172a;">섹션 관리</h3>
+        <ul style="list-style:none; padding:0; margin:0; line-height:2;" id="mwSectionNav">
+            <?php if (!$mw_sections) { ?>
+                <li style="color:#94a3b8; font-size:.8125rem; line-height:1.6;">
+                    <?php echo $mw_ready ? '등록된 블록이 없습니다.' : '미니웹이 아직 설치되지 않았습니다.'; ?>
+                </li>
+            <?php } foreach ($mw_sections as $mw_s) { $mw_on = ($mw_s === $mw_sec); ?>
+                <li><a href="<?php echo $mw_sec_url($mw_s); ?>"
+                       style="color:<?php echo $mw_on ? 'var(--mgr-primary)' : '#334155'; ?>; font-weight:<?php echo $mw_on ? '700' : '400'; ?>; text-decoration:none;"><?php echo get_text($mw_sec_label($mw_s)); ?></a></li>
+            <?php } ?>
+        </ul>
+        <hr style="margin:16px 0; border:0; border-top:1px solid #e5e7eb;">
+        <ul style="list-style:none; padding:0; margin:0; line-height:2;">
+            <li><a href="<?php echo SF_MANAGER_URL; ?>/landing/landing_list.php" style="color:#64748b; text-decoration:none;">랜딩 목록으로</a></li>
         </ul>
     </aside>
 
@@ -346,28 +405,34 @@ function sfAiGenerate(action, btn) {
 //
 // 프로젝트는 ?mwpid=N 로 따라다닌다. 없으면 첫 저장 시 만들어진다.
 // ─────────────────────────────────────────────────────────────────────────
-$mw_prefix = G5_TABLE_PREFIX;
-$mw_ready = false;
+// $mw_prefix / $mw_ready / $mw_pid / $mw_sec / $mw_sections 는 헤더를 출력하기 전(파일 위쪽)에
+// 이미 정해 두었다. 좌측 섹션 목록이 그 값을 쓰기 때문이다. 여기서는 선택된 섹션의
+// 블록 목록과 저장된 콘텐츠만 읽는다.
 $mw_blocks = array();
+$mw_schemas = array(); // block_id => schema_json 필드 정의. 편집 폼을 이걸로 그린다.
 $mw_section = array('block_id' => 0, 'content' => array());
-$mw_pid = isset($_GET['mwpid']) ? (int) $_GET['mwpid'] : 0;
+$mw_sec_sql = sql_real_escape_string($mw_sec);
 
-// 설치 전이면 안내만 하고 UI를 그리지 않는다(없는 테이블을 조회하지 않기 위해).
-$mw_chk = sql_query(" show tables like '" . sql_real_escape_string($mw_prefix . 'miniweb_block') . "' ", false);
-if ($mw_chk && sql_num_rows($mw_chk) > 0) {
-    $mw_ready = true;
-
-    $mw_res = sql_query(" select id, block_code, block_name, thumbnail_url
+if ($mw_ready) {
+    // schema_json 을 같이 읽는다. 입력 항목을 화면에 하드코딩하면 섹션 종류가 늘 때마다
+    // 폼 HTML을 손으로 다시 써야 하고, 블록이 요구하는 항목과 화면이 어긋나도 알 수 없다.
+    // BLOCK_STANDARD 3항이 "블록이 스키마를 정의하고 편집기가 그걸 보고 그린다"인 이유다.
+    $mw_res = sql_query(" select id, block_code, block_name, thumbnail_url, schema_json
                           from {$mw_prefix}miniweb_block
-                          where section_type = 'hero' and is_active = 1
+                          where section_type = '{$mw_sec_sql}' and is_active = 1
                           order by sort_order asc, id asc ", false);
     if ($mw_res) {
-        while ($mw_r = sql_fetch_array($mw_res)) { $mw_blocks[] = $mw_r; }
+        while ($mw_r = sql_fetch_array($mw_res)) {
+            $mw_blocks[] = $mw_r;
+            $mw_fields = json_decode((string) $mw_r['schema_json'], true);
+            // 스키마가 비었거나 깨졌으면 빈 배열로 둔다. 화면은 그 사실을 그대로 알린다.
+            $mw_schemas[(int) $mw_r['id']] = is_array($mw_fields) ? array_values($mw_fields) : array();
+        }
     }
 
     if ($mw_pid > 0) {
         $mw_s = sql_fetch(" select block_id, content_json from {$mw_prefix}miniweb_section
-                            where project_id = '{$mw_pid}' and section_type = 'hero' limit 1 ", false);
+                            where project_id = '{$mw_pid}' and section_type = '{$mw_sec_sql}' limit 1 ", false);
         if ($mw_s) {
             $mw_section['block_id'] = (int) $mw_s['block_id'];
             $mw_decoded = json_decode((string) $mw_s['content_json'], true);
@@ -375,13 +440,10 @@ if ($mw_chk && sql_num_rows($mw_chk) > 0) {
         }
     }
 }
-$mw_val = function ($k) use ($mw_section) {
-    return isset($mw_section['content'][$k]) ? $mw_section['content'][$k] : '';
-};
 ?>
 
 <div class="mgr-card" style="margin-top:2rem;padding:1.25rem;">
-    <h2 style="margin:0 0 .25rem;font-size:1.05rem;">미니웹 빌더 <span style="font-weight:400;color:var(--mgr-text-muted);font-size:.8125rem;">· Hero 섹션 (PoC)</span></h2>
+    <h2 style="margin:0 0 .25rem;font-size:1.05rem;">미니웹 빌더 <span style="font-weight:400;color:var(--mgr-text-muted);font-size:.8125rem;">· <?php echo get_text($mw_sec_label($mw_sec)); ?> 섹션</span></h2>
     <p style="margin:0 0 1rem;color:var(--mgr-text-muted);font-size:.875rem;line-height:1.6;">
         디자인을 바꿔도 입력한 내용은 그대로 유지됩니다. 위쪽 랜딩페이지 폼과는 별개 데이터입니다.
     </p>
@@ -451,7 +513,7 @@ $mw_val = function ($k) use ($mw_section) {
         </div>
 
         <div class="mw-b__panel">
-            <p class="mw-b__label">Hero 디자인</p>
+            <p class="mw-b__label"><?php echo get_text($mw_sec_label($mw_sec)); ?> 디자인</p>
             <div class="mw-b__cards" id="mwCards">
                 <?php foreach ($mw_blocks as $b) {
                     $cur = ((int) $b['id'] === $mw_section['block_id']); ?>
@@ -469,26 +531,8 @@ $mw_val = function ($k) use ($mw_section) {
             </div>
 
             <p class="mw-b__label" style="margin-top:1rem;">내용</p>
-            <div class="mw-b__field">
-                <label for="mw_title">메인 제목 *</label>
-                <input type="text" id="mw_title" maxlength="60" value="<?php echo get_text($mw_val('title')); ?>">
-            </div>
-            <div class="mw-b__field">
-                <label for="mw_description">보조 설명</label>
-                <textarea id="mw_description" maxlength="200"><?php echo get_text($mw_val('description')); ?></textarea>
-            </div>
-            <div class="mw-b__field">
-                <label for="mw_phone">대표 전화번호</label>
-                <input type="tel" id="mw_phone" inputmode="numeric" value="<?php echo get_text($mw_val('phone')); ?>">
-            </div>
-            <div class="mw-b__field">
-                <label for="mw_cta_text">CTA 문구</label>
-                <input type="text" id="mw_cta_text" maxlength="20" value="<?php echo get_text($mw_val('cta_text')); ?>">
-            </div>
-            <div class="mw-b__field">
-                <label for="mw_cta_url">CTA 링크</label>
-                <input type="text" id="mw_cta_url" value="<?php echo get_text($mw_val('cta_url') !== '' ? $mw_val('cta_url') : '#contact'); ?>">
-            </div>
+            <?php // 입력 항목은 선택한 블록의 schema_json 으로 아래 스크립트가 그린다. ?>
+            <div id="mwFields"></div>
 
             <div class="mw-b__save">
                 <button type="button" class="mgr-btn mgr-btn-primary" id="mwSave">내용 저장</button>
@@ -503,6 +547,15 @@ $mw_val = function ($k) use ($mw_section) {
         var PREVIEW = <?php echo json_encode(SF_MANAGER_URL . '/landing/miniweb_preview.php', JSON_UNESCAPED_SLASHES); ?>;
         var TOKEN = <?php echo json_encode(get_token()); ?>;
         var pid = <?php echo (int) $mw_pid; ?>;
+        var sec = <?php echo json_encode($mw_sec); ?>;
+
+        // 블록별 입력 항목 정의. JSON_HEX_TAG 를 주는 이유는 값 안의 "</script>" 가
+        // 스크립트를 여기서 끊어버리지 않게 하기 위해서다.
+        var SCHEMAS = <?php echo json_encode($mw_schemas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+        // 저장돼 있던 값 전체. 지금 화면에 안 보이는 키도 여기 남아 있어야 유지된다.
+        var content = <?php echo json_encode((object) $mw_section['content'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+        var currentBlock = <?php echo (int) $mw_section['block_id']; ?>;
+        var FIRST_BLOCK = <?php echo count($mw_blocks) ? (int) $mw_blocks[0]['id'] : 0; ?>;
 
         var frame = document.getElementById('mwFrame');
         var stage = frame.parentNode;
@@ -514,14 +567,200 @@ $mw_val = function ($k) use ($mw_section) {
             state.style.color = tone === 'error' ? '#b91c1c' : (tone === 'ok' ? '#166534' : '');
         }
 
-        function fields() {
-            return {
-                title: document.getElementById('mw_title').value,
-                description: document.getElementById('mw_description').value,
-                phone: document.getElementById('mw_phone').value,
-                cta_text: document.getElementById('mw_cta_text').value,
-                cta_url: document.getElementById('mw_cta_url').value
-            };
+        // 아직 디자인을 고르지 않았으면 첫 번째 블록의 스키마로 그려 둔다.
+        // 고르기 전에도 내용을 먼저 입력할 수 있어야 하기 때문이다.
+        function schemaFor(id) {
+            var s = SCHEMAS[id];
+            if (s && s.length) { return s; }
+            s = SCHEMAS[FIRST_BLOCK];
+            return (s && s.length) ? s : [];
+        }
+
+        function fieldNode(f) {
+            var wrap = document.createElement('div');
+            wrap.className = 'mw-b__field';
+
+            var key = String(f.key || '');
+            // 서버(miniweb_ajax.php)가 저장할 때 버리는 키 형식이면 아예 그리지 않는다.
+            // 입력은 되는데 저장은 안 되는 칸을 만들지 않기 위해서다.
+            if (!/^[a-z0-9_]{1,40}$/.test(key)) { return wrap; }
+
+            var type = String(f.type || 'text');
+            var label = document.createElement('label');
+            label.setAttribute('for', 'mwf_' + key);
+            label.textContent = (f.label || key) + (f.required ? ' *' : '');
+            wrap.appendChild(label);
+
+            var el;
+            if (type === 'repeater') {
+                var groupKey = key;
+                // 반복 항목에는 'mwf_<key>' 요소가 없다. label 의 for 를 그대로 두면
+                // 존재하지 않는 요소를 가리키게 되므로 지운다.
+                label.removeAttribute('for');
+                if (!Array.isArray(content[groupKey])) { content[groupKey] = []; }
+                var listContainer = document.createElement('div');
+                
+                function renderRepeater() {
+                    listContainer.innerHTML = '';
+                    var arr = content[groupKey];
+                    for (var i = 0; i < arr.length; i++) {
+                        (function(idx, itemData) {
+                            // 예전 데이터가 문자열 배열이면 하위 칸에 값을 넣어도 아무 데도
+                            // 저장되지 않는다. 객체가 아니면 객체로 바꿔 놓고 시작한다.
+                            if (!itemData || typeof itemData !== 'object') {
+                                itemData = content[groupKey][idx] = {};
+                            }
+                            var itemBox = document.createElement('div');
+                            itemBox.style.border = '1px solid #e2e8f0';
+                            itemBox.style.padding = '12px';
+                            itemBox.style.marginBottom = '8px';
+                            itemBox.style.borderRadius = '4px';
+                            itemBox.style.position = 'relative';
+                            
+                            var delBtn = document.createElement('button');
+                            delBtn.type = 'button';
+                            delBtn.textContent = '삭제';
+                            delBtn.style.position = 'absolute';
+                            delBtn.style.right = '8px';
+                            delBtn.style.top = '8px';
+                            delBtn.style.fontSize = '12px';
+                            delBtn.onclick = function() {
+                                content[groupKey].splice(idx, 1);
+                                renderRepeater();
+                            };
+                            itemBox.appendChild(delBtn);
+                            
+                            var flds = f.fields || [];
+                            for (var j = 0; j < flds.length; j++) {
+                                var subF = flds[j];
+                                var subKey = String(subF.key || '');
+                                // 상위 키와 같은 규칙. 서버(mw_sanitize_array)가 버릴 키는
+                                // 칸을 그리지 않는다 - 입력은 되는데 저장은 안 되는 칸을 막는다.
+                                if (!/^[a-z0-9_]{1,40}$/.test(subKey)) { continue; }
+                                var subWrap = document.createElement('div');
+                                subWrap.style.marginBottom = '6px';
+                                
+                                var subLabel = document.createElement('label');
+                                subLabel.textContent = subF.label || subKey;
+                                subLabel.style.display = 'block';
+                                subLabel.style.fontSize = '13px';
+                                subLabel.style.marginBottom = '2px';
+                                subWrap.appendChild(subLabel);
+                                
+                                var subEl;
+                                if (subF.type === 'textarea') subEl = document.createElement('textarea');
+                                else {
+                                    subEl = document.createElement('input');
+                                    subEl.type = 'text';
+                                }
+                                subEl.value = itemData[subKey] || '';
+                                subEl.style.width = '100%';
+                                
+                                (function(el, k, index) {
+                                    el.addEventListener('input', function() { content[groupKey][index][k] = el.value; });
+                                })(subEl, subKey, idx);
+                                
+                                subWrap.appendChild(subEl);
+                                itemBox.appendChild(subWrap);
+                            }
+                            listContainer.appendChild(itemBox);
+                        })(i, arr[i]);
+                    }
+                }
+                
+                renderRepeater();
+                wrap.appendChild(listContainer);
+                
+                var addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'mgr-btn mgr-btn-default';
+                addBtn.textContent = '+ 항목 추가';
+                addBtn.onclick = function() {
+                    content[groupKey].push({});
+                    renderRepeater();
+                };
+                wrap.appendChild(addBtn);
+                
+                return wrap;
+            } else if (type === 'textarea') {
+                el = document.createElement('textarea');
+            } else if (type === 'select' && f.options && f.options.length) {
+                el = document.createElement('select');
+                for (var i = 0; i < f.options.length; i++) {
+                    var o = f.options[i];
+                    var opt = document.createElement('option');
+                    opt.value = (o && o.value !== undefined) ? o.value : o;
+                    opt.textContent = (o && o.label !== undefined) ? o.label : opt.value;
+                    el.appendChild(opt);
+                }
+            } else {
+                el = document.createElement('input');
+                el.type = (type === 'tel' || type === 'number' || type === 'url') ? type : 'text';
+                if (type === 'tel') { el.inputMode = 'numeric'; }
+                if (type === 'image') { el.placeholder = '이미지 주소'; }
+            }
+
+            el.id = 'mwf_' + key;
+            el.setAttribute('data-key', key);
+            if (f.max && el.tagName !== 'SELECT') { el.maxLength = parseInt(f.max, 10); }
+
+            // 저장값이 우선, 없으면 스키마의 기본값.
+            var v = (content[key] !== undefined && content[key] !== null)
+                ? content[key]
+                : (f['default'] !== undefined ? f['default'] : '');
+            el.value = v;
+            content[key] = String(v);
+
+            el.addEventListener('input', function () { content[this.getAttribute('data-key')] = this.value; });
+            el.addEventListener('change', function () { content[this.getAttribute('data-key')] = this.value; });
+            wrap.appendChild(el);
+            return wrap;
+        }
+
+        function renderFields() {
+            var box = document.getElementById('mwFields');
+            var list = schemaFor(currentBlock);
+            box.innerHTML = '';
+            if (!list.length) {
+                var p = document.createElement('p');
+                p.className = 'mw-b__state';
+                p.textContent = '이 블록에는 입력 항목 정의(schema_json)가 없습니다.';
+                box.appendChild(p);
+                return;
+            }
+            for (var i = 0; i < list.length; i++) { box.appendChild(fieldNode(list[i])); }
+        }
+
+        // 화면에 없는 키까지 통째로 보낸다. 디자인을 바꿔 잠시 안 보이게 된 항목이
+        // 저장 한 번에 사라지면 "디자인을 바꿔도 내용은 남는다"가 깨진다.
+        function collect() {
+            var inputs = document.querySelectorAll('#mwFields [data-key]');
+            for (var i = 0; i < inputs.length; i++) {
+                content[inputs[i].getAttribute('data-key')] = inputs[i].value;
+            }
+            return content;
+        }
+
+        // 필수 검사는 지금 선택된 블록의 스키마 기준으로만 한다.
+        function firstMissing() {
+            var list = schemaFor(currentBlock);
+            for (var i = 0; i < list.length; i++) {
+                var f = list[i];
+                if (!f.required) { continue; }
+                // 반복 항목은 입력칸이 하나가 아니라 배열이다. 'mwf_<key>' 요소가 없어
+                // 아래 검사로는 항상 통과해버리므로 항목 수로 판정한다.
+                if (String(f.type) === 'repeater') {
+                    if (!Array.isArray(content[f.key]) || !content[f.key].length) {
+                        return { label: f.label || f.key, el: null };
+                    }
+                    continue;
+                }
+                var el = document.getElementById('mwf_' + f.key);
+                if (el && String(el.value).trim() === '') {
+                    return { label: f.label || f.key, el: el };
+                }
+            }
+            return null;
         }
 
         // iframe 폭을 실제로 바꾼다. 편집 영역보다 넓으면 축소해 보여주되 폭 자체는 유지해야
@@ -570,7 +809,7 @@ $mw_val = function ($k) use ($mw_section) {
         // 프로젝트가 없으면 만들고 주소에 mwpid를 남긴다(새로고침해도 이어지도록).
         function ensureProject(done) {
             if (pid > 0) { done(); return; }
-            post({ action: 'ensure_project', pid: 0, section_type: 'hero', project_name: '미니웹 PoC' }, function (res) {
+            post({ action: 'ensure_project', pid: 0, section_type: sec, project_name: '미니웹 PoC' }, function (res) {
                 pid = res.pid;
                 var u = new URL(location.href);
                 u.searchParams.set('mwpid', pid);
@@ -582,8 +821,9 @@ $mw_val = function ($k) use ($mw_section) {
         document.getElementById('mwCards').addEventListener('click', function (e) {
             var card = e.target.closest('.mw-b__card');
             if (!card) return;
+            collect(); // 아직 저장 전인 입력값을 먼저 거둬 둔다. 폼을 다시 그려도 남도록.
             ensureProject(function () {
-                post({ action: 'change_block', pid: pid, section_type: 'hero', block_id: card.dataset.block }, function () {
+                post({ action: 'change_block', pid: pid, section_type: sec, block_id: card.dataset.block }, function () {
                     var all = document.querySelectorAll('.mw-b__card');
                     for (var i = 0; i < all.length; i++) {
                         all[i].classList.remove('is-current');
@@ -591,6 +831,9 @@ $mw_val = function ($k) use ($mw_section) {
                     }
                     card.classList.add('is-current');
                     card.querySelector('.mw-b__use').textContent = '사용중';
+                    // 새 블록이 요구하는 항목으로 폼을 다시 그린다. 값은 content 에서 되살아난다.
+                    currentBlock = parseInt(card.getAttribute('data-block'), 10);
+                    renderFields();
                     say('디자인을 바꿨습니다. 입력한 내용은 그대로입니다.', 'ok');
                     reloadPreview();
                 });
@@ -598,9 +841,15 @@ $mw_val = function ($k) use ($mw_section) {
         });
 
         document.getElementById('mwSave').addEventListener('click', function () {
+            var miss = firstMissing();
+            if (miss) {
+                say(miss.label + ' 항목을 입력해 주세요.', 'error');
+                if (miss.el) { miss.el.focus(); } // 반복 항목은 포커스할 칸이 없다.
+                return;
+            }
             ensureProject(function () {
-                post({ action: 'save_content', pid: pid, section_type: 'hero',
-                       content: JSON.stringify(fields()) }, function (res) {
+                post({ action: 'save_content', pid: pid, section_type: sec,
+                       content: JSON.stringify(collect()) }, function (res) {
                     say('저장됨 ' + res.saved_at, 'ok');
                     reloadPreview();
                 });
@@ -624,6 +873,7 @@ $mw_val = function ($k) use ($mw_section) {
         });
 
         window.addEventListener('resize', applyDevice);
+        renderFields();
         applyDevice();
         reloadPreview();
     })();

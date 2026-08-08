@@ -44,6 +44,46 @@ function mw_render_safe_url($url)
     return '#';
 }
 
+if (!class_exists('MwRenderHelper')) {
+    class MwRenderHelper {
+        private $content;
+        public function __construct($content) {
+            $this->content = $content;
+        }
+        public function process($html) {
+            $html = preg_replace_callback(
+                '/\{\{#([a-z0-9_]+)\}\}(.*?)\{\{\/\1\}\}/su',
+                array($this, 'replace_condition'),
+                $html
+            );
+            $html = preg_replace_callback(
+                '/\{\{([a-z0-9_]+)\}\}/',
+                array($this, 'replace_variable'),
+                $html
+            );
+            return $html;
+        }
+        public function replace_condition($m) {
+            $val = isset($this->content[$m[1]]) ? $this->content[$m[1]] : '';
+            if (is_array($val)) {
+                $out = '';
+                foreach ($val as $item) {
+                    if (!is_array($item)) continue;
+                    $subHelper = new MwRenderHelper($item);
+                    $out .= $subHelper->process($m[2]);
+                }
+                return $out;
+            }
+            $value = trim((string) $val);
+            return $value === '' ? '' : $m[2];
+        }
+        public function replace_variable($m) {
+            $value = isset($this->content[$m[1]]) ? (string) $this->content[$m[1]] : '';
+            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        }
+    }
+}
+
 // 블록 하나를 콘텐츠로 채워 HTML을 만든다.
 function mw_render_block(array $block, array $content)
 {
@@ -53,30 +93,9 @@ function mw_render_block(array $block, array $content)
     }
 
     $content = mw_render_derive($content);
+    $helper = new MwRenderHelper($content);
 
-    // 1) 조건 구간을 먼저 처리한다. 값이 비어 있으면 통째로 지운다.
-    //    (먼저 {{key}}를 치환해버리면 여는/닫는 표시를 찾을 수 없다.)
-    $html = preg_replace_callback(
-        '/\{\{#([a-z0-9_]+)\}\}(.*?)\{\{\/\1\}\}/su',
-        function ($m) use ($content) {
-            $value = isset($content[$m[1]]) ? trim((string) $content[$m[1]]) : '';
-            return $value === '' ? '' : $m[2];
-        },
-        $html
-    );
-
-    // 2) 남은 자리표시자를 값으로 바꾼다. 정의되지 않은 키는 빈 문자열로 지운다
-    //    ({{title}} 같은 글자가 화면에 그대로 보이는 것을 막는다).
-    $html = preg_replace_callback(
-        '/\{\{([a-z0-9_]+)\}\}/',
-        function ($m) use ($content) {
-            $value = isset($content[$m[1]]) ? (string) $content[$m[1]] : '';
-            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-        },
-        $html
-    );
-
-    return $html;
+    return $helper->process($html);
 }
 
 // 프로젝트의 섹션을 순서대로 읽어 화면 조각들을 돌려준다.

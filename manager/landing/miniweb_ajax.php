@@ -108,13 +108,22 @@ if ($action === 'save_content') {
         mw_json(array('success' => false, 'error' => '콘텐츠 형식이 올바르지 않습니다.'));
     }
 
-    // 키 이름을 제한한다. 스키마에 없는 키가 섞여 들어와 쌓이는 것을 막는다.
-    $clean = array();
-    foreach ($content as $k => $v) {
-        if (!preg_match('/^[a-z0-9_]{1,40}$/', $k)) continue;
-        if (is_array($v) || is_object($v)) continue;
-        $clean[$k] = mb_substr((string) $v, 0, 2000);
+    if (!function_exists('mw_sanitize_array')) {
+        function mw_sanitize_array($arr, $depth = 0) {
+            if ($depth > 3) return array();
+            $clean = array();
+            foreach ($arr as $k => $v) {
+                if (!is_int($k) && !preg_match('/^[a-z0-9_]{1,40}$/', (string)$k)) continue;
+                if (is_array($v)) {
+                    $clean[$k] = mw_sanitize_array($v, $depth + 1);
+                } else if (!is_object($v)) {
+                    $clean[$k] = mb_substr((string) $v, 0, 2000);
+                }
+            }
+            return $clean;
+        }
     }
+    $clean = mw_sanitize_array($content);
     $json = json_encode($clean, JSON_UNESCAPED_UNICODE);
 
     $sec = sql_fetch(" select id from {$sec_table}
