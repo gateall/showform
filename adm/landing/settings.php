@@ -196,8 +196,15 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
             <?php // 위에서 한 번 만든 토큰을 모든 폼이 같이 쓴다(여기서 get_token()을 다시
                   // 부르면 세션이 바뀌어 다른 폼들이 전부 막힌다). ?>
             <input type="hidden" name="token" value="<?php echo $mw_token; ?>">
-            <button type="submit" name="do" value="schema" class="primary"
-                onclick="return confirm('미니웹 테이블을 생성합니다. 계속할까요?');">
+            <input type="hidden" name="do" value="schema">
+            <?php // type="submit" 을 쓰지 않는다. adm/admin.js:113 이 관리자 화면의 모든
+                  // submit 버튼 클릭을 가로채 /adm/ajax.token.php 로 토큰을 새로 받아온 뒤
+                  // 폼의 token 값을 그것으로 덮어쓴다. 이 서버에서 그 엔드포인트가 502 를
+                  // 돌려주고 있어 토큰을 못 받으면 제출 자체가 취소된다("토큰 정보가
+                  // 올바르지 않습니다"). type="button" + form.submit() 은 그 click 핸들러에
+                  // 걸리지 않으므로 이 화면이 만든 토큰이 그대로 전송된다. ?>
+            <button type="button" class="primary"
+                onclick="if (confirm('미니웹 테이블을 생성합니다. 계속할까요?')) { this.form.submit(); }">
                 미니웹 DB 설치
             </button>
         </form>
@@ -249,11 +256,14 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
                 <form method="post" class="mw-seed__form">
                     <input type="hidden" name="token" value="<?php echo $mw_token; ?>">
                     <input type="hidden" name="seed_id" value="<?php echo get_text($seed['id']); ?>">
-                    <button type="submit" name="do" value="seed" <?php echo $ready ? '' : 'disabled'; ?>
+                    <input type="hidden" name="do" value="seed">
+                    <?php // type="button" 인 이유는 위 "미니웹 DB 설치" 버튼의 주석 참고.
+                          // (type="button" 은 name/value 를 전송하지 않으므로 do 를 hidden 으로 둔다.)
+                          // 라벨은 시드 파일이 준 값이라 따옴표가 들어와도 JS 문자열이 깨지지 않게
+                          // addslashes 를 먼저 걸고 HTML 이스케이프한다. ?>
+                    <button type="button" <?php echo $ready ? '' : 'disabled'; ?>
                         class="<?php echo $state === 'installed' ? '' : 'primary'; ?>"
-                        <?php // 라벨은 시드 파일이 준 값이다. 따옴표가 들어 있어도 JS 문자열이
-                              // 깨지지 않게 addslashes 를 먼저 걸고 HTML 이스케이프한다. ?>
-                        onclick="return confirm('<?php echo get_text(addslashes($seed['label'])); ?> 을(를) 설치합니다. 계속할까요?');">
+                        onclick="if (confirm('<?php echo get_text(addslashes($seed['label'])); ?> 을(를) 설치합니다. 계속할까요?')) { this.form.submit(); }">
                         <?php echo $state === 'installed' ? '다시 설치(덮어쓰기)' : '설치'; ?>
                     </button>
                 </form>
