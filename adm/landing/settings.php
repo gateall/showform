@@ -31,12 +31,27 @@ $msg_type = 'info';
 
 // ─── 설치 실행. 반드시 POST + 관리자 토큰이 있어야 한다. ───
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = isset($_POST['do']) ? (string) $_POST['do'] : '';
+    $posted_seed_id = isset($_POST['seed_id']) ? (string) $_POST['seed_id'] : '';
+
+    // 검사 "전에" 상태를 찍어둔다. mw_verify_token()은 세션 토큰을 소모(빈 값으로 설정)하므로
+    // 호출한 뒤에 get_session('ss_token')을 보면 언제나 빈 값이라 진단이 되지 않는다.
+    $had_post_token = isset($_POST['token']) && $_POST['token'] !== '';
+    $had_session_token = ((string) get_session('ss_token')) !== '';
+
     if (!mw_verify_token()) {
-        $msg = '잘못된 접근입니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.';
+        error_log('[miniweb.settings] token_fail action=' . $action
+            . ' seed_id=' . preg_replace('/[^a-zA-Z0-9_-]/', '', $posted_seed_id)
+            . ' post_token=' . ($had_post_token ? 'yes' : 'no')
+            . ' session_token=' . ($had_session_token ? 'yes' : 'no'));
+        // 서버 error_log 는 관리자가 볼 수 없다. 어디서 막혔는지 화면에도 남긴다.
+        // 토큰 값 자체는 절대 출력하지 않는다 - 있었는지 없었는지만 알린다.
+        $msg = '잘못된 접근입니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
+             . ' [진단: 요청 토큰 ' . ($had_post_token ? '있음' : '없음')
+             . ' · 세션 토큰 ' . ($had_session_token ? '있음' : '없음')
+             . ' · 두 값 ' . ($had_post_token && $had_session_token ? '불일치' : '비교 불가') . ']';
         $msg_type = 'error';
     } else {
-        $action = isset($_POST['do']) ? $_POST['do'] : '';
-
         if ($action === 'schema') {
             $r = mw_install_run_sql_file(mw_install_sql_path('miniweb_v1.sql'), $prefix);
             if ($r['ok']) {
@@ -48,7 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'seed') {
             // 실행할 파일은 관리자가 보낸 경로가 아니라, 서버가 sql/ 에서 찾아낸 목록에서 고른다.
-            $seed = mw_seed_find(isset($_POST['seed_id']) ? $_POST['seed_id'] : '');
+            $seed = mw_seed_find($posted_seed_id);
+
+            error_log('[miniweb.settings] seed_post action=' . $action
+                . ' seed_id=' . preg_replace('/[^a-zA-Z0-9_-]/', '', $posted_seed_id)
+                . ' matched=' . ($seed ? 'yes' : 'no')
+                . ' file=' . ($seed ? $seed['file'] : '-')
+                . ' section_type=' . ($seed ? $seed['section_type'] : '-'));
 
             if (!$seed) {
                 $msg = '알 수 없는 시드입니다. 화면을 새로고침한 뒤 다시 시도해 주세요.';
@@ -73,11 +94,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $msg_type = 'ok';
                 } else {
+                    error_log('[miniweb.settings] seed_install_fail seed_id=' . $seed['id']
+                        . ' file=' . $seed['file']
+                        . ' section_type=' . $seed['section_type']
+                        . ' before=' . (int) $before
+                        . ' after=' . (int) mw_section_block_count($prefix, $seed['section_type'])
+                        . ' errors=' . count($r['errors']));
                     // 무엇을 실행하다 실패했는지는 알리되 SQL 전문이나 접속 정보는 내보내지 않는다.
                     $msg = $seed['label'] . ' 설치 실패 (' . $seed['file'] . ') — ' . implode(' / ', $r['errors']);
                     $msg_type = 'error';
                 }
             }
+        } else {
+            // do 값이 없거나 모르는 값이면 지금까지는 토큰만 소모하고 조용히 화면을 다시
+            // 그렸다. 화면만 보면 "버튼을 눌러도 아무 일이 없다"와 구분되지 않는다.
+            $msg = '알 수 없는 요청입니다(do=' . preg_replace('/[^a-zA-Z0-9_-]/', '', $action) . ').'
+                 . ' 버튼이 값을 함께 보내지 못했을 수 있습니다.';
+            $msg_type = 'error';
         }
     }
 }
@@ -228,6 +261,29 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
         <?php } ?>
     </div>
 
+    <?php
+    // ─── 토큰 자가 진단 ───────────────────────────────────────────────────
+    // "잘못된 접근입니다"가 계속 나오는데 원인이 셋으로 갈린다. 화면이 스스로 답하게 한다.
+    //   (1) 폼에 토큰이 안 박힘        → 배포된 파일이 구버전
+    //   (2) 폼 토큰 ≠ 지금 세션 토큰   → 이 화면을 그리는 도중 누군가 토큰을 다시 만듦
+    //   (3) 위 둘 다 정상             → 원인은 제출 이후(다른 요청이 세션을 덮어씀)
+    // 토큰 값 자체는 출력하지 않는다. 일치 여부와 길이만 본다.
+    $mw_token_now = (string) get_session('ss_token');
+    $mw_token_ok = ($mw_token_now !== '' && $mw_token_now === (string) $mw_token);
+    ?>
+    <?php if (!$mw_token_ok) { ?>
+    <div class="mw-card" style="border-color:#fecaca;background:#fef2f2;">
+        <h2 style="color:#b91c1c;">토큰 상태 이상</h2>
+        <p class="mw-note" style="margin-top:0;color:#b91c1c;">
+            이 화면을 그리는 동안 세션 토큰이 폼에 넣은 값과 달라졌습니다. 이 상태에서는
+            설치 버튼이 항상 "잘못된 접근입니다"로 막힙니다.
+            <br>폼 토큰 <?php echo ((string) $mw_token === '' ? '없음' : '있음(' . strlen((string) $mw_token) . '자)'); ?>
+            · 현재 세션 토큰 <?php echo ($mw_token_now === '' ? '없음' : '있음(' . strlen($mw_token_now) . '자)'); ?>
+            · 일치 여부 불일치
+        </p>
+    </div>
+    <?php } ?>
+
     <div class="mw-card">
         <h2>스키마 변경 규칙</h2>
         <p class="mw-note" style="margin-top:0;">
@@ -239,3 +295,12 @@ include_once(G5_ADMIN_PATH . '/admin.head.php');
 </div>
 
 <?php include_once(G5_ADMIN_PATH . '/admin.tail.php'); ?>
+<?php
+// tail 이 토큰을 다시 만들면 위쪽 카드 검사로는 잡히지 않는다(그 검사는 tail 앞에서 돈다).
+// 페이지가 완전히 끝난 시점의 상태를 소스 보기로 확인할 수 있게 주석으로 남긴다.
+$mw_token_end = (string) get_session('ss_token');
+echo "\n<!-- miniweb token check: form=" . ((string) $mw_token === '' ? 'empty' : 'set')
+   . " session_at_end=" . ($mw_token_end === '' ? 'empty' : 'set')
+   . " match=" . ($mw_token_end !== '' && $mw_token_end === (string) $mw_token ? 'yes' : 'NO')
+   . " -->\n";
+?>
