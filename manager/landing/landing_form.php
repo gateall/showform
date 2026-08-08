@@ -501,6 +501,23 @@ if ($mw_ready) {
     .mw-b__field input, .mw-b__field textarea { width:100%; min-height:44px; padding:.5rem .75rem;
         font-size:1rem; border:1px solid var(--mgr-border); border-radius:8px; }
     .mw-b__field textarea { min-height:80px; }
+    /* 반복 항목(repeater) */
+    .mw-rep__item { border:1px solid var(--mgr-border); border-radius:8px; padding:.75rem;
+                    margin-bottom:.5rem; background:#fff; }
+    .mw-rep__bar { display:flex; align-items:center; gap:.375rem; margin-bottom:.5rem; }
+    .mw-rep__no { flex:1 1 auto; font-size:.75rem; font-weight:700; color:var(--mgr-text-muted); }
+    .mw-rep__btn { flex:0 0 auto; min-width:34px; min-height:34px; padding:0 .5rem;
+                   font-size:.75rem; font-weight:700; background:#fff;
+                   border:1px solid var(--mgr-border); border-radius:6px; cursor:pointer; }
+    .mw-rep__btn[disabled] { opacity:.4; cursor:not-allowed; }
+    .mw-rep__sub { margin-bottom:.5rem; }
+    .mw-rep__sub label { display:block; font-size:.75rem; font-weight:600;
+                         margin-bottom:.125rem; color:var(--mgr-text-muted); }
+    .mw-rep__sub input, .mw-rep__sub textarea { width:100%; min-height:40px; padding:.375rem .5rem;
+        font-size:.9375rem; border:1px solid var(--mgr-border); border-radius:6px; }
+    .mw-rep__sub textarea { min-height:64px; }
+    .mw-rep__hint { margin:.375rem 0 0; font-size:.75rem; color:var(--mgr-text-muted); }
+
     .mw-b__save { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
     .mw-b__save button { min-height:48px; padding:0 1.25rem; }
     .mw-b__state { font-size:.8125rem; color:var(--mgr-text-muted); }
@@ -614,89 +631,158 @@ if ($mw_ready) {
                 // 존재하지 않는 요소를 가리키게 되므로 지운다.
                 label.removeAttribute('for');
                 if (!Array.isArray(content[groupKey])) { content[groupKey] = []; }
+
+                // 개수 제한은 스키마가 정한다. max 가 없거나 0이면 제한 없음으로 본다.
+                var minItems = Math.max(0, parseInt(f.min, 10) || 0);
+                var maxItems = Math.max(0, parseInt(f.max, 10) || 0);
+
                 var listContainer = document.createElement('div');
-                
+                var addBtn = document.createElement('button');
+                var hint = document.createElement('p');
+                hint.className = 'mw-rep__hint';
+
+                // 항목 순서를 바꾼다. 배열 자체를 바꾸므로 저장 payload 순서가 곧 화면 순서다.
+                function swapItems(a, b) {
+                    var arr = content[groupKey];
+                    if (a < 0 || b < 0 || a >= arr.length || b >= arr.length) { return; }
+                    var tmp = arr[a]; arr[a] = arr[b]; arr[b] = tmp;
+                    renderRepeater();
+                }
+
+                function subFieldNode(subF, idx, itemData) {
+                    var subKey = String(subF.key || '');
+                    // 상위 키와 같은 규칙. 서버(mw_sanitize_array)가 버릴 키는 칸을 그리지 않는다
+                    // - 입력은 되는데 저장은 안 되는 칸을 막는다.
+                    if (!/^[a-z0-9_]{1,40}$/.test(subKey)) { return null; }
+
+                    var subWrap = document.createElement('div');
+                    subWrap.className = 'mw-rep__sub';
+
+                    var subLabel = document.createElement('label');
+                    subLabel.textContent = subF.label || subKey;
+                    subWrap.appendChild(subLabel);
+
+                    var subType = String(subF.type || 'text');
+                    var subEl;
+                    if (subType === 'textarea') {
+                        subEl = document.createElement('textarea');
+                    } else {
+                        subEl = document.createElement('input');
+                        subEl.type = (subType === 'tel' || subType === 'number' || subType === 'url') ? subType : 'text';
+                        if (subType === 'tel') { subEl.inputMode = 'numeric'; }
+                        if (subType === 'image') { subEl.placeholder = '이미지 주소'; }
+                    }
+                    if (subF.max) { subEl.maxLength = parseInt(subF.max, 10); }
+                    subEl.value = (itemData[subKey] !== undefined && itemData[subKey] !== null) ? itemData[subKey] : '';
+
+                    subEl.addEventListener('input', function () {
+                        content[groupKey][idx][subKey] = subEl.value;
+                    });
+
+                    subWrap.appendChild(subEl);
+                    return subWrap;
+                }
+
                 function renderRepeater() {
                     listContainer.innerHTML = '';
                     var arr = content[groupKey];
+
                     for (var i = 0; i < arr.length; i++) {
-                        (function(idx, itemData) {
+                        (function (idx, itemData) {
                             // 예전 데이터가 문자열 배열이면 하위 칸에 값을 넣어도 아무 데도
                             // 저장되지 않는다. 객체가 아니면 객체로 바꿔 놓고 시작한다.
                             if (!itemData || typeof itemData !== 'object') {
                                 itemData = content[groupKey][idx] = {};
                             }
+
                             var itemBox = document.createElement('div');
-                            itemBox.style.border = '1px solid #e2e8f0';
-                            itemBox.style.padding = '12px';
-                            itemBox.style.marginBottom = '8px';
-                            itemBox.style.borderRadius = '4px';
-                            itemBox.style.position = 'relative';
-                            
+                            itemBox.className = 'mw-rep__item';
+
+                            var bar = document.createElement('div');
+                            bar.className = 'mw-rep__bar';
+
+                            var no = document.createElement('span');
+                            no.className = 'mw-rep__no';
+                            no.textContent = '항목 ' + (idx + 1);
+                            bar.appendChild(no);
+
+                            var upBtn = document.createElement('button');
+                            upBtn.type = 'button';
+                            upBtn.className = 'mw-rep__btn';
+                            upBtn.textContent = '↑';
+                            upBtn.title = '위로';
+                            upBtn.disabled = (idx === 0);
+                            upBtn.onclick = function () { swapItems(idx, idx - 1); };
+                            bar.appendChild(upBtn);
+
+                            var downBtn = document.createElement('button');
+                            downBtn.type = 'button';
+                            downBtn.className = 'mw-rep__btn';
+                            downBtn.textContent = '↓';
+                            downBtn.title = '아래로';
+                            downBtn.disabled = (idx === arr.length - 1);
+                            downBtn.onclick = function () { swapItems(idx, idx + 1); };
+                            bar.appendChild(downBtn);
+
                             var delBtn = document.createElement('button');
                             delBtn.type = 'button';
+                            delBtn.className = 'mw-rep__btn';
                             delBtn.textContent = '삭제';
-                            delBtn.style.position = 'absolute';
-                            delBtn.style.right = '8px';
-                            delBtn.style.top = '8px';
-                            delBtn.style.fontSize = '12px';
-                            delBtn.onclick = function() {
+                            // 최소 개수 아래로는 지울 수 없다. 버튼을 감추지 않고 이유를 알린다.
+                            delBtn.disabled = (arr.length <= minItems);
+                            if (delBtn.disabled && minItems > 0) {
+                                delBtn.title = '최소 ' + minItems + '개는 있어야 합니다.';
+                            }
+                            delBtn.onclick = function () {
+                                if (content[groupKey].length <= minItems) {
+                                    say('이 항목은 최소 ' + minItems + '개가 필요합니다.', 'error');
+                                    return;
+                                }
                                 content[groupKey].splice(idx, 1);
                                 renderRepeater();
                             };
-                            itemBox.appendChild(delBtn);
-                            
+                            bar.appendChild(delBtn);
+
+                            itemBox.appendChild(bar);
+
                             var flds = f.fields || [];
                             for (var j = 0; j < flds.length; j++) {
-                                var subF = flds[j];
-                                var subKey = String(subF.key || '');
-                                // 상위 키와 같은 규칙. 서버(mw_sanitize_array)가 버릴 키는
-                                // 칸을 그리지 않는다 - 입력은 되는데 저장은 안 되는 칸을 막는다.
-                                if (!/^[a-z0-9_]{1,40}$/.test(subKey)) { continue; }
-                                var subWrap = document.createElement('div');
-                                subWrap.style.marginBottom = '6px';
-                                
-                                var subLabel = document.createElement('label');
-                                subLabel.textContent = subF.label || subKey;
-                                subLabel.style.display = 'block';
-                                subLabel.style.fontSize = '13px';
-                                subLabel.style.marginBottom = '2px';
-                                subWrap.appendChild(subLabel);
-                                
-                                var subEl;
-                                if (subF.type === 'textarea') subEl = document.createElement('textarea');
-                                else {
-                                    subEl = document.createElement('input');
-                                    subEl.type = 'text';
-                                }
-                                subEl.value = itemData[subKey] || '';
-                                subEl.style.width = '100%';
-                                
-                                (function(el, k, index) {
-                                    el.addEventListener('input', function() { content[groupKey][index][k] = el.value; });
-                                })(subEl, subKey, idx);
-                                
-                                subWrap.appendChild(subEl);
-                                itemBox.appendChild(subWrap);
+                                var node = subFieldNode(flds[j], idx, itemData);
+                                if (node) { itemBox.appendChild(node); }
                             }
                             listContainer.appendChild(itemBox);
                         })(i, arr[i]);
                     }
+
+                    // 추가 버튼과 안내 문구는 항목 수에 따라 매번 다시 맞춘다.
+                    var count = arr.length;
+                    addBtn.disabled = (maxItems > 0 && count >= maxItems);
+                    addBtn.textContent = '+ 항목 추가';
+                    var parts = ['현재 ' + count + '개'];
+                    if (minItems > 0) { parts.push('최소 ' + minItems + '개'); }
+                    if (maxItems > 0) { parts.push('최대 ' + maxItems + '개'); }
+                    hint.textContent = parts.join(' · ');
                 }
-                
-                renderRepeater();
-                wrap.appendChild(listContainer);
-                
-                var addBtn = document.createElement('button');
+
                 addBtn.type = 'button';
                 addBtn.className = 'mgr-btn mgr-btn-default';
-                addBtn.textContent = '+ 항목 추가';
-                addBtn.onclick = function() {
+                addBtn.onclick = function () {
+                    if (maxItems > 0 && content[groupKey].length >= maxItems) {
+                        say('이 항목은 최대 ' + maxItems + '개까지 넣을 수 있습니다.', 'error');
+                        return;
+                    }
                     content[groupKey].push({});
                     renderRepeater();
                 };
+
+                // 최소 개수가 정해져 있으면 빈 칸을 미리 만들어 둔다(빈 화면으로 시작하지 않게).
+                while (content[groupKey].length < minItems) { content[groupKey].push({}); }
+
+                renderRepeater();
+                wrap.appendChild(listContainer);
                 wrap.appendChild(addBtn);
-                
+                wrap.appendChild(hint);
+
                 return wrap;
             } else if (type === 'textarea') {
                 el = document.createElement('textarea');

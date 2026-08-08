@@ -120,6 +120,20 @@ if ($action === 'save_content') {
                     $clean[$k] = mb_substr((string) $v, 0, 2000);
                 }
             }
+
+            // 반복 항목을 중간에서 지우면 키가 0,2,3 처럼 비어서 온다. 그대로 저장하면
+            // json_encode 가 배열이 아니라 객체({"0":..,"2":..})로 굳혀 버리고, 렌더러의
+            // {{#items}} 반복과 편집기의 Array.isArray 검사가 둘 다 어긋난다.
+            // 키가 전부 정수인 경우에만 다시 0부터 매긴다(문자열 키를 가진 객체는 건드리지 않는다).
+            if ($clean) {
+                $all_int = true;
+                foreach (array_keys($clean) as $k) {
+                    if (!is_int($k)) { $all_int = false; break; }
+                }
+                if ($all_int) {
+                    return array_values($clean);
+                }
+            }
             return $clean;
         }
     }
